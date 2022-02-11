@@ -1,0 +1,82 @@
+
+/*! \mainpage
+
+ \section intro Introduction
+   This is the API documentation for the Gmerlin audio video library,
+   a library for handling and conversion of uncompressed audio- and video data.
+ 
+  Click Modules (on top of the page) to get to the main API index.
+  Here, you find just some general blabla :)
+
+  \section why Why gavl?
+  \subsection problem The problem
+
+  If you start to write some software, which has any kind of audio-, video- or image-support,
+  you'll soon be confronted with the fact, that the method for storing audio and image data in
+  memory is by no means standardized. In the audio area, we have different ways to store
+  multichannel sound (interleaved or all channels separate) and different sample sizes.
+  Furthermore, it can happen, that a cheap soundcard isn't happy with the 5.1 channel sound
+  and the 48 kHz samplerate, so you'll need to convert it to 44.1 kHz/Stereo.
+  In the video and image area, the situation is not better. Images can be planar or packed,
+  have different colorspaces, color orderings and chroma subsampling modes.
+
+  So you can learn how to read images in 24 bit RGB and display them with GTK or SDL. Handling
+  interleaved 16 bit audio samples is also no major problem. But if your program becomes
+  popular, people want to have 24 bit audio, RGB images with 16 bit per color channel
+  (or even floating point),
+  and they are not longer satisfied with your bilinear video scaler. If you want to support
+  a large number of formats, you'll want to convert each format into each other without any
+  intermediate conversion (to save time and preserve accuracy).
+
+  Now you can do some simple mathematics to find out, that for N formats, the number of
+  conversions from every format to every other is N*(N-1). Assuming, you want to support
+  26 pixelformats (like gavl does at the time, this file was written), you end up with
+  a theoretical number of 650 conversion routines. After removing redundant conversions,
+  you still have to write more than 600 functions. Since these are for pixelformats only,
+  and you also want to do audio mixing for all sample formats and lots of other conversions,
+  the total number of routines will soon exceed 1000.
+
+  These numbers are probably the reason, why up to now, no universal solution for the
+  problems described above, was written.
+
+  \subsection solution The solution
+
+  Programming universal audio/video converters is a painful process. 1000s of conversion
+  routines must be written, debugged, tested and optimized.
+  For this reason, a decision was made to do this madness once and make it available for other
+  programmers who can afford to write GPL software. Gavl handles mainly the following tasks:
+
+  - Definition of audio/video formats. This is done by having several enums and
+    structures, which contain all information necessary for unambiguous definition of an
+    Audio/Video format. A gavl enabled application will automatically have support for the
+    same range of formats as gavl.
+  - Containers for audio- and video-frames. These can carry A/V data in all supported
+    formats. Basic routines are available to allocate/free/copy frames and some utilities.
+  - Conversion among all formats. There are generic audio and video converters available,
+    which have a configurable quality level. Higher quality always means lower speed.
+    This means, that you can use gavl, if you must handle 100 audio streams simultaneously
+    at telephone quality as well as for High Definition video production.
+
+  A development goal of gavl is to have a complete set of conversions. You'll never get
+  black images or silent audio frames because of missing conversion routines or speed losses
+  because intermediate conversions are invoked. After this goal is reached, sometimes alternate
+  routines are implemented, which focus either on more speed or higher accuracy. These can
+  be selected by choosing a quality other than 3.
+
+  \subsection advantages Advantages
+
+  Using gavl in your application brings lots of advantages:
+
+  - The most ugly tasks of multimedia programming are already done for you, so you
+    can concentrate on your application
+  - If you nevertheless find ways to improve the quality and/or speed of gavl, then do so.
+    Making and sending a patch will still be less work, than writing such a library from scratch.
+  - Without any additional labor, you handle all formats, which are supported by gavl.
+    Impress your audience with 32 bit audio or floating point RGB processing.
+  - Gavl fits smoothly to all existing Audio/Video and image APIs. You'll find lots of examples
+    in the sourcetrees of gmerlin and gmerlin_avdecoder.
+  - APIs (for codecs, hardware access, effects etc.), which are based on gavl, can
+    nicely interact with each other. You can, for example, easily write an import module for
+    gmerlin_avdecoder, which will decode most important Audio/Video formats.
+
+  */

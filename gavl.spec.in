@@ -1,0 +1,95 @@
+Name:		gavl
+Version:	@VERSION@
+Release:	1
+Summary:        A library for handling uncompressed audio and video data
+License:	GPL
+Group:		Libraries
+Group(de):	Libraries
+Group(es):	Bibliotecas
+Group(fr):	Librairies
+Group(pl):	Biblioteki
+Group(pt_BR):	Bibliotecas
+Group(ru):	Библиотеки
+Group(uk):	Б╕бл╕отеки
+Source0:	%{name}-%{version}.tar.gz
+URL:		http://gmerlin.sourceforge.net/
+BuildRequires:	autoconf
+BuildRequires:	automake
+BuildRequires:	libtool
+BuildRequires:	libpng-devel >= 1.0.8
+BuildRequires:	libsamplerate-devel >= @SAMPLERATE_REQUIRED@
+BuildRoot:	/tmp/gavl
+Requires:	libsamplerate >= @SAMPLERATE_REQUIRED@
+
+%description
+Gavl is a library for handling and converting uncompressed audio and
+video data. It provides datatypes for audio/video formats and standardized
+structures to store the data. It supports converting between all formats.
+Some conversion functions are available in multiple versions (MMX...),
+which are selected by compile time configuration, CPU autodetection and
+user options.
+
+%package devel
+Summary:	Header files and static library for gavl
+Summary(de):    Header Dateien und statische Bibliothek fЭr gavl
+Group:		Development/Libraries
+Group(de):	Entwicklung/Libraries
+Group(es):	Desarrollo/Bibliotecas
+Group(fr):	Development/Librairies
+Group(pl):	Programowanie/Biblioteki
+Group(pt_BR):	Desenvolvimento/Bibliotecas
+Group(ru):	Разработка/Библиотеки
+Group(uk):	Розробка/Б╕бл╕отеки
+Requires:	%{name} = %{version}
+
+%description devel
+Header files and static library for gavl
+
+%prep
+%setup -q
+
+%build
+./cvs_clean.sh
+./autogen.sh
+%configure
+
+%{__make}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+
+%{__make} install DESTDIR=$RPM_BUILD_ROOT
+
+gzip -9nf README
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%post   -p /sbin/ldconfig
+%postun -p /sbin/ldconfig
+
+%files
+%defattr(644,root,root,755)
+%doc README.gz
+%attr(755,root,root) %{_libdir}/lib*.so.*
+
+%files devel
+%defattr(644,root,root)
+# %doc docs/*.html
+%{_libdir}/lib*.la
+%{_libdir}/lib*.a
+%defattr(-,root,root)
+%{_includedir}/gavl
+%{_libdir}/gavl/include/gavlconfig.h
+%{_libdir}/pkgconfig/gavl.pc
+%defattr(755,root,root)
+%{_libdir}/lib*.so
+
+%define date	%(echo `LC_ALL="C" date +"%a %b %d %Y"`)
+%changelog
+* Sat Apr 01 2006 Burkhard Plaum <gmerlin@users.sourceforge.net>
+- Fixes reported by various people
+* Sat May 29 2004 Burkhard Plaum <gmerlin@users.sourceforge.net>
+- Update
+* Sat Mar 05 2003 Burkhard Plaum <gmerlin@users.sourceforge.net>
+- First working release.

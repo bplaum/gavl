@@ -1,0 +1,50 @@
+This is gavl, a library for handling uncompressed audio- and video data.
+
+Read the file INSTALL for detailed installation instructions.
+
+Gavl defines generic types for audio and video formats,
+which are applicable to a wide range of multimedia applications.
+In addition, it provides conversion functions from all possible formats
+to all other formats.
+
+If you want to write a multimedia application, gavl will help you a lot:
+You don't have to mess around with the large varieties of pixelformats,
+interleaving modes, audio sample formats and so on.
+
+Current features:
+
+- Support for the following pixelformats:
+  15 bpp RGB, 15 bpp BGR, 16 bpp RGB, 16 bpp BGR, 24 bpp RGB, 24 bpp BGR
+  32 bpp RGB, 32 bpp BGR, 32 bpp RGBA, YUV 422 (YUY2), YUV 420 Planar,
+  YUV 422 Planar (mpeg and jpeg), YUV 444 Planar (mpeg and jpeg)
+  Conversions from all pixelformat to all others (NO multistep conversions,
+  each conversion has it's own function)
+
+- Audio samples can be 8 bit and 16 PCM (signed and unsigned),
+  32 bit signed and floating point.
+
+- High quality samplerate conversion using the Secret Rabbit Code
+
+- Video frames will allocated with memory aligned scanlines for faster
+  processing.
+
+See the header file include/gavl.h and the sample files
+src/colorspace_test.c and src/colorspace_time.c for
+information and how to use this thing.
+
+For testing the library, the src directory contains
+some test programs.
+
+colorspace_test:
+Makes your current directory full of pngs, one test file
+for each colorspace and one for each conversion.
+Ideally, all these pictures should look the same.
+
+colorspace_time:
+Makes all defined conversions 20 times and prints, how long
+it needed. Good for making C <-> MMX speed comparisons.
+
+Every programmer, who agrees to this kind of API is welcome to
+integrate gavl into his/her project so we can save some
+energy while writing/searching the best and fastest
+conversion routines.

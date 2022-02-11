@@ -1,0 +1,8 @@
+The gavl core was written by me (Burkhard Plaum). Many
+converison routines are, however taken from other (L)GLPed
+projects (most notably avifile, MPlayer and xine).
+
+Audio dithering is done by the included libgdither by Steve Harris. 
+Original source can be found at http://plugin.org.uk/libgdither/
+
+

@@ -1,0 +1,43 @@
+1. Requirements
+
+The only required library is libsamplerate, which can be downloaded
+from http://www.mega-nerd.com/SRC/.
+
+If you installed a library but it wasn't found by the configure script,
+the error is in 99% of the cases one of the following:
+
+- A binary package (e.g. rpm) was installed but not the development package
+ (e.g. for libfoo-1.2.3-4.i386.rpm you also need libfoo-devel-1.2.3-4.i386.rpm)
+
+- The path where the libraries got installed (usually /usr/local/bin for source
+  packages) is missing in the file /etc/ld.so.conf. This is the case e.g. on
+  Fedora Core 3. Add the path there, run /sbin/ldconfig as root and everything
+  should work.
+
+- After installation of the library, /sbin/ldconfig wasn't called
+
+- The package wasn't found, because the environment variable PKG_CONFIG_PATH is not
+  properly set. Typing
+
+  export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+
+  before calling configure helps in most cases.
+
+If all these tips don't help, attach the file config.log to an email and send it to
+gmerlin-general@lists.sourceforge.net.
+
+2. Compilation
+
+Nothing special here. It's the usual procedure:
+
+./configure
+make
+su
+<type root password>
+make install
+
+The configure script supports some command line options, type
+
+./configure --help
+
+to see them.

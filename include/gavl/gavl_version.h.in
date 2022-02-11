@@ -1,0 +1,17 @@
+#ifndef __GAVL_VERSION_H_
+#define __GAVL_VERSION_H_
+
+#define GAVL_VERSION "@GAVL_VERSION@"
+
+#define GAVL_VERSION_MAJOR @GAVL_VERSION_MAJOR@
+#define GAVL_VERSION_MINOR @GAVL_VERSION_MINOR@
+#define GAVL_VERSION_MICRO @GAVL_VERSION_MICRO@
+
+#define GAVL_MAKE_BUILD(a,b,c) ((a << 16) + (b << 8) + c)
+
+#define GAVL_BUILD \
+GAVL_MAKE_BUILD(GAVL_VERSION_MAJOR, \
+                GAVL_VERSION_MINOR, \
+                GAVL_VERSION_MICRO)
+
+#endif // __GAVL_VERSION_H_
