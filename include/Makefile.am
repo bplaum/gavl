@@ -12,6 +12,7 @@ deinterlace.h \
 dsp.h \
 float_cast.h \
 gavfprivate.h \
+gavlshm.h \
 hw_private.h \
 vaapi.h \
 interleave.h \

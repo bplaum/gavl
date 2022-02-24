@@ -461,31 +461,6 @@ const char * gavl_dictionary_get_string_image_uri(const gavl_dictionary_t * m,
   return ret;
   }
 
-#if 0
-const char *
-gavl_metadata_get_image_embedded(gavl_dictionary_t * m,
-                                 const char * key,
-                                 int idx,
-                                 int * w, int * h,
-                                 const char ** mimetype,
-                                 int64_t * offset,
-                                 int64_t * size)
-  {
-  const gavl_dictionary_t * dict = NULL;
-  const gavl_value_t * val;
-
-  if(!(dict = get_image(m, key, idx)))
-    return NULL;
-  
-  if(mimetype)
-    *mimetype = gavl_dictionary_get_string(dict, GAVL_META_MIMETYPE);
-  
-  gavl_dictionary_get_int(dict, GAVL_META_WIDTH, w);
-  gavl_dictionary_get_int(dict, GAVL_META_HEIGHT, h);
-  gavl_dictionary_get_int(dict, GAVL_META_COVER_OFFSET, offset);
-  gavl_dictionary_get_int(dict, GAVL_META_COVER_SIZE, size);
-  }
-#endif
 
 const gavl_dictionary_t *
 gavl_dictionary_get_image_max_proto(const gavl_dictionary_t * m,
