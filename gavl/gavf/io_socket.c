@@ -141,7 +141,7 @@ static int poll_socket(void * priv, int timeout)
     return gavl_socket_can_read(s->fd, timeout);
   }
 
-gavf_io_t * gavf_io_create_socket_1(int fd, int read_timeout, int flags)
+gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int flags)
   {
   gavf_io_t * ret = NULL;
   

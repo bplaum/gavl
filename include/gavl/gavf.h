@@ -213,7 +213,7 @@ gavf_io_t * gavf_io_create_file(FILE * f, int wr, int can_seek, int do_close);
 
 
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_socket_1(int fd, int read_timeout, int flags);
+gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int flags);
 
 GAVL_PUBLIC
 int gavf_io_get_socket(gavf_io_t * io);

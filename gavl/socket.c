@@ -836,6 +836,7 @@ int gavl_socket_is_local(int fd)
   if(slen == 0 || us.ss_family == AF_LOCAL)
     return 1;
 
+#if 0
   if(us.ss_family == AF_INET)
     {
     struct sockaddr_in * a1, *a2;
@@ -874,6 +875,7 @@ int gavl_socket_is_local(int fd)
       return 1;
 
     }
+#endif
   return 0;
   }
 
