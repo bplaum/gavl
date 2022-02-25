@@ -332,6 +332,8 @@ gavl_codec_id_t gavl_get_compression(int index);
 #define GAVL_PACKET_REF      (1<<5) //!< B-frame used as reference (can't savely be skipped)
 #define GAVL_PACKET_NOOUTPUT (1<<6) //!< Packet will produce no decoder output (e.g. VP8 alternate reference)
 
+#define GAVL_PACKET_HAS_FDS  (1<<7) //!< Packet contains file descriptors (can only be sent via UNIX-Sockets)
+
 #define GAVL_PACKET_FLAG_PRIV (1<<16) //!< Private flag (defined outside of gavl)
   
 #define GAVL_PACKET_PADDING  32 //!< Packets are padded in memory with this many zero bytes
@@ -372,6 +374,9 @@ typedef struct
   int32_t dst_y;             //!< Y-coordinate in the destination frame (for overlays)
 
   uint32_t id;    //!< ID of the gavf stream where this packet belongs
+  
+  int fds[GAVL_MAX_PLANES];
+  int num_fds;
   
   } gavl_packet_t;
 

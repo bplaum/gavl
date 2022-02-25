@@ -826,7 +826,7 @@ int gavl_socket_read_line(int fd, char ** ret,
 int gavl_socket_is_local(int fd)
   {
   struct sockaddr_storage us;
-  struct sockaddr_storage them;
+  //  struct sockaddr_storage them;
   socklen_t slen;
   slen = sizeof(us);
   
@@ -953,6 +953,65 @@ int gavl_socket_send_file(int fd, const char * filename,
   if(buf)
     free(buf);
   return ret;
+  }
+
+/* These functions do not test if the socket is local */
+
+int gavl_socket_send_fds(int socket, const int * fds, int n)
+  {
+  struct msghdr msg = {0};
+  struct cmsghdr *cmsg;
+  char payload = '\0';
+
+  char buf[CMSG_SPACE(GAVL_MAX_PLANES * sizeof(int))];
+  struct iovec io = { .iov_base = &payload, .iov_len = sizeof(payload) };
+  memset(buf, '\0', sizeof(buf));
+  
+  msg.msg_iov = &io;
+  msg.msg_iovlen = 1;
+  msg.msg_control = buf;
+  msg.msg_controllen = sizeof(buf);
+  
+  cmsg = CMSG_FIRSTHDR(&msg);
+  cmsg->cmsg_level = SOL_SOCKET;
+  cmsg->cmsg_type = SCM_RIGHTS;
+  cmsg->cmsg_len = CMSG_LEN(n * sizeof(int));
+  
+  memcpy ((int *) CMSG_DATA(cmsg), fds, n * sizeof (int));
+  
+  if(sendmsg (socket, &msg, 0) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Failed to send filedescriptors: %s", strerror(errno));
+    return 0;
+    }
+  else
+    return 1;
+  }
+
+int gavl_socket_revc_fds(int socket, int * fds, int n)
+  {
+  struct msghdr msg = {0};
+  struct cmsghdr *cmsg;
+  char buf[CMSG_SPACE(GAVL_MAX_PLANES * sizeof(int))], dup[256];
+  struct iovec io = { .iov_base = &dup, .iov_len = sizeof(dup) };
+  memset(buf, '\0', sizeof(buf));
+
+  msg.msg_iov = &io;
+  msg.msg_iovlen = 1;
+  msg.msg_control = buf;
+  msg.msg_controllen = sizeof(buf);
+
+  if(recvmsg (socket, &msg, 0) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Failed to receive filedescriptors: %s", strerror(errno));
+    return 0;
+    }
+
+  cmsg = CMSG_FIRSTHDR(&msg);
+
+  memcpy (fds, (int *) CMSG_DATA(cmsg), n * sizeof(int));
+
+  return 1;
   }
 
 int gavl_udp_socket_create(gavl_socket_address_t * addr)
