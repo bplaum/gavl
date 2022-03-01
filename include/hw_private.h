@@ -23,6 +23,7 @@
 #define HW_PRIVATE_H_INCLUDED
 
 #include <gavl/gavl.h> // Includes hw.h
+#include <gavl/compression.h>
 
 /* Functions */
 typedef struct
@@ -58,6 +59,31 @@ typedef struct
                            gavl_video_frame_t * dst,
                            gavl_video_frame_t * src);
 
+  int (*video_frame_map)(const gavl_video_format_t * fmt,
+                         gavl_video_frame_t * f);
+
+  int (*video_frame_unmap)(const gavl_video_format_t * fmt,
+                           gavl_video_frame_t * f);
+
+  void (*video_frame_to_packet)(gavl_hw_context_t * ctx,
+                                const gavl_video_format_t * fmt,
+                                gavl_video_frame_t * frame,
+                                gavl_packet_t * p);
+
+  void (*video_frame_from_packet)(gavl_hw_context_t * ctx,
+                                  const gavl_video_format_t * fmt,
+                                  gavl_packet_t * p,
+                                  gavl_video_frame_t * frame);
+
+  int (*can_import)(gavl_hw_context_t * ctx, gavl_hw_type_t t);
+  int (*can_export)(gavl_hw_context_t * ctx, gavl_hw_type_t t);
+
+  int (*import_video_frame)(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+                            gavl_video_frame_t * src, gavl_video_frame_t * dst);
+
+  int (*export_video_frame)(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+                            gavl_video_frame_t * src, gavl_video_frame_t * dst);
+  
   } gavl_hw_funcs_t;
 
 struct gavl_hw_context_s
@@ -67,12 +93,20 @@ struct gavl_hw_context_s
   const gavl_hw_funcs_t * funcs;
   gavl_pixelformat_t * image_formats;
   gavl_pixelformat_t * overlay_formats;
+  
+  int support_flags;
+
+  gavl_video_frame_t ** imported_vframes;
+  int imported_vframes_alloc;
+  
   };
+
+
 
 gavl_hw_context_t *
 gavl_hw_context_create_internal(void * native,
                                 const gavl_hw_funcs_t * funcs,
-                                gavl_hw_type_t type);
+                                gavl_hw_type_t type, int support_flags);
 
 void 
 gavl_hw_destroy_video_frame(gavl_hw_context_t * ctx,

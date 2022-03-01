@@ -109,6 +109,7 @@ gavl_video_frame_t * gavl_video_frame_create(const gavl_video_format_t * format)
   if(format)
     video_frame_alloc(ret, format, 1);
   ret->timecode = GAVL_TIMECODE_INVALID_MASK;
+  ret->buf_idx = -1;
   return ret;
   }
 

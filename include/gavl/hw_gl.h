@@ -21,6 +21,13 @@
 
 // #include <gavl/gavldefs.h>
 
+typedef struct
+  {
+  int num_textures;
+  GLuint textures[GAVL_MAX_PLANES];
+  GLenum texture_target;
+  } gavl_gl_frame_info_t;
+
 GAVL_PUBLIC int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * type);
 
 GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx);

@@ -671,6 +671,8 @@ typedef struct
   int valid_samples;             /*!< Number of actually valid samples */
   int64_t timestamp;             /*!< Timestamp in samplerate tics */
   int channel_stride;            /*!< Byte offset between channels. Total allocated size is always num_channels * channel_stride */
+
+  int buf_idx;
   } gavl_audio_frame_t;
 
 /*!
@@ -2585,7 +2587,7 @@ struct gavl_video_frame_s
   uint8_t * planes[GAVL_MAX_PLANES]; /*!< Pointers to the planes */
   int strides[GAVL_MAX_PLANES];      /*!< For each plane, this stores the byte offset between the scanlines */
   
-  void * user_data;    /*!< For storing user data (e.g. the corresponding XImage) */
+  void * client_data;    /*!< For storing user data (gavl never touches these) */
   int64_t timestamp; /*!< Timestamp in stream specific units (see \ref video_format) */
   int64_t duration; /*!< Duration in stream specific units (see \ref video_format) */
   gavl_interlace_mode_t   interlace_mode;/*!< Interlace mode */
@@ -2600,7 +2602,9 @@ struct gavl_video_frame_s
   int32_t dst_y;                     //!< y offset in the destination frame. (since 1.5.0) */
 
   gavl_hw_context_t * hwctx;         //!< Handle for accessing the frame
+  void * storage;               /*!< Storage handle defined by hardware context */
   
+  int buf_idx;
   };
 
 
@@ -4396,7 +4400,7 @@ void gavl_video_frame_pool_reset(gavl_video_frame_pool_t *p);
 /**
  * @}
  */
- 
+
   
 #ifdef __cplusplus
 }

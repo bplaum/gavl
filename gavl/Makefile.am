@@ -156,6 +156,8 @@ dsputils.c \
 edl.c \
 frametable.c \
 hw.c \
+hw_dmabuf.c \
+hw_shm.c \
 http.c \
 interleave.c \
 log.c \

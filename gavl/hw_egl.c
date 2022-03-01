@@ -65,11 +65,20 @@
 
 #ifdef HAVE_DRM
 #include <gavl/hw_v4l2.h>
+#include <gavl/hw_dmabuf.h>
 #endif
 
 #ifndef GL_TEXTURE_EXTERNAL_OES
 #define GL_TEXTURE_EXTERNAL_OES 0x8D65
 #endif
+
+#ifdef HAVE_DRM
+static int egl_import_dmabuf(gavl_hw_context_t * ctx,
+                             const gavl_video_format_t * fmt,
+                             gavl_video_frame_t * src,
+                             gavl_video_frame_t * dst);
+#endif
+
 
 typedef struct
   {
@@ -103,6 +112,20 @@ typedef struct
   EGLBoolean (*eglDestroyImage)(EGLDisplay dpy, void * image);
 
   void (*glEGLImageTargetTexture2DOES)(GLenum target, void * image);
+
+
+  EGLBoolean (*eglExportDMABUFImageQueryMESA)(EGLDisplay dpy,
+                                              EGLImageKHR image,
+                                              int *fourcc,
+                                              int *num_planes,
+                                              EGLuint64KHR *modifiers);
+
+  EGLBoolean (*eglExportDMABUFImageMESA)(EGLDisplay dpy,
+                                         EGLImageKHR image,
+                                         int *fds,
+                                         EGLint *strides,
+                                         EGLint *offsets);
+  
   
   } egl_t;
 
@@ -164,6 +187,60 @@ static int video_frame_to_hw_egl(const gavl_video_format_t * fmt,
   return 1;
   }
 
+static int exports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+  {
+  const char * extensions;
+  egl_t * priv = ctx->native;
+  extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
+  
+  switch(hw)
+    {
+    case GAVL_HW_DMABUFFER:
+      if(strstr(extensions, "EGL_MESA_image_dma_buf_export"))
+        return 1;
+      break;
+    default:
+      break;
+    }
+  return 0;
+  }
+
+static int imports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+  {
+  const char * extensions;
+  egl_t * priv = ctx->native;
+  extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
+  
+  switch(hw)
+    {
+    case GAVL_HW_DMABUFFER:
+      if(strstr(extensions, "EGL_EXT_image_dma_buf_import"))
+        return 1;
+      break;
+    default:
+      break;
+    }
+  return 0;
+  }
+
+static int import_video_frame_egl(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+                                  gavl_video_frame_t * src, gavl_video_frame_t * dst)
+  {
+  gavl_hw_type_t src_hw_type = gavl_hw_ctx_get_type(src->hwctx);
+  
+  switch(src_hw_type)
+    {
+#ifdef HAVE_DRM
+    case GAVL_HW_DMABUFFER:
+      return egl_import_dmabuf(ctx, fmt, src, dst);
+      break;
+#endif
+    default:
+      break;
+    }
+  return 0;
+  }
+
 static const gavl_hw_funcs_t funcs =
   {
     .destroy_native         = destroy_native_egl,
@@ -175,6 +252,9 @@ static const gavl_hw_funcs_t funcs =
     .video_frame_to_hw      = video_frame_to_hw_egl,
     .video_format_adjust    = gavl_gl_adjust_video_format,
     .overlay_format_adjust  = gavl_gl_adjust_video_format,
+    .can_export             = exports_type_egl,
+    .can_import             = imports_type_egl,
+    .import_video_frame     = import_video_frame_egl
   };
 
 static const EGLint
@@ -188,18 +268,11 @@ gles_attributes[] =
    EGL_NONE
   };
 
-#if 0
-static void dump_dma_buf_formats(EGLDisplay  dpy)
-  {
-  //  EGL_EXT_image_dma_buf_import_modifiers 
-  //  EGLBoolean  eglQueryDmaBufFormatsEXT (EGLDisplay  dpy, EGLint  max_formats, EGLint  *formats, EGLint  *num_formats)
-  }
-#endif
 
 gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t type, void * native_display)
   {
+  int support_flags;
   egl_t * priv;
-
   EGLint num_configs = 0;
 
   void * native_display_priv = NULL;
@@ -208,6 +281,8 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
   const EGLint * attributes = NULL;
   
   //  
+
+  support_flags = GAVL_HW_SUPPORTS_VIDEO;
   
   switch(type)
     {
@@ -258,13 +333,14 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
   priv->native_display = native_display;
   priv->native_display_priv = native_display_priv;
 
+  
   priv->eglGetPlatformDisplay          = (void*)eglGetProcAddress("eglGetPlatformDisplayEXT");
   priv->eglCreatePlatformWindowSurface = (void*)eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
 
+  priv->glEGLImageTargetTexture2DOES = (void*)eglGetProcAddress("glEGLImageTargetTexture2DOES");
   priv->eglCreateImage = (void*)eglGetProcAddress("eglCreateImageKHR");
   priv->eglDestroyImage = (void*)eglGetProcAddress("eglDestroyImageKHR");
-
-  priv->glEGLImageTargetTexture2DOES = (void*)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+  
   
   if((priv->display = priv->eglGetPlatformDisplay(platform, native_display, NULL)) == EGL_NO_DISPLAY)
     goto fail;
@@ -274,7 +350,10 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
   
   if(eglChooseConfig(priv->display, attrs, &priv->config, 1, &num_configs) == EGL_FALSE)
     goto fail;
-  
+
+  //  fprintf(stderr, "EGL Extensions: %s\n",
+  //          );
+          
   if((priv->context = eglCreateContext(priv->display,
                                        priv->config,
                                        EGL_NO_CONTEXT,
@@ -283,7 +362,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
   
   priv->surf = EGL_NO_SURFACE;
   
-  return gavl_hw_context_create_internal(priv, &funcs, type);
+  return gavl_hw_context_create_internal(priv, &funcs, type, support_flags);
   
   fail:
 
@@ -317,27 +396,6 @@ EGLDisplay gavl_hw_ctx_egl_get_egl_display(gavl_hw_context_t * ctx)
   egl_t * p = ctx->native;
   return p->display;
   }
-
-#if 0
-
-Display * gavl_hw_ctx_egl_get_display(gavl_hw_context_t * ctx)
-  {
-  glx_t * p = ctx->native;
-  return p->display;
-  }
-
-GLXFBConfig gavl_hw_ctx_glx_get_fbconfig(gavl_hw_context_t * ctx)
-  {
-  glx_t * p = ctx->native;
-  return p->fbcfg[0];
-  }
-
-GLXContext gavl_hw_ctx_glx_get_ctx(gavl_hw_context_t * ctx)
-  {
-  glx_t * p = ctx->native;
-  return p->ctx;
-  }
-#endif
 
 
 EGLint const surface_attribs[] =
@@ -403,8 +461,7 @@ int gavl_hw_egl_import_v4l2_buffer(gavl_hw_context_t * ctx,
   EGLImageKHR image = EGL_NO_IMAGE_KHR;
   EGLint attrs[128];
   int aidx = 0;
-
-  gavl_v4l2_buffer_t * buf = v4l2_frame->user_data;
+  gavl_v4l2_buffer_t * buf = v4l2_frame->storage;
   
   egl = ctx->native;
   
@@ -517,4 +574,103 @@ int gavl_hw_egl_import_v4l2_buffer(gavl_hw_context_t * ctx,
   
   }
 
+#ifdef HAVE_DRM
+static int egl_import_dmabuf(gavl_hw_context_t * ctx,
+                             const gavl_video_format_t * fmt,
+                             gavl_video_frame_t * src,
+                             gavl_video_frame_t * dst)
+  {
+
+  egl_t * egl;
+  
+  EGLImageKHR image = EGL_NO_IMAGE_KHR;
+  EGLint attrs[128];
+  int aidx = 0;
+  gavl_dmabuf_video_frame_t * dmabuf = src->storage;
+
+  gavl_gl_frame_info_t * info = dst->storage;
+  
+  egl = ctx->native;
+  
+  attrs[aidx++] = EGL_WIDTH;
+  attrs[aidx++] = fmt->image_width;
+  attrs[aidx++] = EGL_HEIGHT;
+  attrs[aidx++] = fmt->image_height;
+
+  attrs[aidx++] = EGL_LINUX_DRM_FOURCC_EXT;
+  attrs[aidx++] = dmabuf->fourcc;
+
+  /* Plane 0 */
+  attrs[aidx++] = EGL_DMA_BUF_PLANE0_FD_EXT;
+  attrs[aidx++] = dmabuf->buffers[dmabuf->planes[0].buf_idx].fd;
+  
+  attrs[aidx++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
+  attrs[aidx++] = dmabuf->planes[0].offset;
+  
+  attrs[aidx++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
+  attrs[aidx++] = src->strides[0];
+  
+  if(dmabuf->num_planes > 1)
+    {
+    /* Plane 1 */
+    attrs[aidx++] = EGL_DMA_BUF_PLANE1_FD_EXT;
+    attrs[aidx++] = dmabuf->buffers[dmabuf->planes[1].buf_idx].fd;
+
+    attrs[aidx++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
+    attrs[aidx++] = dmabuf->planes[1].offset;
+      
+    attrs[aidx++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
+    attrs[aidx++] = src->strides[1];
+    }
+
+  if(dmabuf->num_planes > 2)
+    {
+    /* Plane 2 */
+    attrs[aidx++] = EGL_DMA_BUF_PLANE2_FD_EXT;
+    attrs[aidx++] = dmabuf->buffers[dmabuf->planes[2].buf_idx].fd;
+
+    attrs[aidx++] = EGL_DMA_BUF_PLANE2_OFFSET_EXT;
+    attrs[aidx++] = dmabuf->planes[2].offset;
+      
+    attrs[aidx++] = EGL_DMA_BUF_PLANE2_PITCH_EXT;
+    attrs[aidx++] = src->strides[2];
+    }
+  
+  /* Terminate attributes */
+
+  attrs[aidx++] = EGL_NONE;
+
+  eglGetError();
+  
+  image = egl->eglCreateImage(egl->display, EGL_NO_CONTEXT,
+                              EGL_LINUX_DMA_BUF_EXT,
+                              NULL, attrs);
+  
+  if(!image)
+    {
+    fprintf(stderr, "Creating Image failed %08x\n", eglGetError());
+    return 0;
+    }
+  gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
+  
+  /* Associate the texture with the dma buffer */
+
+  info->num_textures = 1;
+  info->texture_target = GL_TEXTURE_EXTERNAL_OES;
+
+  glGenTextures(1, &info->textures[0]);
+  
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, info->textures[0]);
+  egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
+  
+  /* Destroy image */
+
+  egl->eglDestroyImage(egl->display, image);
+  
+  gavl_hw_egl_unset_current(ctx);
+  
+  return 1;
+  
+  }
+#endif
 

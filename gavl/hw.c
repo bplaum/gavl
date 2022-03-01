@@ -20,16 +20,27 @@
  * *****************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
+
+#include <config.h>
+
 #include <hw_private.h>
+
+#include <gavl/log.h>
+
+#define LOG_DOMAIN "hw_context"
 
 gavl_hw_context_t * gavl_hw_context_create_internal(void * native,
                                                     const gavl_hw_funcs_t * funcs,
-                                                    gavl_hw_type_t type)
+                                                    gavl_hw_type_t type,
+                                                    int support_flags)
   {
   gavl_hw_context_t * ret = calloc(1, sizeof(*ret));
   ret->type = type;
   ret->native = native;
   ret->funcs = funcs;
+  ret->support_flags = support_flags;
+  
   
   if(ret->funcs->get_image_formats)
     ret->image_formats = ret->funcs->get_image_formats(ret);
@@ -40,8 +51,25 @@ gavl_hw_context_t * gavl_hw_context_create_internal(void * native,
   return ret;
   }
 
+int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx)
+  {
+  return ctx->support_flags;
+  }
+
+
 void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx)
   {
+  if(ctx->imported_vframes)
+    {
+    int i;
+    for(i = 0; i < ctx->imported_vframes_alloc; i++)
+      {
+      if(ctx->imported_vframes[i])
+        gavl_video_frame_destroy(ctx->imported_vframes[i]);
+      }
+    free(ctx->imported_vframes);
+    }
+  
   if(ctx->funcs->destroy_native)
     ctx->funcs->destroy_native(ctx->native);
 
@@ -214,12 +242,23 @@ static const struct
 types[] = 
   {
     { GAVL_HW_VAAPI_X11, "vaapi through X11" },
-    
-    { GAVL_HW_EGL_GL_X11, "Opengl Texture (EGL+X11)" },  // EGL Texture (associated with X11 connection)
-    { GAVL_HW_EGL_GLES_X11, "Opengl ES Texture (EGL+X11)" },  // EGL Texture (associated with X11 connection)
+
+    // EGL Texture (associated with X11 connection)
+    { GAVL_HW_EGL_GL_X11, "Opengl Texture (EGL+X11)" },
+
+    // EGL Texture (associated with X11 connection)
+    { GAVL_HW_EGL_GLES_X11, "Opengl ES Texture (EGL+X11)" },
+
     // GAVL_HW_EGL_WAYLAND,  // EGL Texture (wayland) Not implemented yet
-    { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer" }, // V4L2 buffers (mmap()ed, optionaly also with DMA handles)
-    
+
+    // V4L2 buffers (mmap()ed, optionaly also with DMA handles)
+    { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer" }, 
+
+    // DMA handles, can be exported by V4L and im- and exported by OpenGL and also mmaped to userspace
+    { GAVL_HW_DMABUFFER,   "DMA Buffer" },
+
+    // Shared memory, which can be sent to other processes
+    { GAVL_HW_SHM,         "Shared Memory" },
     { /* End  */ },
   };
   
@@ -234,4 +273,125 @@ const char * gavl_hw_type_to_string(gavl_hw_type_t type)
     i++;
     }
   return NULL;
+  }
+
+int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type)
+  {
+  if(ctx->funcs->can_export && ctx->funcs->can_export(ctx, type))
+    return 1;
+  else
+    return 0;
+  }
+
+int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type)
+  {
+  if(ctx->funcs->can_import && ctx->funcs->can_import(ctx, type))
+    return 1;
+  else
+    return 0;
+  }
+
+static gavl_video_frame_t * create_import_frame(gavl_hw_context_t * ctx,
+                                                int buf_idx, gavl_video_format_t * fmt)
+  {
+  if(buf_idx >= ctx->imported_vframes_alloc)
+    {
+    int num;
+    
+    if(buf_idx - ctx->imported_vframes_alloc > 16)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "Not importing video frame (buffer index %d too large)",
+               buf_idx);
+      return NULL;
+      }
+    
+    num = buf_idx + 16;
+    ctx->imported_vframes = realloc(ctx->imported_vframes, num * sizeof(*ctx->imported_vframes));
+    memset(ctx->imported_vframes + ctx->imported_vframes_alloc, 0,
+           (num - ctx->imported_vframes_alloc) * sizeof(*ctx->imported_vframes));
+    ctx->imported_vframes_alloc = num;
+    }
+  ctx->imported_vframes[buf_idx] = gavl_hw_video_frame_create_hw(ctx, NULL);
+  return ctx->imported_vframes[buf_idx];
+  }
+
+/* ctx1 exports frame to ctx2 */
+static int export_frame(gavl_hw_context_t * ctx1,
+                        gavl_hw_context_t * ctx2,
+                        gavl_video_frame_t * src,
+                        gavl_video_frame_t ** dst,
+                        gavl_video_format_t * fmt)
+  {
+  if(src->buf_idx >= 0)
+    {
+    if((src->buf_idx < ctx2->imported_vframes_alloc) &&
+       (ctx2->imported_vframes[src->buf_idx]))
+      {
+      *dst = ctx2->imported_vframes[src->buf_idx];
+      return 1;
+      }
+    else
+      {
+      *dst = create_import_frame(ctx2, src->buf_idx, fmt);
+      return ctx1->funcs->export_video_frame(ctx1, fmt, src, *dst);
+      }
+    }
+  else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot transfer video frame (need buf_idx)");
+    return 0;
+    }
+  }
+
+/* ctx2 imports frame from ctx1 */
+static int import_frame(gavl_hw_context_t * ctx1,
+                        gavl_hw_context_t * ctx2,
+                        gavl_video_frame_t * src,
+                        gavl_video_frame_t ** dst,
+                        gavl_video_format_t * fmt)
+  {
+  if(src->buf_idx >= 0)
+    {
+    if((src->buf_idx < ctx2->imported_vframes_alloc) &&
+       (ctx2->imported_vframes[src->buf_idx]))
+      {
+      *dst = ctx2->imported_vframes[src->buf_idx];
+      return 1;
+      }
+    else
+      {
+      *dst = create_import_frame(ctx2, src->buf_idx, fmt);
+      return ctx2->funcs->import_video_frame(ctx2, fmt, src, *dst);
+      }
+    }
+  else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot transfer video frame (need buf_idx)");
+    return 0;
+    }
+  }
+
+int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
+                                     gavl_hw_context_t * ctx2,
+                                     gavl_video_frame_t ** frame2,
+                                     gavl_video_format_t * fmt)
+  {
+  gavl_hw_context_t * ctx1 = frame1->hwctx;
+  gavl_hw_type_t t = gavl_hw_ctx_get_type(ctx1);
+    
+  if(gavl_hw_ctx_imports_type(ctx2, t))
+    {
+    return import_frame(ctx1, ctx2, frame1, frame2, fmt);
+    }
+
+  t = gavl_hw_ctx_get_type(ctx2);
+  
+  if(gavl_hw_ctx_exports_type(ctx1, t))
+    {
+    return export_frame(ctx1, ctx2, frame1, frame2, fmt);
+    }
+
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot transfer video frame");
+  return 0;
   }

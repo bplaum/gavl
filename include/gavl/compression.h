@@ -377,7 +377,7 @@ typedef struct
   
   int fds[GAVL_MAX_PLANES];
   int num_fds;
-  
+  int buf_idx;
   } gavl_packet_t;
 
 /** \brief Initialize a packet

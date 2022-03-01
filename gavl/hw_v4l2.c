@@ -26,6 +26,7 @@
 
 
 #include <gavl/hw_v4l2.h>
+#include <gavl/hw_dmabuf.h>
 
 #include <hw_private.h>
 
@@ -958,8 +959,8 @@ static void buffer_to_video_frame(gavl_v4l2_device_t * dev, gavl_v4l2_buffer_t *
     }
 
   dev->vframe->hwctx = dev->hwctx;
-  dev->vframe->user_data = buf;
-  
+  dev->vframe->storage = buf;
+  dev->vframe->buf_idx = buf->index;
   }
 
 
@@ -1790,6 +1791,86 @@ static void destroy_native_v4l2(void * native)
   gavl_v4l2_device_close(native);
   }
 
+static int exports_type_v4l2(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+  {
+  switch(hw)
+    {
+    case GAVL_HW_DMABUFFER:
+      return 1;
+      break;
+    default:
+      break;
+    }
+  return 0;
+  }
+
+static int export_video_frame_v4l2(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+                                   gavl_video_frame_t * src, gavl_video_frame_t * dst)
+  {
+  gavl_v4l2_device_t * dev = ctx->native;
+  gavl_hw_type_t dst_hw_type = gavl_hw_ctx_get_type(dst->hwctx);
+
+  switch(dst_hw_type)
+    {
+    case GAVL_HW_DMABUFFER:
+      {
+      int i;
+      gavl_dmabuf_video_frame_t * dma_frame = dst->storage;
+      gavl_v4l2_buffer_t * v4l2_storage = src->storage;
+
+      dma_frame->num_buffers = v4l2_storage->num_planes;
+      dma_frame->num_planes = gavl_pixelformat_num_planes(fmt->pixelformat);
+      dma_frame->fourcc = gavl_drm_fourcc_from_gavl(fmt->pixelformat);
+      
+      /* Export buffers */
+      for(i = 0; i < v4l2_storage->num_planes; i++)
+        {
+        struct v4l2_exportbuffer expbuf;
+    
+        memset(&expbuf, 0, sizeof(expbuf));
+        expbuf.type = v4l2_storage->type;
+        expbuf.index = v4l2_storage->index;
+        expbuf.plane = i;
+    
+        if(my_ioctl(dev->fd, VIDIOC_EXPBUF, &expbuf) == -1)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Exporting buffer failed: %s", strerror(errno));
+          return 0;
+          }
+        dma_frame->buffers[i].fd = expbuf.fd;
+        }
+      
+      /* Setup planes */
+      for(i = 0; i < dma_frame->num_planes; i++)
+        {
+        dst->strides[i] = src->strides[i];
+
+        if(!i)
+          {
+          dma_frame->planes[i].buf_idx = 0;
+          dma_frame->planes[i].offset = 0;
+          }
+        else if(dma_frame->num_buffers == 1)
+          {
+          dma_frame->planes[i].buf_idx = 0;
+          dma_frame->planes[i].offset = src->planes[i] - src->planes[0];
+          }
+        else
+          {
+          dma_frame->planes[i].buf_idx = 1;
+          dma_frame->planes[i].offset = 0;
+          }
+        }
+      
+      dst->buf_idx = src->buf_idx;
+      }
+    default:
+      break;
+    }
+  return 0;
+  }
+
+
 static const gavl_hw_funcs_t funcs =
   {
    .destroy_native         = destroy_native_v4l2,
@@ -1801,6 +1882,8 @@ static const gavl_hw_funcs_t funcs =
    //    .video_frame_to_hw      = video_frame_to_hw_egl,
    //    .video_format_adjust    = gavl_gl_adjust_video_format,
    //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
+    .can_export             = exports_type_v4l2,
+    .export_video_frame = export_video_frame_v4l2,
   };
 
 
@@ -1811,7 +1894,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_v4l2(const gavl_dictionary_t * dev_info)
   gavl_hw_context_t * ret;
   gavl_v4l2_device_t * dev = gavl_v4l2_device_open(dev_info);
   
-  ret = gavl_hw_context_create_internal(dev, &funcs, GAVL_HW_V4L2_BUFFER);
+  ret = gavl_hw_context_create_internal(dev, &funcs, GAVL_HW_V4L2_BUFFER, GAVL_HW_SUPPORTS_VIDEO);
   dev->hwctx = ret;
   return ret;
   }
@@ -1826,7 +1909,7 @@ int gavl_v4l2_export_dmabuf_video(gavl_video_frame_t * frame)
   int i;
   gavl_v4l2_device_t * dev = frame->hwctx->native;
 
-  gavl_v4l2_buffer_t * buf = frame->user_data;
+  gavl_v4l2_buffer_t * buf = frame->storage;
   
   if(buf->flags & GAVL_V4L2_BUFFER_FLAG_DMA)
     return 1;

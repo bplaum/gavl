@@ -11,6 +11,7 @@ gavldsp.h \
 gavlsocket.h \
 http.h \
 hw.h \
+hw_dmabuf.h \
 hw_egl.h \
 hw_gl.h \
 hw_v4l2.h \

@@ -23,11 +23,21 @@
 #define HW_H_INCLUDED
 
 #include <gavl/gavldefs.h>
+#include <gavl/compression.h>
 
 /**
  * @file hw.h
  * external api header.
  */
+
+/* Support flags for hardware contexts */
+
+#define GAVL_HW_SUPPORTS_AUDIO       (1<<0)
+#define GAVL_HW_SUPPORTS_VIDEO       (1<<1)
+#define GAVL_HW_SUPPORTS_PACKETS     (1<<2)
+#define GAVL_HW_SUPPORTS_SHARED      (1<<3) // Data can be shared among processes
+// #define GAVL_HW_SUPPORTS_DMA_EXPORT  (1<<4) // Buffer can be exported as Linux DMA buffer
+// #define GAVL_HW_SUPPORTS_DMA_IMPORT  (1<<5) // Buffer can be imported as Linux DMA buffer
 
 typedef enum
   {
@@ -36,17 +46,30 @@ typedef enum
     GAVL_HW_EGL_GLES_X11,   // EGL Texture (associated with X11 connection)
     // GAVL_HW_EGL_WAYLAND, // EGL Texture (wayland) Not implemented yet
     GAVL_HW_VAAPI_X11,
-    GAVL_HW_V4L2_BUFFER, // V4L2 buffers (mmaped, optionaly also with DMA handles)
+    GAVL_HW_V4L2_BUFFER, // V4L2 buffers (mmapped)
+    GAVL_HW_DMABUFFER,   // DMA handles, can be exported by V4L and im- and exported by OpenGL
+    GAVL_HW_SHM,         // Shared memory, which can be sent to other processes
   } gavl_hw_type_t;
 
 /* Global handle for accessing a piece of hardware */
 typedef struct gavl_hw_context_s gavl_hw_context_t;
 
-GAVL_PUBLIC void gavl_hw_supported(gavl_hw_type_t type);
+GAVL_PUBLIC int gavl_hw_supported(gavl_hw_type_t type);
 
 GAVL_PUBLIC const char * gavl_hw_type_to_string(gavl_hw_type_t type);
 
+GAVL_PUBLIC int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
+GAVL_PUBLIC int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
+
 GAVL_PUBLIC void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx);
+
+GAVL_PUBLIC int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx);
+
+GAVL_PUBLIC int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
+                                                 gavl_hw_context_t * ctx2,
+                                                 gavl_video_frame_t ** frame2,
+                                                 gavl_video_format_t * fmt);
+
 
 /* Returned array must be free()d */
 GAVL_PUBLIC gavl_pixelformat_t *
@@ -88,5 +111,18 @@ GAVL_PUBLIC int gavl_video_frame_ram_to_hw(const gavl_video_format_t * fmt,
 GAVL_PUBLIC int gavl_video_frame_hw_to_ram(const gavl_video_format_t * fmt,
                                            gavl_video_frame_t * dst,
                                            gavl_video_frame_t * src);
+
+GAVL_PUBLIC int gavl_video_frame_hw_to_packet(gavl_hw_context_t * ctx,
+                                              gavl_video_frame_t * src,
+                                              gavl_packet_t * p);
+
+GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_import_from_packet(gavl_hw_context_t * ctx,
+                                                                        gavl_packet_t * p);
+
+GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_import_from_frame(gavl_hw_context_t * ctx,
+                                                                       gavl_video_frame_t * p);
+
+GAVL_PUBLIC int gavl_video_frame_hw_can_transfer(gavl_hw_context_t * from,
+                                                 gavl_hw_context_t * to);
 
 #endif

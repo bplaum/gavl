@@ -143,52 +143,50 @@ void gavl_gl_adjust_video_format(gavl_hw_context_t * ctx,
 
 static int get_frame_planes(const gavl_video_frame_t * f)
   {
-  int num_planes = 0;
-  const GLuint * tex = f->user_data;
-  
-  while(tex[num_planes] != GL_NONE)
-    num_planes++;
-  return num_planes;
+  const gavl_gl_frame_info_t * info = f->storage;
+  return info->num_textures;
   }
                             
 /* The following functions require a current GL context */
 gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
   {
   int i;
-  int num_planes = 1;
   GLenum type = 0, format = 0;
-  GLuint * tex;
   GLint internalformat;
 
-  GLsizei width = fmt->image_width;
-  GLsizei height = fmt->image_height;
+  GLsizei width;
+  GLsizei height;
 
   gavl_video_frame_t * ret;
+  gavl_gl_frame_info_t * info = calloc(1, sizeof(*info));
   
   ret = gavl_video_frame_create(NULL);
+  ret->storage = info;
   
-  tex = calloc(1, sizeof(*tex));
+  if(!fmt)
+    return ret;
+
+  width = fmt->image_width;
+  height = fmt->image_height;
 
   
   if(!gavl_get_gl_format(fmt->pixelformat, &format, &type))
     return 0;
   
-  num_planes = gavl_pixelformat_num_planes(fmt->pixelformat);
-
-  if(num_planes > 1)
+  info->num_textures = gavl_pixelformat_num_planes(fmt->pixelformat);
+  info->texture_target = GL_TEXTURE_2D;
+  
+  if(info->num_textures > 1)
     internalformat = GL_RED;
   else
     internalformat = GL_RGBA;
   
-  tex = calloc(num_planes+1, sizeof(*tex));
-  
-  glGenTextures(num_planes, tex);
-  tex[num_planes] = GL_NONE;
+  glGenTextures(info->num_textures, info->textures);
 
-  for(i = 0; i < num_planes; i++)
+  for(i = 0; i < info->num_textures; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(GL_TEXTURE_2D, tex[i]);
+    glBindTexture(GL_TEXTURE_2D, info->textures[i]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
@@ -217,20 +215,18 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
     gavl_gl_log_error("glTexImage2D");
     
     }
-  
-  
-  ret->user_data = tex;
   return ret;
   }
 
 void gavl_gl_destroy_frame(gavl_video_frame_t * f)
   {
-  if(f->user_data)
+  gavl_gl_frame_info_t * info;
+
+  if(f->storage)
     {
-    int num_planes = get_frame_planes(f);
-    GLuint * tex = f->user_data;
-    glDeleteTextures(num_planes, tex);
-    free(tex);
+    info = f->storage;
+    glDeleteTextures(info->num_textures, info->textures);
+    free(info);
     }
   f->hwctx = NULL;
   gavl_video_frame_destroy(f);
@@ -243,17 +239,18 @@ void gavl_gl_frame_to_ram(const gavl_video_format_t * fmt,
   {
   int i;
   GLenum type = 0, format = 0;
-  int num_planes = get_frame_planes(src);
-  const GLuint * tex = src->user_data;
+  gavl_gl_frame_info_t * info;
+
+  info = src->storage;
   
   gavl_get_gl_format(fmt->pixelformat, &format, &type);
   
-  for(i = 0; i < num_planes; i++)
+  for(i = 0; i < info->num_textures; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(GL_TEXTURE_2D, tex[i]);
+    glBindTexture(GL_TEXTURE_2D, info->textures[i]);
 
-    if(num_planes == 1)
+    if(info->num_textures == 1)
       {
       /* Implies i = 0 */
       glPixelStorei(GL_PACK_ROW_LENGTH, dst->strides[i] / gavl_pixelformat_bytes_per_pixel(fmt->pixelformat));
@@ -275,8 +272,9 @@ void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
   int i;
   GLenum type = 0, format = 0;
   int num_planes = get_frame_planes(dst);
-  GLuint * tex = dst->user_data;
   int width, height;
+
+  gavl_gl_frame_info_t * info = dst->storage;
   
   gavl_get_gl_format(fmt->pixelformat, &format, &type);
 
@@ -286,9 +284,8 @@ void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
   for(i = 0; i < num_planes; i++)
     {
     glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(GL_TEXTURE_2D, tex[i]);
+    glBindTexture(GL_TEXTURE_2D, info->textures[i]);
 
-    
     if(num_planes == 1)
       {
       /* Implies i = 0 */
