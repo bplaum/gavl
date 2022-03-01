@@ -149,7 +149,7 @@ gavl_video_frame_t * gavl_vaapi_video_frame_create_hw(gavl_hw_context_t * ctx,
     goto fail;
   
   ret = create_common(ctx);
-  ret->user_data = surf;
+  ret->storage = surf;
   
   return ret;
 
@@ -173,7 +173,7 @@ static int map_frame(gavl_hw_vaapi_t * priv, gavl_video_frame_t * f)
   VAStatus result;
   VAImage * image;
 
-  image = f->user_data;
+  image = f->storage;
   
   /* Map */
   if((result = vaMapBuffer(priv->dpy, image->buf, &buf)) != VA_STATUS_SUCCESS)
@@ -217,7 +217,7 @@ void gavl_vaapi_unmap_frame(gavl_video_frame_t * f)
   {
   VAImage * image;
   gavl_hw_vaapi_t * priv = f->hwctx->native;
-  image = f->user_data;
+  image = f->storage;
   vaUnmapBuffer(priv->dpy, image->buf);
   }
 
@@ -259,7 +259,7 @@ video_frame_create_ram(gavl_hw_context_t * ctx,
                              &image->image)) != VA_STATUS_SUCCESS)
     goto fail;
   
-  ret->user_data = image;
+  ret->storage = image;
 
   if(!map_frame(priv, ret))
     goto fail;
@@ -298,7 +298,7 @@ gavl_vaapi_video_frame_create_ovl(gavl_hw_context_t * ctx,
   if(!(ret = video_frame_create_ram(ctx, fmt, 1)))
     goto fail;
   
-  image = ret->user_data;
+  image = ret->storage;
   
   if((result = vaCreateSubpicture(priv->dpy,
                                   image->image.image_id,
@@ -323,7 +323,7 @@ void gavl_vaapi_video_frame_destroy(gavl_video_frame_t * f)
   if(f->planes[0])
     {
     vaapi_frame_t * image;
-    image = f->user_data;
+    image = f->storage;
 
     if(image->ovl != VA_INVALID_ID)
       vaDestroySubpicture(priv->dpy, image->ovl);
@@ -332,7 +332,7 @@ void gavl_vaapi_video_frame_destroy(gavl_video_frame_t * f)
     }
   else
     {
-    VASurfaceID * surf = f->user_data;
+    VASurfaceID * surf = f->storage;
     vaDestroySurfaces(priv->dpy, surf, 1);
     }
   gavl_video_frame_null(f);
@@ -350,8 +350,8 @@ int gavl_vaapi_video_frame_to_ram(const gavl_video_format_t * fmt,
   VAImageFormat * format;
   gavl_hw_vaapi_t * priv = src->hwctx->native;
 
-  image = dst->user_data;
-  surf = src->user_data;
+  image = dst->storage;
+  surf = src->storage;
   
   vaUnmapBuffer(priv->dpy, image->buf);
   
@@ -411,8 +411,8 @@ int gavl_vaapi_video_frame_to_hw(const gavl_video_format_t * fmt,
   VAStatus result;
   gavl_hw_vaapi_t * priv = src->hwctx->native;
 
-  image = src->user_data;
-  surf = dst->user_data;
+  image = src->storage;
+  surf = dst->storage;
 
   gavl_vaapi_video_frame_swap_bytes(fmt, src, 0);
   
@@ -574,7 +574,7 @@ void gavl_vaapi_cleanup(void * priv)
 
 VASurfaceID gavl_vaapi_get_surface_id(const gavl_video_frame_t * f)
   {
-  VASurfaceID * surf = f->user_data;
+  VASurfaceID * surf = f->storage;
   return *surf;
   }
 
@@ -582,26 +582,26 @@ VASurfaceID gavl_vaapi_get_surface_id(const gavl_video_frame_t * f)
 void gavl_vaapi_set_surface_id(gavl_video_frame_t * f, VASurfaceID id)
   {
   VASurfaceID * surf;
-  if(!f->user_data)
+  if(!f->storage)
     {
     surf = malloc(sizeof(*surf));
-    f->user_data = surf;
+    f->storage = surf;
     }
   else
-    surf = f->user_data;
+    surf = f->storage;
   
   *surf = id;
   }
 
 VASubpictureID gavl_vaapi_get_subpicture_id(const gavl_video_frame_t * f)
   {
-  vaapi_frame_t * frame = f->user_data;
+  vaapi_frame_t * frame = f->storage;
   return frame->ovl;
   }
 
 VAImageID gavl_vaapi_get_image_id(const gavl_video_frame_t * f)
   {
-  vaapi_frame_t * frame = f->user_data;
+  vaapi_frame_t * frame = f->storage;
   return frame->image.image_id;
   }
 
@@ -613,7 +613,7 @@ void gavl_vaapi_video_frame_swap_bytes(const gavl_video_format_t * fmt,
   uint32_t vaapi_masks[4];
   gavl_hw_vaapi_t * priv = f->hwctx->native;
   
-  vaapi_frame_t * frame = f->user_data;
+  vaapi_frame_t * frame = f->storage;
   
   if(!(gavl_masks = gavl_pixelformat_get_masks(fmt->pixelformat)))
     return;

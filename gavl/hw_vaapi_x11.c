@@ -68,6 +68,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_vaapi_x11(Display * dpy)
   int major, minor;
   vaapi_x11_t * priv;
   VAStatus result;
+  int support_flags = GAVL_HW_SUPPORTS_VIDEO;
   
   priv = calloc(1, sizeof(*priv));
 
@@ -98,7 +99,8 @@ gavl_hw_context_t * gavl_hw_ctx_create_vaapi_x11(Display * dpy)
     return NULL;
     }
 
-  return gavl_hw_context_create_internal(priv, &funcs, GAVL_HW_VAAPI_X11);
+  return gavl_hw_context_create_internal(priv, &funcs,
+                                         GAVL_HW_VAAPI_X11, support_flags);
   }
 
 Display * gavl_hw_ctx_vaapi_x11_get_display(gavl_hw_context_t * ctx)
