@@ -28,6 +28,19 @@
 /* No seek support */
 #define GAVF_FLAG_STREAMING       (1<<5)
 
+/* IO flags */
+
+#define GAVF_IO_CAN_READ          (1<<0)
+#define GAVF_IO_CAN_WRITE         (1<<1)
+#define GAVF_IO_CAN_SEEK          (1<<2)
+#define GAVF_IO_IS_DUPLEX         (1<<3) // Duplex means we have the backchannel for messages
+#define GAVF_IO_IS_REGULAR        (1<<4)
+#define GAVF_IO_IS_SOCKET         (1<<5)
+#define GAVF_IO_IS_UNIX_SOCKET    (1<<6)
+#define GAVF_IO_IS_LOCAL          (1<<7)
+#define GAVF_IO_IS_PIPE           (1<<8)
+#define GAVF_IO_IS_TTY            (1<<9)
+
 /* gavf file structure */
 
 /*
@@ -185,6 +198,7 @@ gavf_io_t * gavf_io_create(gavf_read_func  r,
                            gavf_seek_func  s,
                            gavf_close_func c,
                            gavf_flush_func f,
+                           int flags,
                            void * data);
 
 GAVL_PUBLIC
@@ -217,6 +231,9 @@ gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int flags);
 
 GAVL_PUBLIC
 int gavf_io_get_socket(gavf_io_t * io);
+
+GAVL_PUBLIC
+int gavf_io_get_flags(gavf_io_t * io);
 
 GAVL_PUBLIC
 gavf_io_t * gavf_io_create_sub_read(gavf_io_t * io, int64_t offset, int64_t len);

@@ -16,6 +16,7 @@ void gavf_io_init(gavf_io_t * ret,
                   gavf_seek_func  s,
                   gavf_close_func c,
                   gavf_flush_func f,
+                  int flags,
                   void * priv)
   {
   memset(ret, 0, sizeof(*ret));
@@ -25,6 +26,7 @@ void gavf_io_init(gavf_io_t * ret,
   ret->close_func = c;
   ret->flush_func = f;
   ret->priv = priv;
+  ret->flags = flags;
   }
 
 void gavf_io_set_nonblock_read(gavf_io_t * io, gavf_read_func read_nonblock)
@@ -57,13 +59,14 @@ gavf_io_t * gavf_io_create(gavf_read_func  r,
                            gavf_seek_func  s,
                            gavf_close_func c,
                            gavf_flush_func f,
+                           int flags,
                            void * priv)
   {
   gavf_io_t * ret;
   ret = malloc(sizeof(*ret));
   if(!ret)
     return NULL;
-  gavf_io_init(ret, r, w, s, c, f, priv);
+  gavf_io_init(ret, r, w, s, c, f, flags, priv);
   return ret;
   }
 
@@ -1281,6 +1284,7 @@ gavf_io_t * gavf_io_create_sub_read(gavf_io_t * io, int64_t offset, int64_t len)
                        seek_func,
                        close_sub,
                        NULL,
+                       io->flags,
                        s);
   
   return ret;
@@ -1322,6 +1326,7 @@ gavf_io_t * gavf_io_create_sub_write(gavf_io_t * io)
                        seek_func,
                        close_sub,
                        flush_sub,
+                       io->flags,
                        s);
   return ret;
   }
@@ -1432,4 +1437,9 @@ int gavf_io_read_line(gavf_io_t * io, char ** ret, int * ret_alloc, int max_len)
   *pos = '\0';
   return 1;
 
+  }
+
+int gavf_io_get_flags(gavf_io_t * io)
+  {
+  return io->flags;
   }

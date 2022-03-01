@@ -79,6 +79,7 @@ gavf_io_t * gavf_io_create_buf_read()
                         seek_buf,
                         close_buf,
                         NULL,
+                        GAVF_IO_CAN_READ | GAVF_IO_CAN_SEEK,
                         buf);
   }
 
@@ -91,6 +92,7 @@ gavf_io_t * gavf_io_create_buf_write()
                         seek_buf,
                         close_buf,
                         NULL,
+                        GAVF_IO_CAN_WRITE | GAVF_IO_CAN_SEEK,
                         buf);
   
   }
@@ -113,6 +115,7 @@ void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf)
                seek_buf,
                NULL,
                NULL,
+               GAVF_IO_CAN_READ | GAVF_IO_CAN_SEEK,
                buf);
   }
 
@@ -124,5 +127,6 @@ void gavf_io_init_buf_write(gavf_io_t * io, gavl_buffer_t * buf)
                seek_buf,
                NULL,
                NULL,
+               GAVF_IO_CAN_WRITE | GAVF_IO_CAN_SEEK,
                buf);
   }

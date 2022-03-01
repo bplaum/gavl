@@ -29,6 +29,8 @@ struct gavl_io_s
   void * msg_data;
   
   gavl_buffer_t get_buf;
+
+  int flags;
   };
 
 void gavf_io_init(gavf_io_t * ret,
@@ -37,6 +39,7 @@ void gavf_io_init(gavf_io_t * ret,
                   gavf_seek_func  s,
                   gavf_close_func c,
                   gavf_flush_func f,
+                  int flags,
                   void * priv);
 
 

@@ -153,6 +153,9 @@ GAVL_PUBLIC
 int gavl_socket_is_local(int fd);
 
 GAVL_PUBLIC
+int gavl_socket_is_unix(int fd);
+
+GAVL_PUBLIC
 int gavl_socket_can_read(int fd, int milliseconds);
 
 GAVL_PUBLIC

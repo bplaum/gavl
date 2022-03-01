@@ -288,18 +288,19 @@ static int poll_tls(void * priv, int timeout)
   return gavl_socket_can_read(p->fd, timeout);
   }
 
-gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flags)
+gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int socket_flags)
   {
   tls_t * p;
   int result;
   gavf_io_t * io;
+  int flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
 
   tls_global_init();
 
   
   p = calloc(1, sizeof(*p));
 
-  p->flags = flags;
+  p->flags = socket_flags;
   p->fd = fd;
   
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Establishing TLS connection with %s", server_name);
@@ -364,6 +365,7 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flag
                       NULL,
                       close_tls,
                       flush_tls,
+                      flags,
                       p);
   
   gavf_io_set_nonblock_read(io, read_nonblock_tls);

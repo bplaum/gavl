@@ -141,22 +141,30 @@ static int poll_socket(void * priv, int timeout)
     return gavl_socket_can_read(s->fd, timeout);
   }
 
-gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int flags)
+gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)
   {
   gavf_io_t * ret = NULL;
-  
+  int flags;
   socket_t * s = calloc(1, sizeof(*s));
 
-  s->flags = flags;
+  s->flags = socket_flags;
   s->timeout = read_timeout;
   s->fd = fd;
 
+  flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
+
+  if(gavl_socket_is_local(fd))
+    flags |= GAVF_IO_IS_LOCAL;
+  if(gavl_socket_is_unix(fd))
+    flags |= GAVF_IO_IS_UNIX_SOCKET;
+  
   gavl_buffer_alloc(&s->buf, BUFFER_SIZE);
   
   ret = gavf_io_create(read_socket, write_socket,
                        NULL, // seek
                        close_socket,
                        NULL, // flush
+                       flags,
                        s);
 
   gavf_io_set_poll_func(ret, poll_socket);

@@ -823,10 +823,24 @@ int gavl_socket_read_line(int fd, char ** ret,
   return 1;
   }
 
+int gavl_socket_is_unix(int fd)
+  {
+  socklen_t slen;
+  struct sockaddr_storage us;
+  slen = sizeof(us);
+  if(getsockname(fd, (struct sockaddr*)&us, &slen) == -1)
+    return 0;
+
+  if(us.ss_family == AF_LOCAL)
+    return 1;
+  else
+    return 0;
+  }
+
 int gavl_socket_is_local(int fd)
   {
   struct sockaddr_storage us;
-  //  struct sockaddr_storage them;
+  struct sockaddr_storage them;
   socklen_t slen;
   slen = sizeof(us);
   
@@ -836,7 +850,7 @@ int gavl_socket_is_local(int fd)
   if(slen == 0 || us.ss_family == AF_LOCAL)
     return 1;
 
-#if 0
+#if 1
   if(us.ss_family == AF_INET)
     {
     struct sockaddr_in * a1, *a2;

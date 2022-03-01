@@ -2350,3 +2350,4 @@ void gavf_clear_eof(gavf_t * g)
   {
   GAVF_CLEAR_FLAG(g, GAVF_FLAG_EOF);
   }
+
