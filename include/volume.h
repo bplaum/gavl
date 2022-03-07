@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef VOLUME_H_INCLUDED
+#define VOLUME_H_INCLUDED
+
 typedef struct
   {
   void (*set_volume_s8)(gavl_volume_control_t * v, void * samples,
@@ -67,3 +70,5 @@ void gavl_init_volume_funcs_c(gavl_volume_funcs_t*);
 #ifdef ARCH_X86
 // void gavl_init_volume_funcs_mmx(gavl_volume_funcs_t*);
 #endif
+
+#endif // VOLUME_H_INCLUDED

@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef _GAVL_DEINTERLACE_H_
-#define _GAVL_DEINTERLACE_H_
+#ifndef DEINTERLACE_H_INCLUDED
+#define DEINTERLACE_H_INCLUDED
 
 /* Private structures for the deinterlacer */
 
@@ -106,4 +106,4 @@ gavl_find_deinterlacer_blend_funcs_3dnow(gavl_video_deinterlace_blend_func_table
 #endif
 
 
-#endif // _GAVL_DEINTERLACE_H_
+#endif // DEINTERLACE_H_INCLUDED

@@ -1,3 +1,6 @@
+#ifndef GAVL_LOG_H_INCLUDED
+#define GAVL_LOG_H_INCLUDED
+
 #include <gavl/gavl.h>
 #include <gavl/msg.h>
 
@@ -52,3 +55,5 @@ void gavl_set_log_mask(int mask);
 
 GAVL_PUBLIC
 void gavl_set_log_verbose(int level);
+
+#endif // GAVL_LOG_H_INCLUDED

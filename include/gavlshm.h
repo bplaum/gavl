@@ -1,3 +1,7 @@
+#ifndef GAVL_SHM_H_INCLUDED
+#define GAVL_SHM_H_INCLUDED
+
+
 #include <limits.h>
 #include <inttypes.h>
 
@@ -29,3 +33,4 @@ void gavl_shm_pool_destroy(gavl_shm_pool_t *);
 gavl_shm_t * gavl_shm_pool_get_read(gavl_shm_pool_t *, int id);
 gavl_shm_t * gavl_shm_pool_get_write(gavl_shm_pool_t *);
 
+#endif // GAVL_SHM_H_INCLUDED

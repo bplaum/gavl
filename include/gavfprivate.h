@@ -1,3 +1,6 @@
+#ifndef GAVFPRIVATE_H_INCLUDED
+#define GAVFPRIVATE_H_INCLUDED
+
 
 #include <gavl/gavf.h>
 
@@ -353,3 +356,5 @@ int gavf_footer_write(gavf_t * g);
 void gavf_footer_init(gavf_t * g);
 
 int gavf_program_header_write(gavf_t * g);
+
+#endif // GAVFPRIVATE_H_INCLUDED

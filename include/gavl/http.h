@@ -1,3 +1,5 @@
+#ifndef GAVLHTTP_H_INCLUDED
+#define GAVLHTTP_H_INCLUDED
 
 #include <gavl/gavf.h>
 
@@ -94,3 +96,4 @@ void gavl_http_header_set_empty_var(gavl_dictionary_t * h, const char * name);
 GAVL_PUBLIC
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 
+#endif // GAVLHTTP_H_INCLUDED

@@ -1,4 +1,9 @@
 
+#ifndef GAVL_HW_V4L2_H_INCLUDED
+#define GAVL_HW_V4L2_H_INCLUDED
+
+
+
 #include <gavl/connectors.h>
 #include <sys/types.h>
 
@@ -109,3 +114,5 @@ GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_v4l2(const gavl_dictionary_t 
 GAVL_PUBLIC gavl_v4l2_device_t * gavl_hw_ctx_v4l2_get_device(gavl_hw_context_t * ctx);
 
 GAVL_PUBLIC int gavl_v4l2_export_dmabuf_video(gavl_video_frame_t * frame);
+
+#endif // GAVL_HW_V4L2_H_INCLUDED

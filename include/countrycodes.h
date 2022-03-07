@@ -1,3 +1,7 @@
+#ifndef COUNTRYCODES_H_INCLUDED
+#define COUNTRYCODES_H_INCLUDED
+
+
 typedef struct
   {
   const char * label;
@@ -9,3 +13,4 @@ typedef struct
 extern const gavl_country_t gavl_countries[];
 
 
+#endif // COUNTRYCODES_H_INCLUDED

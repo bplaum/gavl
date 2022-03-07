@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
  
-#ifndef TIMECODE_H_INCLUDED
-#define TIMECODE_H_INCLUDED
+#ifndef GAVL_TIMECODE_H_INCLUDED
+#define GAVL_TIMECODE_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
@@ -212,5 +212,5 @@ void gavl_timecode_prettyprint_short(gavl_timecode_t tc,
 }
 #endif
 
-#endif /* TIMECODE_H_INCLUDED */
+#endif /* GAVL_TIMECODE_H_INCLUDED */
 

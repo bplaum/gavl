@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef HW_H_INCLUDED
-#define HW_H_INCLUDED
+#ifndef GAVL_HW_H_INCLUDED
+#define GAVL_HW_H_INCLUDED
 
 #include <gavl/gavldefs.h>
 #include <gavl/compression.h>
@@ -125,4 +125,4 @@ GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_import_from_frame(gavl_hw_c
 GAVL_PUBLIC int gavl_video_frame_hw_can_transfer(gavl_hw_context_t * from,
                                                  gavl_hw_context_t * to);
 
-#endif
+#endif // GAVL_HW_H_INCLUDED

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef ARITH128_H_INCLUDED
+#define ARITH128_H_INCLUDED
+
+
 /* 128 bit arithmetic routines needed for overflow save
  * 64 bit rescaling functions.
  *
@@ -48,3 +52,5 @@ void gavl_int128_div(gavl_int128_t * n, int64_t d, gavl_int128_t * ret);
 
 
 void gavl_int128_copy(gavl_int128_t *dst, gavl_int128_t * src);
+
+#endif // ARITH128_H_INCLUDED

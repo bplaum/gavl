@@ -1,3 +1,6 @@
+#ifndef FLOAT_CAST_H_INCLUDED
+#define FLOAT_CAST_H_INCLUDED
+
 /*
 ** Copyright (C) 2001-2002 Erik de Castro Lopo <erikd@zip.com.au>
 **  
@@ -201,3 +204,4 @@
 
 
 
+#endif // FLOAT_CAST_H_INCLUDED

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef SAMPLEFORMAT_H_INCLUDED
+#define SAMPLEFORMAT_H_INCLUDED
+
+
 typedef struct
   {
 
@@ -117,3 +121,5 @@ gavl_find_sampleformat_converter(gavl_sampleformat_table_t * t,
 
 void gavl_destroy_sampleformat_table(gavl_sampleformat_table_t * t);
 
+
+#endif // SAMPLEFORMAT_H_INCLUDED

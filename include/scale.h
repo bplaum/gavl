@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef _GAVL_SCALE_H_
-#define _GAVL_SCALE_H_
+#ifndef SCALE_H_INCLUDED
+#define SCALE_H_INCLUDED
 
 #include <config.h>
 #include "video.h"
@@ -430,4 +430,4 @@ struct gavl_video_scaler_s
   };
 
 
-#endif // _GAVL_SCALE_H_
+#endif // SCALE_H_INCLUDED

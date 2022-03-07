@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef DSP_H_INCLUDED
+#define DSP_H_INCLUDED
+
 struct gavl_dsp_context_s
   {
   int quality;
@@ -45,3 +48,5 @@ void gavl_dsp_init_sse(gavl_dsp_funcs_t * funcs,
 void gavl_dsp_init_ssse3(gavl_dsp_funcs_t * funcs, 
                          int quality);
 #endif
+
+#endif // DSP_H_INCLUDED

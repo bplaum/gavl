@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef BLEND_H_INCLUDED
+#define BLEND_H_INCLUDED
+
+
 #include <gavl/connectors.h>
 
 typedef void (*gavl_blend_func_t)(gavl_overlay_blend_context_t * ctx,
@@ -52,3 +56,4 @@ gavl_find_blend_func_c(gavl_overlay_blend_context_t * ctx,
                        gavl_pixelformat_t * overlay_format);
 
                        
+#endif // BLEND_H_INCLUDED

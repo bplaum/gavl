@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef INTERLEAVE_H_INCLUDED
+#define INTERLEAVE_H_INCLUDED
+
+
 /* Interleaving functions */
 
 typedef struct
@@ -93,3 +97,5 @@ gavl_find_interleave_converter(gavl_interleave_table_t *,
                                gavl_audio_format_t * out);
 
 void gavl_init_interleave_funcs_c(gavl_interleave_table_t * t);
+
+#endif // INTERLEAVE_H_INCLUDED

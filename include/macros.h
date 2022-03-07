@@ -19,9 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef _GAVL_MACROS_H_
-
-#define _GAVL_MACROS_H_
+#ifndef MACROS_H_INCLUDED
+#define MACROS_H_INCLUDED
 
 #define GAVL_LOOP_HEAD(loop_i, loop_n) \
 loop_i = (loop_n) + 1; \
@@ -30,4 +29,4 @@ while(--loop_i) \
   
 #define GAVL_LOOP_TAIL }
 
-#endif //  _GAVL_MACROS_H_
+#endif // MACROS_H_INCLUDED

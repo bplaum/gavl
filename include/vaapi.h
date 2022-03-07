@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef VAAPI_H_INCLUDED
+#define VAAPI_H_INCLUDED
+
+
 #include <va/va.h>
 #include <hw_private.h>
 
@@ -75,3 +79,5 @@ void gavl_vaapi_cleanup(void * priv);
 
 void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
                                     gavl_video_format_t * fmt);
+
+#endif // VAAPI_H_INCLUDED

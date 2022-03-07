@@ -23,6 +23,9 @@
 * Function table for pixelformats
  **************************************/
 
+#ifndef COLORSPACE_H_INCLUDED
+#define COLORSPACE_H_INCLUDED
+
 #include <macros.h>
 
 typedef struct
@@ -1274,3 +1277,5 @@ gavl_init_yuv_rgb_funcs_mmxext(gavl_pixelformat_function_table_t *,
 void gavl_init_rgb_yuv_funcs_sse3(gavl_pixelformat_function_table_t *,
                                   const gavl_video_options_t * opt);
 #endif
+
+#endif // COLORSPACE_H_INCLUDED

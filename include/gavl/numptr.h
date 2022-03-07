@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_NUMPTR_H_INCLUDED
+#define GAVL_NUMPTR_H_INCLUDED
+
 #include <gavl/gavldefs.h>
 
 /* ptr -> integer */
@@ -148,3 +151,5 @@ GAVL_PTR_2_DOUBLE64BE(const void * p);
 
 GAVL_PUBLIC double
 GAVL_PTR_2_DOUBLE64LE(const void * p);
+
+#endif // GAVL_NUMPTR_H_INCLUDED

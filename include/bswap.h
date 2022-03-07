@@ -27,8 +27,8 @@
  * byte swap.
  */
 
-#ifndef BSWAP_H
-#define BSWAP_H
+#ifndef BSWAP_H_INCLUDED
+#define BSWAP_H_INCLUDED
 
 #ifdef HAVE_BYTESWAP_H
 #include <byteswap.h>
@@ -120,4 +120,4 @@ static inline uint64_t bswap_64(uint64_t x)
 
 #endif  /* !HAVE_BYTESWAP_H */
 
-#endif /* BSWAP_H */
+#endif /* BSWAP_H_INCLUDED */

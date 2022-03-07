@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef ACCEL_H_INCLUDED
+#define ACCEL_H_INCLUDED
+
+
 /*
   Acceleration flags are NOT part of the public API
   because what the user wants in the end is to choose between
@@ -70,3 +74,5 @@ extern void * (*gavl_memcpy)(void *to, const void *from, size_t len);
 #define GAVL_LIKELY(exp)   exp
 
 #endif
+
+#endif // ACCEL_H_INCLUDED

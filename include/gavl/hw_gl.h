@@ -19,6 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_HW_GL_H_INCLUDED
+#define GAVL_HW_GL_H_INCLUDED
+
+
+
 // #include <gavl/gavldefs.h>
 
 typedef struct
@@ -58,3 +63,5 @@ GAVL_PUBLIC void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
 GAVL_PUBLIC const char * gavl_gl_get_error_string(GLenum err);
 GAVL_PUBLIC void gavl_gl_log_error(const char * funcname);
 GAVL_PUBLIC void gavl_gl_flush_errors();
+
+#endif // GAVL_HW_GL_H_INCLUDED

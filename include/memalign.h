@@ -19,9 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef _GAVL_MEMALIGN_H_
-#define _GAVL_MEMALIGN_H_
+#ifndef MEMALIGN_H_INCLUDED
+#define MEMALIGN_H_INCLUDED
+
 
 void * gavl_memalign(size_t boundary, size_t size);
 
-#endif //  _GAVL_MEMALIGN_H_
+#endif // MEMALIGN_H_INCLUDED

@@ -19,6 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_HW_VAAPI_H_INCLUDED
+#define GAVL_HW_VAAPI_H_INCLUDED
+
+
+
 /* VA-API specific backend functions */
 
 GAVL_PUBLIC VAImageID   gavl_vaapi_get_image_id(const gavl_video_frame_t *);
@@ -39,3 +44,5 @@ GAVL_PUBLIC void gavl_vaapi_unmap_frame(gavl_video_frame_t *);
 GAVL_PUBLIC void gavl_vaapi_video_frame_swap_bytes(const gavl_video_format_t * fmt,
                                                    gavl_video_frame_t * f,
                                                    int to_gavl);
+
+#endif // GAVL_HW_VAAPI_H_INCLUDED

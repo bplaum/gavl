@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_HW_VAAPI_X11_H_INCLUDED
+#define GAVL_HW_VAAPI_X11_H_INCLUDED
+
+
 #include <gavl/gavldefs.h>
 #include <X11/Xlib.h>
 
@@ -32,3 +36,5 @@ GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_vaapi_x11(Display * dpy);
 
 GAVL_PUBLIC Display * gavl_hw_ctx_vaapi_x11_get_display(gavl_hw_context_t *);
 GAVL_PUBLIC VADisplay gavl_hw_ctx_vaapi_x11_get_va_display(gavl_hw_context_t *);
+
+#endif // GAVL_HW_VAAPI_X11_H_INCLUDED

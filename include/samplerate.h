@@ -21,8 +21,8 @@
 **     http://www.mega-nerd.com/SRC/api.html
 */
 
-#ifndef SAMPLERATE_H
-#define SAMPLERATE_H
+#ifndef SAMPLERATE_H_INCLUDED
+#define SAMPLERATE_H_INCLUDED
 
 #ifdef __cplusplus
 extern "C" {
@@ -185,7 +185,7 @@ void gavl_src_float_to_short_array (const float *in, short *out, int len) ;
 }		/* extern "C" */
 #endif	/* __cplusplus */
 
-#endif	/* SAMPLERATE_H */
+#endif	/* SAMPLERATE_H_INCLUDED */
 
 /*
 ** Do not edit or modify anything in this comment block.

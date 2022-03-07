@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef TRANSFORM_H_INCLUDED 
+#define TRANSFORM_H_INCLUDED 
+
 #define MAX_TRANSFORM_FILTER 4
 
 typedef struct 
@@ -173,3 +176,5 @@ struct gavl_image_transform_s
   
   };
 
+
+#endif // TRANSFORM_H_INCLUDED 

@@ -19,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef MIX_H_INCLUDED
+#define MIX_H_INCLUDED
+
+
 typedef struct gavl_mix_output_channel_s gavl_mix_output_channel_t;
 
 typedef void (*gavl_mix_func_t)(gavl_mix_output_channel_t * channel,
@@ -72,3 +76,5 @@ void gavl_mix_audio(gavl_audio_convert_context_t * ctx);
 
 void gavl_setup_mix_funcs_c(gavl_mixer_table_t * c,
                             gavl_audio_format_t * f);
+
+#endif // MIX_H_INCLUDED

@@ -1,6 +1,6 @@
 
-#ifndef GAVF_H_INCLUDED
-#define GAVF_H_INCLUDED
+#ifndef GAVLGAVF_H_INCLUDED
+#define GAVLGAVF_H_INCLUDED
 
 
 #include <inttypes.h>
@@ -873,4 +873,4 @@ void gavf_options_copy(gavf_options_t * dst, const gavf_options_t * src);
 
 
 
-#endif // GAVF_H_INCLUDED
+#endif // GAVLGAVF_H_INCLUDED

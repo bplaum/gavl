@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_HW_EGL_H_INCLUDED
+#define GAVL_HW_EGL_H_INCLUDED
+
 
 #include <EGL/egl.h>
 
@@ -48,3 +51,5 @@ GAVL_PUBLIC int gavl_hw_egl_import_v4l2_buffer(gavl_hw_context_t * ctx,
                                                GLuint texture,
                                                gavl_video_frame_t * v4l2_frame);
 
+
+#endif // GAVL_HW_EGL_H_INCLUDED

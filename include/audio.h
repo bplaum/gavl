@@ -19,7 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef AUDIO_H_INCLUDED
+#define AUDIO_H_INCLUDED
+
+
 /* Private structures for the audio converter */
+
 
 #include <gavl.h>
 #include <samplerate.h>
@@ -130,3 +135,4 @@ void gavl_samplerate_converter_destroy(gavl_samplerate_converter_t * s);
 void gavl_audio_dither_context_destroy(gavl_audio_dither_context_t * s);
 
 
+#endif // AUDIO_H_INCLUDED

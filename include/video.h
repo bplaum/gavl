@@ -19,8 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#ifndef _GAVL_VIDEO_H_
-#define _GAVL_VIDEO_H_
+#ifndef VIDEO_H_INCLUDED
+#define VIDEO_H_INCLUDED
+
 
 /* Private structures for the video converter */
 
@@ -149,4 +150,4 @@ void gavl_pixelformat_get_offset(gavl_pixelformat_t pixelformat,
 
 
 
-#endif // _GAVL_VIDEO_H_
+#endif // VIDEO_H_INCLUDED

@@ -19,6 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#ifndef GAVL_KEYCODES_H_INCLUDED
+#define GAVL_KEYCODES_H_INCLUDED
+
+
+
 /*
  *  System independent keycode definitions
  */
@@ -163,3 +168,5 @@
 
 /**  @}
  */
+
+#endif // GAVL_KEYCODES_H_INCLUDED
