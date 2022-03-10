@@ -395,3 +395,40 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot transfer video frame");
   return 0;
   }
+
+int gavl_video_frame_hw_to_packet(gavl_hw_context_t * ctx,
+                                  const gavl_video_format_t * fmt,
+                                  const gavl_video_frame_t * src,
+                                  gavl_packet_t * p)
+  {
+  if(ctx->funcs->video_frame_to_packet && ctx->funcs->video_frame_to_packet(ctx, fmt, src, p))
+    {
+    gavl_video_frame_to_packet_metadata(src, p);
+    return 1;
+    }
+  else
+    return 0;
+  }
+
+gavl_video_frame_t * gavl_video_frame_hw_from_packet(gavl_hw_context_t * ctx,
+                                                     const gavl_video_format_t * fmt,
+                                                     const gavl_packet_t * src)
+  {
+
+  if(ctx->funcs->video_frame_from_packet)
+    return NULL;
+  
+  
+#if 0
+  
+  if(ctx->funcs->video_frame_from_packet(ctx, fmt, frame, src))
+    {
+    gavl_packet_to_video_frame_metadata(src, frame);
+    return 1;
+    }
+  else
+    return 0;
+
+#endif
+  }
+

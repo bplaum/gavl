@@ -233,7 +233,7 @@ put_video_func(void * priv, gavl_video_frame_t * frame)
   {
   gavl_sink_status_t st;
   gavf_stream_t * s = priv;
-  gavf_video_frame_to_packet_metadata(frame, s->p);
+  gavl_video_frame_to_packet_metadata(frame, s->p);
   s->p->data_len = s->ci.max_packet_size;
   st = gavl_packet_sink_put_packet(s->psink, s->p);
   s->p = NULL;

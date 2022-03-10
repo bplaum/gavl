@@ -22,28 +22,23 @@
 // #include <gmerlin/translation.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "shm"
-#define SHM_NAME_MAX 32
 
 #define ALIGN_BYTES 16
 
+
+#if 0
 typedef struct
   {
   pthread_mutex_t mutex;
   int refcount;
   } refcounter_t;
+#endif
 
-struct gavl_shm_s
-  {
-  uint8_t * addr;
-  int size;
-  int id;
-  int wr;
-  refcounter_t * rc;
-  };
 
 static pthread_mutex_t id_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int shm_id = 0;
 
+/*
 static int align_size(int size)
   {
   size = ((size + ALIGN_BYTES - 1) / ALIGN_BYTES) * ALIGN_BYTES;
@@ -54,7 +49,8 @@ static int get_real_size(int size)
   {
   return align_size(size) + sizeof(refcounter_t);
   }
-
+*/
+  
 uint8_t * gavl_shm_get_buffer(gavl_shm_t * s, int * size)
   {
   if(size)
@@ -62,14 +58,9 @@ uint8_t * gavl_shm_get_buffer(gavl_shm_t * s, int * size)
   return s->addr;
   }
 
-int gavl_shm_get_id(gavl_shm_t * s)
-  {
-  return s->id;
-  }
-
 static void gen_name(int pid, int shmid, char * ret)
   {
-  snprintf(ret, SHM_NAME_MAX, "/gavl-%08x-%08x", pid, shmid);
+  snprintf(ret, BG_SHM_NAME_MAX, "/gavl-%08x-%08x", pid, shmid);
   }
 
 gavl_shm_t * gavl_shm_alloc_write(int size)
@@ -77,9 +68,8 @@ gavl_shm_t * gavl_shm_alloc_write(int size)
   int shm_fd = -1;
   void * addr;
   gavl_shm_t * ret = NULL;
-  char name[SHM_NAME_MAX];
-  pthread_mutexattr_t attr;
-  int real_size = get_real_size(size);
+  char name[BG_SHM_NAME_MAX];
+  //  pthread_mutexattr_t attr;
   int pid = getpid();
   
   pthread_mutex_lock(&id_mutex);
@@ -106,14 +96,14 @@ gavl_shm_t * gavl_shm_alloc_write(int size)
 
   pthread_mutex_unlock(&id_mutex);
   
-  if(ftruncate(shm_fd, real_size))
+  if(ftruncate(shm_fd, size))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
            "ftruncate failed: %s", strerror(errno));
     goto fail;
     }
 
-  if((addr = mmap(0, real_size, PROT_READ | PROT_WRITE,
+  if((addr = mmap(0, size, PROT_READ | PROT_WRITE,
                   MAP_SHARED, shm_fd, 0)) == MAP_FAILED)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
@@ -124,12 +114,14 @@ gavl_shm_t * gavl_shm_alloc_write(int size)
   ret = calloc(1, sizeof(*ret));
   ret->addr = addr;
   ret->size = size;
-  ret->id = shm_id;
+
+  strncpy(ret->name, name, BG_SHM_NAME_MAX);
+  
   ret->wr = 1;
-  ret->rc = (refcounter_t*)(ret->addr + align_size(size));
+  //  ret->rc = (refcounter_t*)(ret->addr + align_size(size));
 
   /* Initialize process shared mutex */
-
+#if 0  
   pthread_mutexattr_init(&attr);
   if(pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED))
     {
@@ -137,12 +129,14 @@ gavl_shm_t * gavl_shm_alloc_write(int size)
            "cannot create process shared mutex: %s", strerror(errno));
     goto fail;
     }
-  pthread_mutex_init(&ret->rc->mutex, &attr);
+  //  pthread_mutex_init(&ret->rc->mutex, &attr);
 
+
+  ret->rc->refcount = 0;
+#endif
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN,
          "created shm segment (write) %s", name);
 
-  ret->rc->refcount = 0;
   fail:
   
   close(shm_fd);
@@ -150,15 +144,12 @@ gavl_shm_t * gavl_shm_alloc_write(int size)
   return ret;
   }
 
-gavl_shm_t * gavl_shm_alloc_read(int pid, int shmid, int size)
+gavl_shm_t * gavl_shm_alloc_read(const char * name, int size)
   {
   void * addr;
   gavl_shm_t * ret = NULL;
   int shm_fd;
-  char name[SHM_NAME_MAX];
-  int real_size = get_real_size(size);
-  
-  gen_name(pid, shmid, name);
+  //  int real_size = get_real_size(size);
   
   shm_fd = shm_open(name, O_RDWR, 0);
   if(shm_fd < 0)
@@ -167,7 +158,7 @@ gavl_shm_t * gavl_shm_alloc_read(int pid, int shmid, int size)
              "shm_open of %s failed: %s", name, strerror(errno));
     goto fail;
     }
-  if((addr = mmap(0, real_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+  if((addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED,
                   shm_fd, 0)) == MAP_FAILED)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
@@ -178,9 +169,8 @@ gavl_shm_t * gavl_shm_alloc_read(int pid, int shmid, int size)
   ret = calloc(1, sizeof(*ret));
   ret->addr = addr;
   ret->size = size;
-  ret->rc = (refcounter_t*)(ret->addr + align_size(size));
-  ret->id = shmid;
-
+  //  ret->rc = (refcounter_t*)(ret->addr + align_size(size));
+  
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN,
          "created shm segment (read) %s", name);
 
@@ -197,15 +187,14 @@ void gavl_shm_free(gavl_shm_t * shm)
   
   if(shm->wr)
     {
-    char name[SHM_NAME_MAX];
-    gen_name(shm->id, getpid(), name);
-    shm_unlink(name);
+    shm_unlink(shm->name);
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN,
-           "destroyed shm segment %s", name);
+           "destroyed shm segment %s", shm->name);
     }
   free(shm);
   }
 
+#if 0
 void gavl_shm_ref(gavl_shm_t * s)
   {
   pthread_mutex_lock(&s->rc->mutex);
@@ -232,37 +221,30 @@ int gavl_shm_refcount(gavl_shm_t * s)
   return ret;
   }
 
-
 /* Shared memory pool */
 
 struct gavl_shm_pool_s
   {
   int wr;
-  int segment_size;
-
-  int pid; // PID of the generating process
-  
-  int num_segments;
-  int segments_alloc;
-  gavl_shm_t ** segments;
   };
 
 gavl_shm_pool_t * gavl_shm_pool_create_write(int seg_size)
   {
   gavl_shm_pool_t * ret = calloc(1, sizeof(*ret));
   ret->wr = 1;
-  ret->segment_size = seg_size;
   return ret;
   }
 
 gavl_shm_pool_t * gavl_shm_pool_create_read(int seg_size, int pid)
   {
   gavl_shm_pool_t * ret = calloc(1, sizeof(*ret));
-  ret->pid = pid;
-  ret->segment_size = seg_size;
   return ret;
   }
 
+#endif
+
+
+#if 0
 gavl_shm_t * gavl_shm_pool_get_read(gavl_shm_pool_t * p, int id)
   {
   int i;
@@ -322,13 +304,8 @@ gavl_shm_t * gavl_shm_pool_get_write(gavl_shm_pool_t * p)
   gavl_shm_ref(ret);
   return ret;
   }
-
 void gavl_shm_pool_destroy(gavl_shm_pool_t * p)
   {
-  int i;
-  for(i = 0; i < p->num_segments; i++)
-    gavl_shm_free(p->segments[i]);
-  if(p->segments)
-    free(p->segments);
   free(p);
   }
+#endif

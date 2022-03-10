@@ -649,9 +649,11 @@ void gavf_overlay_to_packet(gavl_video_frame_t * frame,
                             const gavl_video_format_t * format);
 
 /* These copy *only* the metadata */
+#if 0
 GAVL_PUBLIC
 void gavf_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
                                          gavl_packet_t * p);
+#endif
 
 GAVL_PUBLIC
 void gavf_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,

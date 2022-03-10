@@ -113,14 +113,14 @@ GAVL_PUBLIC int gavl_video_frame_hw_to_ram(const gavl_video_format_t * fmt,
                                            gavl_video_frame_t * src);
 
 GAVL_PUBLIC int gavl_video_frame_hw_to_packet(gavl_hw_context_t * ctx,
-                                              gavl_video_frame_t * src,
+                                              const gavl_video_format_t * fmt,
+                                              const gavl_video_frame_t * src,
                                               gavl_packet_t * p);
 
-GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_import_from_packet(gavl_hw_context_t * ctx,
-                                                                        gavl_packet_t * p);
+GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_from_packet(gavl_hw_context_t * ctx,
+                                                                 const gavl_video_format_t * fmt,
+                                                                 const gavl_packet_t * src);
 
-GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_import_from_frame(gavl_hw_context_t * ctx,
-                                                                       gavl_video_frame_t * p);
 
 GAVL_PUBLIC int gavl_video_frame_hw_can_transfer(gavl_hw_context_t * from,
                                                  gavl_hw_context_t * to);

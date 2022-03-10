@@ -20,6 +20,7 @@
  * *****************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <gavl/gavl.h>
 #include <hw_private.h>
@@ -29,8 +30,7 @@
 
 typedef struct
   {
-  gavl_shm_pool_t * pool;
-  int shm_size;
+  int wr;
   } shm_t;
 
 /* Functions */
@@ -92,16 +92,33 @@ static void overlay_format_adjust_shm(gavl_hw_context_t * ctx,
   }
 #endif
 
+
 static gavl_video_frame_t * video_frame_create_hw_shm(gavl_hw_context_t * ctx,
                                                       gavl_video_format_t * fmt)
   {
+  gavl_shm_t * shm;
+  shm_t * s = ctx->native;
   gavl_video_frame_t * ret = gavl_video_frame_create(NULL);
+
+  if(s->wr)
+    {
+    shm = gavl_shm_alloc_write(gavl_video_format_get_image_size(fmt));
+    ret->storage = shm;
+    
+    /* Set pointers */
+    gavl_video_frame_set_planes(ret, fmt, shm->addr);
+    }
+  else
+    {
+    // Set storage when we read the packet 
+    }
   
   return ret;
   }
 
 static void video_frame_destroy_shm(gavl_video_frame_t * f)
   {
+  //  shm_t * p;
   
   }
 
@@ -109,22 +126,39 @@ typedef struct
   {
   int pid;
   int id;
-  } shm_packet_info;
+  int buf_idx;
+  int offsets[GAVL_MAX_PLANES];
+  int strides[GAVL_MAX_PLANES];
+  } shm_payload_t;
 
-static void video_frame_to_packet_shm(gavl_hw_context_t * ctx,
-                                      const gavl_video_format_t * fmt,
-                                      gavl_video_frame_t * frame,
-                                      gavl_packet_t * p)
+static int video_frame_to_packet_shm(gavl_hw_context_t * ctx,
+                                     const gavl_video_format_t * fmt,
+                                     const gavl_video_frame_t * frame,
+                                     gavl_packet_t * p)
   {
+  const gavl_shm_t *shm = frame->storage;
   
+  gavl_packet_alloc(p, BG_SHM_NAME_MAX);
+  strncpy((char*)p->data, shm->name, BG_SHM_NAME_MAX);
+  
+  p->buf_idx = frame->buf_idx;
+  return 1;
   }
 
-static void video_frame_from_packet_shm(gavl_hw_context_t * ctx,
-                                        const gavl_video_format_t * fmt,
-                                        gavl_packet_t * p,
-                                        gavl_video_frame_t * frame)
+static int video_frame_from_packet_shm(gavl_hw_context_t * ctx,
+                                       const gavl_video_format_t * fmt,
+                                       gavl_video_frame_t * frame,
+                                       const gavl_packet_t * p)
   {
+  gavl_shm_t *shm = gavl_shm_alloc_read((const char *)(p->data),
+                                        gavl_video_format_get_image_size(fmt));
+
+  frame->storage = shm;
+  gavl_video_frame_set_planes(frame, fmt, shm->addr);
   
+  frame->buf_idx = p->buf_idx;
+  
+  return 1;
   }
 
 static const gavl_hw_funcs_t funcs =
@@ -142,13 +176,12 @@ static const gavl_hw_funcs_t funcs =
   };
 
 
-gavl_hw_context_t * gavl_hw_ctx_create_shm()
+gavl_hw_context_t * gavl_hw_ctx_create_shm(int wr)
   {
   shm_t * native = calloc(1, sizeof(*native));
+  native->wr = wr;
   return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_SHM, GAVL_HW_SUPPORTS_VIDEO | GAVL_HW_SUPPORTS_SHARED);
   }
-
-
 
 /*
   

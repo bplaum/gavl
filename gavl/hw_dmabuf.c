@@ -98,15 +98,14 @@ typedef struct
     {
     int buf_idx;
     int offset;
-    int stride;
     } planes[GAVL_MAX_PLANES];
   
   } dma_payload_t;
 
-static void video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
-                                         const gavl_video_format_t * fmt,
-                                         gavl_video_frame_t * frame,
-                                         gavl_packet_t * p)
+static int video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
+                                        const gavl_video_format_t * fmt,
+                                        const gavl_video_frame_t * frame,
+                                        gavl_packet_t * p)
   {
   int i;
   dma_payload_t * pl;
@@ -121,19 +120,19 @@ static void video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
     {
     pl->planes[i].buf_idx = info->planes[i].buf_idx;
     pl->planes[i].offset = info->planes[i].offset;
-    pl->planes[i].stride = frame->strides[i];
     }
 
   for(i = 0; i < info->num_buffers; i++)
     p->fds[i] = info->buffers[i].fd;
   
   p->num_fds = info->num_buffers;
+  return 1;
   }
 
-static void video_frame_from_packet_dmabuf(gavl_hw_context_t * ctx,
+static int video_frame_from_packet_dmabuf(gavl_hw_context_t * ctx,
                                            const gavl_video_format_t * fmt,
-                                           gavl_packet_t * p,
-                                           gavl_video_frame_t * frame)
+                                           gavl_video_frame_t * frame,
+                                           const gavl_packet_t * p)
   {
   int i;
 
@@ -147,24 +146,29 @@ static void video_frame_from_packet_dmabuf(gavl_hw_context_t * ctx,
     {
     info->planes[i].buf_idx = pl->planes[i].buf_idx;
     info->planes[i].offset = pl->planes[i].offset;
-    frame->strides[i] = pl->planes[i].stride;
     }
 
+  
   info->num_buffers = p->num_fds;
   
   for(i = 0; i < info->num_buffers; i++)
     info->buffers[i].fd = p->fds[i];
+  gavl_video_frame_set_strides(frame, fmt);
+  frame->buf_idx = p->buf_idx;
   
+  return 1;
   }
 
+#if 0
 static void destroy_native_dmabuf(void * data)
   {
   free(data);
   }
+#endif
 
 static const gavl_hw_funcs_t funcs =
   {
-    //   .destroy_native         = destroy_native_dmabuf,
+    //    .destroy_native         = destroy_native_dmabuf,
    //    .get_image_formats      = gavl_gl_get_image_formats,
    //    .get_overlay_formats    = gavl_gl_get_overlay_formats,
    .video_frame_create_hw  = video_frame_create_hw_dmabuf,

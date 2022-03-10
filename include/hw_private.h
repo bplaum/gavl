@@ -65,15 +65,15 @@ typedef struct
   int (*video_frame_unmap)(const gavl_video_format_t * fmt,
                            gavl_video_frame_t * f);
 
-  void (*video_frame_to_packet)(gavl_hw_context_t * ctx,
+  int (*video_frame_to_packet)(gavl_hw_context_t * ctx,
                                 const gavl_video_format_t * fmt,
-                                gavl_video_frame_t * frame,
+                                const gavl_video_frame_t * frame,
                                 gavl_packet_t * p);
 
-  void (*video_frame_from_packet)(gavl_hw_context_t * ctx,
-                                  const gavl_video_format_t * fmt,
-                                  gavl_packet_t * p,
-                                  gavl_video_frame_t * frame);
+  int (*video_frame_from_packet)(gavl_hw_context_t * ctx,
+                                 const gavl_video_format_t * fmt,
+                                 gavl_video_frame_t * frame,
+                                 const gavl_packet_t * p);
 
   int (*can_import)(gavl_hw_context_t * ctx, gavl_hw_type_t t);
   int (*can_export)(gavl_hw_context_t * ctx, gavl_hw_type_t t);

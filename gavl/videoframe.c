@@ -1722,6 +1722,34 @@ void gavl_video_frame_dump_metadata(const gavl_video_format_t * format,
   fprintf(stderr, " dst: %d %d\n", frame->dst_x, frame->dst_y);
   }
 
+void gavl_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
+                                         gavl_packet_t * pkt)
+  {
+  pkt->pts = frame->timestamp;
+  pkt->duration = frame->duration;
+  pkt->timecode = frame->timecode;
+  pkt->interlace_mode = frame->interlace_mode;
+
+  gavl_rectangle_i_copy(&pkt->src_rect, &frame->src_rect);
+  pkt->dst_x = frame->dst_x;
+  pkt->dst_y = frame->dst_y;
+  }
+
+void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_frame_t * frame)
+  {
+  frame->timestamp = p->pts;
+  frame->duration = p->duration;
+
+  frame->interlace_mode = p->interlace_mode;
+  frame->timecode  = p->timecode;
+
+  gavl_rectangle_i_copy(&frame->src_rect, &p->src_rect);
+  frame->dst_x = p->dst_x;
+  frame->dst_y = p->dst_y;
+  
+  }
+
+
 /* Rotate video frames in multiples of 90 degrees */
 
 #if 0
