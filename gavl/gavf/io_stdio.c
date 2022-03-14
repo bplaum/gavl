@@ -34,11 +34,7 @@ static int read_file(void * priv, uint8_t * data, int len)
 
 static int write_file(void * priv, const uint8_t * data, int len)
   {
-  int ret;
-  ret =  fwrite(data, 1, len, (FILE*)priv);
-  //  if(ret < len)
-  //    fprintf(stderr, "write failed: %d < %d\n", ret, len);
-  return ret;
+  return fwrite(data, 1, len, (FILE*)priv);
   }
 
 static int64_t seek_file(void * priv, int64_t pos, int whence)
@@ -94,6 +90,9 @@ gavf_io_t * gavf_io_create_file(FILE * f, int wr, int can_seek, int close)
     flags |= GAVF_IO_IS_REGULAR;
     }
 
+  if(!(flags & GAVF_IO_IS_REGULAR))
+    can_seek = 0;
+  
   if(can_seek)
     flags |= GAVF_IO_CAN_SEEK;
   

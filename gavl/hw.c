@@ -238,27 +238,28 @@ static const struct
   {
   gavl_hw_type_t type;
   const char * name;
+  const char * id;
   }
 types[] = 
   {
-    { GAVL_HW_VAAPI_X11, "vaapi through X11" },
+    { GAVL_HW_VAAPI_X11, "vaapi through X11", "va_x11" },
 
     // EGL Texture (associated with X11 connection)
-    { GAVL_HW_EGL_GL_X11, "Opengl Texture (EGL+X11)" },
+    { GAVL_HW_EGL_GL_X11, "Opengl Texture (EGL+X11)", "egl_gl_x11" },
 
     // EGL Texture (associated with X11 connection)
-    { GAVL_HW_EGL_GLES_X11, "Opengl ES Texture (EGL+X11)" },
+    { GAVL_HW_EGL_GLES_X11, "Opengl ES Texture (EGL+X11)", "egl_gles_x11" },
 
     // GAVL_HW_EGL_WAYLAND,  // EGL Texture (wayland) Not implemented yet
 
     // V4L2 buffers (mmap()ed, optionaly also with DMA handles)
-    { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer" }, 
+    { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer", "v4l2" }, 
 
     // DMA handles, can be exported by V4L and im- and exported by OpenGL and also mmaped to userspace
-    { GAVL_HW_DMABUFFER,   "DMA Buffer" },
+    { GAVL_HW_DMABUFFER,   "DMA Buffer", "dmabuf" },
 
     // Shared memory, which can be sent to other processes
-    { GAVL_HW_SHM,         "Shared Memory" },
+    { GAVL_HW_SHM,         "Shared Memory", "shm"  },
     { /* End  */ },
   };
   
@@ -273,6 +274,32 @@ const char * gavl_hw_type_to_string(gavl_hw_type_t type)
     i++;
     }
   return NULL;
+  }
+
+const char * gavl_hw_type_to_id(gavl_hw_type_t type)
+  {
+  int i = 0;
+
+  while(types[i].name)
+    {
+    if(types[i].type == type)
+      return types[i].id;
+    i++;
+    }
+  return NULL;
+  }
+
+gavl_hw_type_t gavl_hw_type_from_id(const char * id)
+  {
+  int i = 0;
+
+  while(types[i].name)
+    {
+    if(!strcmp(types[i].id, id))
+      return types[i].type;
+    i++;
+    }
+  return 0;
   }
 
 int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type)
@@ -292,7 +319,7 @@ int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type)
   }
 
 static gavl_video_frame_t * create_import_frame(gavl_hw_context_t * ctx,
-                                                int buf_idx, gavl_video_format_t * fmt)
+                                                int buf_idx, const gavl_video_format_t * fmt)
   {
   if(buf_idx >= ctx->imported_vframes_alloc)
     {
@@ -416,19 +443,29 @@ gavl_video_frame_t * gavl_video_frame_hw_from_packet(gavl_hw_context_t * ctx,
   {
 
   if(ctx->funcs->video_frame_from_packet)
-    return NULL;
-  
-  
-#if 0
-  
-  if(ctx->funcs->video_frame_from_packet(ctx, fmt, frame, src))
     {
-    gavl_packet_to_video_frame_metadata(src, frame);
-    return 1;
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read video frame from packet: Method missing");
+    return NULL;
+    }
+  if(src->buf_idx < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read video frame from packet: Need buf_idx");
+    return NULL;
+    }
+
+  if((src->buf_idx < ctx->imported_vframes_alloc) &&
+     (ctx->imported_vframes[src->buf_idx]))
+    {
+    return ctx->imported_vframes[src->buf_idx];
     }
   else
-    return 0;
-
-#endif
+    {
+    gavl_video_frame_t * ret;
+    ret = create_import_frame(ctx, src->buf_idx, fmt);
+    
+    ctx->funcs->video_frame_from_packet(ctx, fmt, ret, src);
+    return ret;
+    }
+  
   }
 

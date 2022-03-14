@@ -313,30 +313,6 @@
 
 #define GAVL_MSG_GAVF_RESYNC       2
 
-/* Emitted by the decoder immediately after a program header was read */
-
-#define GAVL_MSG_GAVF_READ_PROGRAM_HEADER_START     (0x1000|1)
-#define GAVL_MSG_GAVF_READ_PROGRAM_HEADER_END       (0x1000|2)
-
-/* Emitted by the encoder immediately before a program header is written */
-#define GAVL_MSG_GAVF_WRITE_HEADER_START            (0x1000|3)
-
-/* Emitted by the encoder immediately after a program header is written */
-#define GAVL_MSG_GAVF_WRITE_HEADER_END              (0x1000|4)
-
-#define GAVL_MSG_GAVF_READ_SYNC_HEADER_START        (0x1000|5)
-#define GAVL_MSG_GAVF_READ_SYNC_HEADER_END          (0x1000|6)
-
-#define GAVL_MSG_GAVF_WRITE_SYNC_HEADER_START       (0x1000|7)
-#define GAVL_MSG_GAVF_WRITE_SYNC_HEADER_END         (0x1000|8)
-
-#define GAVL_MSG_GAVF_READ_PACKET_START             (0x1000|9)
-#define GAVL_MSG_GAVF_READ_PACKET_END               (0x1000|10)
-
-#define GAVL_MSG_GAVF_WRITE_PACKET_START            (0x1000|11)
-
-/* Emitted by the encoder immediately after a packet is written */
-#define GAVL_MSG_GAVF_WRITE_PACKET_END              (0x1000|12)
 
 /* Emitted from within the demuxer loop */
 #define GAVL_MSG_GAVF_GOT_EOF                       (0x1000|13)

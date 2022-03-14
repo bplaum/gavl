@@ -149,7 +149,17 @@ void gavf_stream_create_packet_src(gavf_t * g, gavf_stream_t * s)
 /* Packet sink */
 
 static gavl_sink_status_t
-put_packet_func(void * priv, gavl_packet_t * p)
+put_packet_func_separate(void * priv, gavl_packet_t * p)
+  {
+  gavf_stream_t * s = priv;
+  p->id = s->id;
+
+  
+  
+  }
+
+static gavl_sink_status_t
+put_packet_func_multiplex(void * priv, gavl_packet_t * p)
   {
   gavf_stream_t * s = priv;
   gavf_packet_buffer_done_write(s->pb);
@@ -173,7 +183,7 @@ put_packet_func(void * priv, gavl_packet_t * p)
   }
 
 static gavl_packet_t *
-get_packet_func(void * priv)
+get_packet_func_multiplex(void * priv)
   {
   gavf_stream_t * s = priv;
   return gavf_packet_buffer_get_write(s->pb);
@@ -182,7 +192,7 @@ get_packet_func(void * priv)
 void gavf_stream_create_packet_sink(gavf_t * g, gavf_stream_t * s)
   {
   /* Create packet sink */
-  s->psink = gavl_packet_sink_create(get_packet_func,
-                                     put_packet_func, s);
+  s->psink = gavl_packet_sink_create(get_packet_func_multiplex,
+                                     put_packet_func_multiplex, s);
   
   }

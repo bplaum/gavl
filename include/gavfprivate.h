@@ -4,6 +4,9 @@
 
 #include <gavl/gavf.h>
 
+/* Supported members of stream metadata */
+#define GAVF_META_STREAM_HWTYPE     "hwtype"
+#define GAVF_META_STREAM_PACKET_URI "packeturi"
 
 /* I/O */
 
@@ -125,6 +128,9 @@ typedef struct
   gavl_video_source_t * vsrc;
   gavl_video_sink_t * vsink;
 
+  gavl_hw_context_t * hwctx; // For importing frames sent off-band
+  gavf_io_t * io; // Streams can have separate IO
+  
   gavf_t * g;
 
   /* For reading uncompressed audio and video */
@@ -306,7 +312,7 @@ struct gavf_s
   {
   int flags;
   
-
+  gavf_io_t * io_orig;
   gavf_io_t * io;
   
   gavl_dictionary_t * cur;

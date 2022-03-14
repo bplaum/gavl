@@ -58,6 +58,10 @@ GAVL_PUBLIC int gavl_hw_supported(gavl_hw_type_t type);
 
 GAVL_PUBLIC const char * gavl_hw_type_to_string(gavl_hw_type_t type);
 
+GAVL_PUBLIC const char * gavl_hw_type_to_id(gavl_hw_type_t type);
+GAVL_PUBLIC gavl_hw_type_t gavl_hw_type_from_id(const char * id);
+
+
 GAVL_PUBLIC int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
 GAVL_PUBLIC int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
 

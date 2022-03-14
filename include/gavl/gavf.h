@@ -41,6 +41,12 @@
 #define GAVF_IO_IS_PIPE           (1<<8)
 #define GAVF_IO_IS_TTY            (1<<9)
 
+#define GAVF_PROTOCOL_TCP      "gavf-tcp"
+#define GAVF_PROTOCOL_TCPSERV  "gavf-tcpserv"
+#define GAVF_PROTOCOL_UNIX     "gavf-unix"
+#define GAVF_PROTOCOL_UNIXSERV "gavf-unixserv"
+#define GAVF_PROTOCOL          "gavf"
+
 /* gavf file structure */
 
 /*
@@ -546,6 +552,9 @@ void gavf_write_resync(gavf_t * g, int64_t time, int scale, int discard, int dis
 GAVL_PUBLIC
 int gavf_open_read(gavf_t * g, gavf_io_t * io);
 
+GAVL_PUBLIC
+int gavf_open_uri_read(gavf_t * g, const char * uri);
+
 /* Clear the EOF flag of the demuxer */
 GAVL_PUBLIC
 void gavf_clear_eof(gavf_t * g);
@@ -649,11 +658,6 @@ void gavf_overlay_to_packet(gavl_video_frame_t * frame,
                             const gavl_video_format_t * format);
 
 /* These copy *only* the metadata */
-#if 0
-GAVL_PUBLIC
-void gavf_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
-                                         gavl_packet_t * p);
-#endif
 
 GAVL_PUBLIC
 void gavf_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
@@ -669,6 +673,10 @@ void gavf_shrink_audio_frame(gavl_audio_frame_t * f,
 GAVL_PUBLIC
 int gavf_open_write(gavf_t * g, gavf_io_t * io,
                     const gavl_dictionary_t * m);
+
+GAVL_PUBLIC
+int gavf_open_uri_write(gavf_t * g, const char * uri, const gavl_dictionary_t * m);
+
 
 /*
  *  Return value: >= 0 is the stream index passed to gavf_write_packet()

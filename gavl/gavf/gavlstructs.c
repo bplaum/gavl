@@ -382,16 +382,6 @@ int gavf_read_gavl_packet(gavf_io_t * io,
   {
   uint64_t start_pos;
   uint32_t len;
-  int result;
-  gavl_msg_t msg;
-
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_PACKET_START, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, io->msg_callback, io->msg_data);
-  gavl_msg_free(&msg);
-
-  if(!result)
-    goto fail;
   
   if(!gavf_io_read_uint32v(io, &len))
     goto fail;
@@ -513,14 +503,6 @@ int gavf_read_gavl_packet(gavf_io_t * io,
   /* Add offset */
   p->pts += pts_offset;
 
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_PACKET_END, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, io->msg_callback, io->msg_data);
-  gavl_msg_free(&msg);
-  
-  if(!result)
-    goto fail;
-  
   return 1;
   
   fail:

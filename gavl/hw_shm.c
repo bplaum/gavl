@@ -119,7 +119,15 @@ static gavl_video_frame_t * video_frame_create_hw_shm(gavl_hw_context_t * ctx,
 static void video_frame_destroy_shm(gavl_video_frame_t * f)
   {
   //  shm_t * p;
-  
+  if(f->storage)
+    {
+    gavl_shm_t * shm;
+    shm = f->storage;
+    gavl_shm_free(shm);
+    f->storage = 0;
+    }
+  gavl_video_frame_null(f);
+  gavl_video_frame_destroy(f);
   }
 
 typedef struct

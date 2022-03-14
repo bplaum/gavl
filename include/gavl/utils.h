@@ -287,6 +287,15 @@ void gavl_buffer_flush(gavl_buffer_t * buf, int len);
 GAVL_PUBLIC
 const char * gavl_tempdir();
 
+GAVL_PUBLIC
+int gavl_url_split(const char * url,
+                   char ** protocol,
+                   char ** user,
+                   char ** password,
+                   char ** hostname,
+                   int * port,
+                   char ** path);
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 

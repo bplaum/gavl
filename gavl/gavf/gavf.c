@@ -1,12 +1,36 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <config.h>
 
 #include <gavfprivate.h>
 #include <metatags.h>
 
+#include <gavl/http.h>
+#include <gavl/gavlsocket.h>
+
+#define PROTOCOL "GAVF/"VERSION
+
 #define DUMP_EOF
+
+/*
+ *   A gavf handle acts like a software HDMI-Plug which allows to send
+ *   A/V data between processes.
+ *   
+ *   We support:
+ *   - Sending A/V streams via separate sockets minimizing latency due to multiplexing
+ *   - Sending of shared frames with zero copy (dma-buffers or shared memory)
+ *
+ *  On Unix domain sockets, the gavf connection is controlled via messages.
+ *  In the main media directions, messages are sent in the message stream
+ *  with ID GAVL_META_STREAM_ID_MSG_CONTROL (-2). In the opposite direction the messages are
+ *  send as "elementary stream" using gavl_msg_write().
+ *
+ *  Messages from dst to src:
+ *  
+ *
+ */
 
 static struct
   {
@@ -94,14 +118,12 @@ int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
 static int write_sync_header(gavf_t * g, int stream, int64_t packet_pts)
   {
   int ret = 0;
-  int result;
   int i;
   gavf_stream_t * s;
   
   gavl_value_t sync_pts_val;
   gavl_value_t sync_pts_arr_val;
   gavl_array_t * sync_pts_arr;
-  gavl_msg_t msg;
 
   int num;
   
@@ -165,16 +187,8 @@ static int write_sync_header(gavf_t * g, int stream, int64_t packet_pts)
   
     }
 
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_SYNC_HEADER_START, GAVL_MSG_NS_GAVF);
-  gavl_msg_set_arg(&msg, 0, &sync_pts_arr_val);
+  
 
-  result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  
-  gavl_msg_free(&msg);
-  
-  if(!result)
-    goto fail;
   /* Write the sync header */
   if(gavf_io_write_data(g->io, (uint8_t*)GAVF_TAG_SYNC_HEADER, 8) < 8)
     goto fail;
@@ -201,11 +215,6 @@ static int write_sync_header(gavf_t * g, int stream, int64_t packet_pts)
     goto fail;
 
 
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_SYNC_HEADER_END, GAVL_MSG_NS_GAVF);
-  gavl_msg_set_arg_nocopy(&msg, 0, &sync_pts_arr_val);
-  result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  gavl_msg_free(&msg);
   
   ret = 1;
   
@@ -220,18 +229,7 @@ static gavl_sink_status_t do_write_packet(gavf_t * g, int32_t stream_id, int pac
                                           int64_t last_sync_pts,
                                           int64_t default_duration, const gavl_packet_t * p)
   {
-  int result;
-  gavl_msg_t msg;
-
   //  fprintf(stderr, "do_write_packet\n");
-  
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_PACKET_START, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  gavl_msg_free(&msg);
-
-  if(!result)
-    return GAVL_SINK_ERROR;
   
   if((gavf_io_write_data(g->io,
                          (const uint8_t*)GAVF_TAG_PACKET_HEADER, 1) < 1) ||
@@ -251,10 +249,6 @@ static gavl_sink_status_t do_write_packet(gavf_t * g, int32_t stream_id, int pac
   if(!gavf_io_flush(g->io))
     return GAVL_SINK_ERROR;
   
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_PACKET_END, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  gavl_msg_free(&msg);
   
   return GAVL_SINK_OK;
   }
@@ -871,17 +865,6 @@ gavf_t * gavf_create()
 static int read_sync_header(gavf_t * g)
   {
   int i;
-  int result;
-  gavl_msg_t msg;
-
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_SYNC_HEADER_START, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  gavl_msg_free(&msg);
-
-  if(!result)
-    return 0;
-  
   /* Read sync header */
 #if 0
   fprintf(stderr, "Read sync header\n");
@@ -900,14 +883,7 @@ static int read_sync_header(gavf_t * g)
       }
     }
 
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_SYNC_HEADER_END, GAVL_MSG_NS_GAVF);
-  gavl_msg_send(&msg, g->msg_callback, g->msg_data);
-  gavl_msg_free(&msg);
 
-  if(!result)
-    return 0;
-  
   return 1;
   }
 
@@ -1104,26 +1080,8 @@ static int read_header(gavf_t * g,
   gavl_msg_t msg;
 
   
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_PROGRAM_HEADER_START,
-                     GAVL_MSG_NS_GAVF);
-
-  if(!gavl_msg_send(&msg, g->msg_callback, g->msg_data))
-    goto fail;
-  
-  gavl_msg_free(&msg);
-
   if(!read_dictionary(g->io, head, buf, ret))
     goto fail;
-  
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_PROGRAM_HEADER_END,
-                     GAVL_MSG_NS_GAVF);
-  gavl_msg_set_arg_dictionary(&msg, 0, ret);
-  
-  if(!gavl_msg_send(&msg, g->msg_callback, g->msg_data))
-    goto fail;
-
   
   result = 1;
   fail:
@@ -1379,9 +1337,6 @@ const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
       if((s = gavf_find_stream_by_id(g, g->pkthdr.stream_id)) &&
          (s->flags & STREAM_FLAG_SKIP))
         {
-        int result;
-        gavl_msg_t msg;
-        
         if(s->unref_func)
           {
           if(!gavf_packet_read_packet(g, &g->skip_pkt))
@@ -1400,18 +1355,7 @@ const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
           {
           gavf_packet_skip(g);
           }
-
-        gavl_msg_init(&msg);
-        gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READ_PACKET_END, GAVL_MSG_NS_GAVF);
-        result = gavl_msg_send(&msg, g->msg_callback, g->msg_data);
         
-        if(!result)
-          {
-#ifdef DUMP_EOF
-          fprintf(stderr, "EOF 5\n");
-#endif
-          goto got_eof;
-          }
         
         }
       else
@@ -1874,20 +1818,11 @@ int gavf_program_header_write(gavf_t * g)
   gavf_io_t * bufio;
   int ret = 0;
   gavf_chunk_t chunk;
-  int result;
-  gavl_msg_t msg;
-
   gavf_io_t * io = g->io;
   
   //  fprintf(stderr, "Writing program header:\n");
   //  gavl_dictionary_dump(dict, 2);
   
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_HEADER_START, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, io->msg_callback, io->msg_data);
-  gavl_msg_free(&msg);
-  if(!result)
-    goto fail;
   
   bufio = gavf_chunk_start_io(io, &chunk, GAVF_TAG_PROGRAM_HEADER);
   
@@ -1899,12 +1834,6 @@ int gavf_program_header_write(gavf_t * g)
   
   gavf_chunk_finish_io(io, &chunk, bufio);
   
-  gavl_msg_init(&msg);
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_WRITE_HEADER_END, GAVL_MSG_NS_GAVF);
-  result = gavl_msg_send(&msg, io->msg_callback, io->msg_data);
-  gavl_msg_free(&msg);
-  if(!result)
-    goto fail;
 
   
   ret = 1;
@@ -2331,3 +2260,423 @@ void gavf_clear_eof(gavf_t * g)
   GAVF_CLEAR_FLAG(g, GAVF_FLAG_EOF);
   }
 
+/* New open functions */
+
+static int read_pipe(void * priv, uint8_t * data, int len)
+  {
+  return fread(data, 1, len, priv);
+  }
+
+static int write_pipe(void * priv, const uint8_t * data, int len)
+  {
+  return fwrite(data, 1, len, priv);
+  }
+
+static void close_pipe(void * priv)
+  {
+  pclose(priv);
+  }
+
+static int flush_pipe(void * priv)
+  {
+  if(!fflush(priv))
+    return 1;
+  return 0;
+  }
+
+static int client_handshake(gavf_io_t * io, int wr, const char * path)
+  {
+  int ret = 0;
+  gavl_dictionary_t req;
+  gavl_dictionary_t res;
+
+  gavl_dictionary_init(&req);
+  gavl_dictionary_init(&res);
+
+  gavl_http_request_init(&req, (wr ? "PUT" : "GET"), path, PROTOCOL);
+
+  if(!gavl_http_request_write(io, &req))
+    goto fail;
+
+  if(!gavl_http_response_read(io, &res))
+    goto fail;
+
+  if(wr && gavl_http_response_get_status_int(&res) != 100)
+    goto fail;
+
+  else if(!wr && gavl_http_response_get_status_int(&res) != 200)
+    goto fail;
+  
+  ret = 1;
+  
+  fail:
+  
+  gavl_dictionary_free(&req);
+  gavl_dictionary_free(&res);
+
+  return ret;
+  }
+
+static int server_handshake(gavf_io_t * io, int wr, const char * path)
+  {
+  int ret = 0;
+  const char * method;
+  const char * protocol;
+  gavl_dictionary_t req;
+  gavl_dictionary_t res;
+  
+  gavl_dictionary_init(&req);
+  gavl_dictionary_init(&res);
+
+  if(!gavl_http_request_read(io, &req))
+    return 0;
+
+  method = gavl_http_request_get_method(&req);
+  protocol = gavl_http_request_get_protocol(&req);
+
+  if(strcmp(protocol, PROTOCOL))
+    {
+    gavl_http_response_init(&res, PROTOCOL, 400, "Bad Request");
+    goto fail;
+    }
+  
+  if(!strcmp(method, "GET"))
+    {
+    if(!wr)
+      {
+      gavl_http_response_init(&res, PROTOCOL, 405, "Method Not Allowed");
+      goto fail;
+      }
+
+    if(strcmp(path, gavl_http_request_get_path(&req)))
+      {
+      gavl_http_response_init(&res, PROTOCOL, 404, "Not Found");
+      goto fail;
+      }
+
+    gavl_http_response_init(&res, PROTOCOL, 200, "OK");
+    ret = 1;
+    
+    }
+  else if(!strcmp(method, "PUT"))
+    {
+    if(wr)
+      {
+      gavl_http_response_init(&res, PROTOCOL, 405, "Method Not Allowed");
+      goto fail;
+      }
+
+    if(strcmp(path, gavl_http_request_get_path(&req)))
+      {
+      gavl_http_response_init(&res, PROTOCOL, 404, "Not Found");
+      goto fail;
+      }
+
+    gavl_http_response_init(&res, PROTOCOL, 100, "Continue");
+    ret = 1;
+    }
+
+  fail:
+  
+  gavl_http_response_write(io, &res);
+
+  gavl_dictionary_free(&req);
+  gavl_dictionary_free(&res);
+  
+  return ret;
+  }
+
+
+static int open_socket(const char * uri, int wr, gavf_io_t ** io)
+  {
+  int ret = 0;
+  char * host = NULL;
+  char * path = NULL;
+  char * protocol = NULL;
+  int port = 0;
+  int fd;
+  int server_fd = -1;
+  gavl_socket_address_t * addr = NULL;
+  int timeout = 1000;
+  
+  if(!gavl_url_split(uri, &protocol, NULL, NULL, &host, &port, &path))
+    goto fail;
+
+  if(!host || !port)
+    goto fail;
+
+  if(!path)
+    path = gavl_strdup("/");
+  
+  ret = 1;
+  
+  if(!strcmp(protocol, GAVF_PROTOCOL_TCP))
+    {
+    addr = gavl_socket_address_create();
+    if(!gavl_socket_address_set(addr, host, port, SOCK_STREAM))
+      goto fail;
+    
+    fd = gavl_socket_connect_inet(addr, timeout);
+    if(fd < 0)
+      goto fail;
+    
+    *io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+    
+    if(!client_handshake(*io, wr, path))
+      {
+      gavf_io_destroy(*io);
+      *io = NULL;
+      goto fail;
+      }
+    }
+  else if(!strcmp(protocol, GAVF_PROTOCOL_TCPSERV))
+    {
+    addr = gavl_socket_address_create();
+    if(!gavl_socket_address_set(addr, host, port, SOCK_STREAM))
+      goto fail;
+
+    server_fd = gavl_listen_socket_create_inet(addr, 0, 1, 0);
+
+    fd = gavl_listen_socket_accept(server_fd, -1, NULL);
+
+    if(fd < 0)
+      goto fail;
+
+    *io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+
+    if(!server_handshake(*io, wr, path))
+      {
+      gavf_io_destroy(*io);
+      *io = NULL;
+      goto fail;
+      }
+    }
+  else if(!strcmp(protocol, GAVF_PROTOCOL_UNIX))
+    {
+    if(!strcmp(path, "/"))
+      goto fail;
+
+    fd = gavl_socket_connect_unix(path);
+
+    if(fd < 0)
+      goto fail;
+
+    *io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+
+    if(!client_handshake(*io, wr, "/"))
+      {
+      gavf_io_destroy(*io);
+      *io = NULL;
+      goto fail;
+      }
+    
+    }
+  else if(!strcmp(protocol, GAVF_PROTOCOL_UNIXSERV))
+    {
+    server_fd = gavl_listen_socket_create_unix(path, 1);
+    
+    fd = gavl_listen_socket_accept(server_fd, -1, NULL);
+
+    if(fd < 0)
+      goto fail;
+
+    *io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+
+    if(!server_handshake(*io, wr, "/"))
+      {
+      gavf_io_destroy(*io);
+      *io = NULL;
+      goto fail;
+      }
+    
+    
+    }
+  else
+    {
+    /* Invalid protocol */
+    ret = 0;
+    goto fail;
+    }
+  
+  fail:
+
+  if(server_fd >= 0)
+    gavl_listen_socket_destroy(server_fd);
+  
+  if(host)
+    free(host);
+  if(path)
+    free(path);
+  if(protocol)
+    free(protocol);
+  
+  return ret;
+  }
+
+int gavf_open_uri_write(gavf_t * g, const char * uri, const gavl_dictionary_t * m)
+  {
+  gavf_io_t * io = NULL;
+  int flags;
+  //  int result;
+  
+  if(gavl_string_starts_with(uri, GAVF_PROTOCOL"://"))
+    uri += strlen(GAVF_PROTOCOL"://");
+  
+  if(uri[0] == '|')
+    {
+    FILE * f;
+    flags = GAVF_IO_CAN_WRITE | GAVF_IO_IS_LOCAL | GAVF_IO_IS_PIPE;
+    
+    uri++;
+    while(isspace(*uri) && (*uri != '\0'))
+      uri++;
+    
+    f = popen(uri, "w");
+    
+    io = gavf_io_create(NULL, write_pipe, NULL, close_pipe , flush_pipe, flags, f);
+    }
+  else if(!strcmp(uri, "-"))
+    {
+    io =  gavf_io_create_file(stdout, 1, 0, 0);
+    }
+  else if(open_socket(uri, 1, &io))
+    {
+    
+    }
+  else
+    {
+    FILE * f;
+    f = fopen(uri, "w");
+    io =  gavf_io_create_file(f, 1, 1, 1);
+    }
+
+  if(!io)
+    return 0;
+
+  g->io = io;
+  
+  flags = gavf_io_get_flags(g->io);
+  
+  if(flags & GAVF_IO_IS_PIPE)
+    {
+    int fd;
+    int server_fd;
+    char * name = NULL;
+    char * redirect_uri = NULL;
+    gavl_dictionary_t header;
+
+    io = NULL;
+
+    g->io_orig = g->io;
+    
+    server_fd = gavl_unix_socket_create(&name, 1);
+
+    redirect_uri = gavl_sprintf("%s://%s", GAVF_PROTOCOL_UNIX, name);
+    
+    gavl_dictionary_init(&header);
+    gavl_http_request_init(&header, "REDIRECT", redirect_uri, PROTOCOL);
+    gavl_http_request_write(g->io, &header);
+    gavl_dictionary_free(&header);
+    free(redirect_uri);
+    
+    fd = gavl_listen_socket_accept(server_fd, 1000, NULL);
+    gavl_unix_socket_close(server_fd, name);
+
+    if(fd < 0)
+      {
+      return 0;
+      }
+
+    io = gavf_io_create_socket(fd, 2000, GAVF_IO_SOCKET_DO_CLOSE);
+    
+    if(!server_handshake(io, 1, "/"))
+      {
+      gavf_io_destroy(io);
+      return 0;
+      }
+
+    g->io = io;
+    
+    //    static int 
+    }
+
+  return 1;
+  }
+
+int gavf_open_uri_read(gavf_t * g, const char * uri)
+  {
+  gavf_io_t * io;
+  int flags;
+  
+  if(gavl_string_starts_with(uri, GAVF_PROTOCOL"://"))
+    uri += strlen(GAVF_PROTOCOL"://");
+  
+  if(uri[0] == '<')
+    {
+    FILE * f;
+    flags = GAVF_IO_CAN_WRITE | GAVF_IO_IS_LOCAL | GAVF_IO_IS_PIPE;
+    
+    uri++;
+    while(isspace(*uri) && (*uri != '\0'))
+      uri++;
+    
+    f = popen(uri, "r");
+    
+    io = gavf_io_create(read_pipe, NULL, NULL, close_pipe , flush_pipe, flags, f);
+    }
+  else if(!strcmp(uri, "-"))
+    {
+    io =  gavf_io_create_file(stdin, 0, 0, 0);
+    }
+  else if(open_socket(uri, 0, &io))
+    {
+    
+    }
+  else
+    {
+    FILE * f;
+    f = fopen(uri, "r");
+    io =  gavf_io_create_file(f, 0, 1, 1);
+    }
+
+  if(!io)
+    return 0;
+
+  g->io = io;
+  
+  flags = gavf_io_get_flags(io);
+
+  /* Do pipe redirection */
+
+  if(flags & GAVF_IO_IS_PIPE)
+    {
+    int ret = 0;
+    const char * method;
+    const char * path;
+    gavl_dictionary_t header;
+    
+    g->io_orig = g->io;
+    g->io = NULL;
+    
+    gavl_dictionary_init(&header);
+
+    if(!gavl_http_request_read(g->io, &header))
+      return 0;
+
+    if(!(method = gavl_http_request_get_method(&header)))
+      return 0;
+
+    if(!(path = gavl_http_request_get_path(&header)))
+      return 0;
+
+    if(strcmp(method, "REDIRECT"))
+      return 0;
+
+    ret = gavf_open_uri_read(g, path);
+
+    gavl_dictionary_free(&header);
+    return ret;
+    }
+  
+  return 1;
+  }
