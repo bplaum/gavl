@@ -101,12 +101,7 @@ typedef struct
     
   int timescale;
   int packet_duration;
-
-  int64_t last_sync_pts; // PTS of the last snyc header
-
-  // PTS of the next sync header (for streams without B-frames)
-  int64_t next_sync_pts; 
-
+  
   // Next PTS (for streams with implicit PTS)
   int64_t next_pts;
 
@@ -114,8 +109,6 @@ typedef struct
   int64_t pts_offset;
 
   int64_t sync_pts;
-  
-  int packets_since_sync;
   
   gavf_packet_buffer_t * pb;
   
@@ -175,7 +168,6 @@ gavf_stream_t * gavf_find_stream_by_id(gavf_t * g, int32_t id);
 int gavf_write_gavl_packet_header(gavf_io_t * io,
                                   int default_duration,
                                   int packet_flags,
-                                  int64_t last_sync_pts,
                                   const gavl_packet_t * p);
 
 /* Options */
@@ -234,6 +226,8 @@ int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
 #define GAVF_EXT_PK_TIMECODE         3
 #define GAVF_EXT_PK_SRC_RECT         4
 #define GAVF_EXT_PK_DST_COORDS       5
+#define GAVF_EXT_PK_FDS              6
+#define GAVF_EXT_PK_BUF_IDX          7
 
 /* File index */
 
@@ -266,31 +260,6 @@ void gavf_packet_index_dump(gavf_packet_index_t * idx);
 
 void gavf_io_cleanup(gavf_io_t * io);
 
-typedef struct
-  {
-  uint64_t num_entries;
-  uint64_t entries_alloc;
-
-  struct
-    {
-    uint64_t pos;
-    int64_t * pts;
-    } * entries;
-
-  /* Secondary variables (not in the file) */
-  int num_streams;
-  int pts_len;
-  
-  } gavf_sync_index_t;
-
-void gavf_sync_index_init(gavf_sync_index_t * idx, int num_streams);
-
-void gavf_sync_index_add(gavf_t * g, uint64_t pos);
-
-int gavf_sync_index_read(gavf_io_t * io, gavf_sync_index_t * idx);
-int gavf_sync_index_write(gavf_io_t * io, const gavf_sync_index_t * idx);
-void gavf_sync_index_free(gavf_sync_index_t * idx);
-void gavf_sync_index_dump(const gavf_sync_index_t * idx);
 
 /* Global gavf structure */
 
@@ -319,7 +288,6 @@ struct gavf_s
   
   gavl_dictionary_t mi;
   
-  gavf_sync_index_t     si;
   gavf_packet_index_t   pi;
 
   gavf_packet_header_t  pkthdr;
@@ -344,10 +312,6 @@ struct gavf_s
   
   gavl_video_frame_t * write_vframe;
   gavl_audio_frame_t * write_aframe;
-
-  /* Time of the last sync header */
-  gavl_time_t last_sync_time;
-  gavl_time_t sync_distance;
 
   encoding_mode_t encoding_mode;
   encoding_mode_t final_encoding_mode;

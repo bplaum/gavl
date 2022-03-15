@@ -65,14 +65,6 @@ int gavf_footer_write(gavf_t * g)
 #if 1
   
   /* Write indices */  
-  if(g->opt.flags & GAVF_OPT_FLAG_SYNC_INDEX)
-    {
-    if(g->opt.flags & GAVF_OPT_FLAG_DUMP_INDICES)
-      gavf_sync_index_dump(&g->si);
-    if(!gavf_sync_index_write(g->io, &g->si))
-      return 0;
-    }
-  
   if(g->opt.flags & GAVF_OPT_FLAG_PACKET_INDEX)
     {
     if(g->opt.flags & GAVF_OPT_FLAG_DUMP_INDICES)

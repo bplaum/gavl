@@ -15,7 +15,8 @@ read_packet_func_nobuffer(void * priv, gavl_packet_t ** p)
 
   GAVF_CLEAR_FLAG(s->g, GAVF_FLAG_HAVE_PKT_HEADER);
   
-  if(!gavf_read_gavl_packet(s->g->io, s->packet_duration, s->packet_flags, s->last_sync_pts, &s->next_pts, s->pts_offset, *p))
+  if(!gavf_read_gavl_packet(s->g->io, s->packet_duration, s->packet_flags,
+                            &s->next_pts, s->pts_offset, *p))
     return GAVL_SOURCE_EOF;
 
   (*p)->id = s->id;
@@ -31,6 +32,7 @@ read_packet_func_nobuffer(void * priv, gavl_packet_t ** p)
   return GAVL_SOURCE_OK;
   }
 
+/* Process one packet */
 gavl_source_status_t gavf_demux_iteration(gavf_t * g)
   {
   gavl_packet_t * read_packet;
@@ -54,7 +56,7 @@ gavl_source_status_t gavf_demux_iteration(gavf_t * g)
   read_packet = gavf_packet_buffer_get_write(read_stream->pb);
 
   if(!gavf_read_gavl_packet(g->io, read_stream->packet_duration, read_stream->packet_flags,
-                            read_stream->last_sync_pts, &read_stream->next_pts, read_stream->pts_offset, read_packet))
+                            &read_stream->next_pts, read_stream->pts_offset, read_packet))
     return GAVL_SOURCE_EOF;
 
   read_packet->id = read_stream->id;
@@ -170,14 +172,13 @@ put_packet_func_multiplex(void * priv, gavl_packet_t * p)
   fprintf(stderr, "put packet %d\n", s->id);
   gavl_packet_dump(p);
 #endif
-  /* Fist packet */
-  if(s->stats.pts_start == GAVL_TIME_UNDEFINED)
-    s->next_sync_pts = p->pts;
   
   gavl_stream_stats_update(&s->stats, p);
   
-  return gavf_flush_packets(s->g, s);
-  
+  //  return gavf_flush_packets(s->g, s);
+
+  /* TODO */
+  return GAVL_SINK_OK;
   // return gavf_write_packet(s->g, (int)(s - s->g->streams), p) ?
   //    GAVL_SINK_OK : GAVL_SINK_ERROR;
   }

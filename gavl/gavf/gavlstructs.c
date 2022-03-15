@@ -375,7 +375,6 @@ int gavf_write_video_format(gavf_io_t * io, const gavl_video_format_t * format)
 int gavf_read_gavl_packet(gavf_io_t * io,
                           int default_duration,
                           int packet_flags,
-                          int64_t last_sync_pts,
                           int64_t * next_pts,
                           int64_t pts_offset,
                           gavl_packet_t * p)
@@ -400,7 +399,6 @@ int gavf_read_gavl_packet(gavf_io_t * io,
     {
     if(!gavf_io_read_int64v(io, &p->pts))
       goto fail;
-    p->pts += last_sync_pts;
     }
   else if(next_pts)
     p->pts = *next_pts;
@@ -515,7 +513,6 @@ int gavf_read_gavl_packet(gavf_io_t * io,
 int gavf_write_gavl_packet_header(gavf_io_t * io,
                                   int default_duration,
                                   int packet_flags,
-                                  int64_t last_sync_pts,
                                   const gavl_packet_t * p)
   {
   uint32_t num_extensions;
@@ -565,7 +562,7 @@ int gavf_write_gavl_packet_header(gavf_io_t * io,
       }
     else
       {
-      if(!gavf_io_write_int64v(io, p->pts - last_sync_pts))
+      if(!gavf_io_write_int64v(io, p->pts))
         return 0;
       }
     }

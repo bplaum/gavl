@@ -45,79 +45,69 @@
 #define GAVF_PROTOCOL_TCPSERV  "gavf-tcpserv"
 #define GAVF_PROTOCOL_UNIX     "gavf-unix"
 #define GAVF_PROTOCOL_UNIXSERV "gavf-unixserv"
+
+/* Generic protocol for selecting the right plugin with gmerlin */
 #define GAVF_PROTOCOL          "gavf"
 
-/* gavf file structure */
+/* gavf is a stream format, which is basically a serialized version 
+   of the internal stream structures, which are used throughout the
+   whole gmerlin ecosystem.
+
+   It was designed mainly for two reasons:
+
+   1. As an on-disk format, which supports *all* variants of uncopressed
+      media supported by gavl. Mostly for experiments.
+
+   2. As a format, which allows to send multimedia between processes. This implies
+      the support of packets in shared memory or dma-buffers.
+      
+   It is *not* meant to be a format for achiving movies or music. In particular,
+   the fileformat will *not* be garantueed to be compatible between versions.
+   You have been warned.
+*/
 
 /*
 
-  The gavf layer works only on track level. Track switching must be
-  hanbled by a wrapper (e.g. bgplug in libgmerlin)
-  
+  General structures:
   CHUNK("name"):
   name: 8 characters, starts with "GAVF"
   len:  64 bit len (or offset in case of GAVFTAIL) as signed, 0 if unknown
   
-  Chunks *always* start at 8 byte boundaries. Preceeding bytes (up to 7) are
-  filled with zeros
+  Chunks *always* start at 8 byte boundaries (counted from the start of the GAVFPHDR).
+  Preceeding bytes (up to 7) are filled with zeros.
   
   CHUNK("GAVFPHDR")
-  len bytes header (dictionary)
-  
+  len bytes program header (dictionary)
+
+  For the on-disk format, the program header is followed by
+
   CHUNK("GAVFPKTS")
   len bytes packets
 
-    CHUNK("GAVFSYNC")
-    sync_chunk (variable)
-    
-      P:        1 byte
-      packet (variable)
-
-      P:        1 byte
-      packet (variable)
-
-      [...]
-
-    CHUNK("GAVFSYNC")
-    sync_chunk (variable)
-    
-      P:        1 byte
-      packet (variable)
-
-      P:        1 byte
-      packet (variable)
-
-      [...]
-
-    [...]
-    
-
-  CHUNK("GAVFPEND")
-  len:      8 bytes, 0 
-
-    
+  After that, multiplexed gavf packets follow until the end of the GAVFPKTS chunk.
+  After the packets, the GAVFFOOT chunk contains the stream stats for each stream
+  
   CHUNK("GAVFFOOT")
-    footer
+    footer (dictionary)
       {
       stats [ { stats } { stats } { stats } { stats } ]
       }
-   
-  Optional:
-  CHUNK("GAVFSIDX") 8 bytes
-  len:      8 bytes, bytes to follow, 0 if unknown
-  len bytes sync index
-  
+      
   Optional:
   GAVFPIDX: 8 bytes
   len:      8 bytes, bytes to follow, 0 if unknown
   len bytes packet index
    
   GAVFTAIL:      8 bytes
-  footer_offset: 8 bytes, file offset of the GAVFFOOT tag
   size:          8 bytes, byte position after the last byte of these 8 bytes
-  
 
-  
+  Files on the on-disk format can be joined using "cat" and the result will be
+  a multi-track file
+
+  The stream format sends the program header through the main I/O channel.
+  Each stream has an entry GAVL_META_URI, which contains the address of a UNIX-socket
+  where the stream packets are sent.
+    
 */
 
 #define GAVF_TAG_PROGRAM_HEADER "GAVFPHDR"
@@ -125,8 +115,8 @@
 
 #define GAVF_TAG_PACKETS        "GAVFPKTS"
 
-#define GAVF_TAG_SYNC_HEADER    "GAVFSYNC"
-#define GAVF_TAG_SYNC_INDEX     "GAVFSIDX"
+// #define GAVF_TAG_SYNC_HEADER    "GAVFSYNC"
+// #define GAVF_TAG_SYNC_INDEX     "GAVFSIDX"
 #define GAVF_TAG_PACKET_INDEX   "GAVFPIDX"
 #define GAVF_TAG_FOOTER         "GAVFFOOT"
 #define GAVF_TAG_TAIL           "GAVFTAIL"
@@ -134,15 +124,6 @@
 
 typedef struct gavf_s gavf_t;
 typedef struct gavf_options_s gavf_options_t;
-
-//#define GAVF_IO_CB_PROGRAM_HEADER_START 1
-//#define GAVF_IO_CB_PROGRAM_HEADER_END   (1|0x100)
-//#define GAVF_IO_CB_PACKET_START         2
-//#define GAVF_IO_CB_PACKET_END           (2|0x100)
-//#define GAVF_IO_CB_SYNC_HEADER_START    4
-//#define GAVF_IO_CB_SYNC_HEADER_END      (4|0x100)
-
-//#define GAVF_IO_CB_TYPE_END(t) (!!(t & 0x100))
 
 /* Chunk structure */
 
@@ -544,9 +525,6 @@ void gavf_set_options(gavf_t *, const gavf_options_t *);
 GAVL_PUBLIC
 int gavf_get_flags(gavf_t *);
 
-GAVL_PUBLIC
-void gavf_write_resync(gavf_t * g, int64_t time, int scale, int discard, int discont);
-
 /* Read support */
 
 GAVL_PUBLIC
@@ -614,15 +592,6 @@ int gavf_packet_read_packet(gavf_t * gavf, gavl_packet_t * p);
 GAVL_PUBLIC
 int gavf_reset(gavf_t * gavf);
 
-/* Get the first PTS of all streams */
-
-GAVL_PUBLIC
-const int64_t * gavf_first_pts(gavf_t * gavf);
-
-/* Get the last PTS of the streams */
-
-GAVL_PUBLIC
-const int64_t * gavf_end_pts(gavf_t * gavf);
 
 /* Seek to a specific time. Return the sync timestamps of
    all streams at the current position */
@@ -852,7 +821,6 @@ GAVL_PUBLIC
 int gavf_read_gavl_packet(gavf_io_t * io,
                           int default_duration,
                           int packet_flags,
-                          int64_t last_sync_pts,
                           int64_t * next_pts,
                           int64_t pts_offset,
                           gavl_packet_t * p);
@@ -862,7 +830,6 @@ int gavf_write_gavl_packet(gavf_io_t * io,
                            gavf_io_t * hdr_io,
                            int packet_duration,
                            int packet_flags,
-                           int64_t last_sync_pts,
                            const gavl_packet_t * p);
 
 /* Utilify functions for messages */

@@ -377,8 +377,9 @@
 
 #define GAVL_META_STREAM_ID               "streamid"
 
-#define GAVL_META_STREAM_ID_MSG_PROGRAM   -1
-#define GAVL_META_STREAM_ID_MSG_CONTROL   -2
+/* Handled inside of gavl */
+#define GAVL_META_STREAM_ID_MSG_GAVF   -2
+#define GAVL_META_STREAM_ID_MSG_PROGRAM -1
 
 #define GAVL_META_STREAM_ID_MEDIA_START    1
 

@@ -17,6 +17,4 @@ io_stdio.c      \
 io_tls.c        \
 packetbuffer.c  \
 packetindex.c   \
-pconn.c         \
-syncindex.c
-
+pconn.c
