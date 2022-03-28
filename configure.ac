@@ -70,7 +70,14 @@ AC_C_ATTRIBUTE_ALIGNED
 AC_C_BIGENDIAN(,,AC_MSG_ERROR("Cannot detect endianess"))
 
 LIBGAVL_CFLAGS=""
-LIBGAVL_LIBS="-lrt"
+case "$host_os" in 
+        darwin*)
+        LIBGAVl_LIBS=""
+        ;;
+        *)
+        LIBGAVL_LIBS="-lrt"
+        ;;
+esac
 LIBGAVL_LDFLAGS=""
 
 APPS_LDFLAGS=""
