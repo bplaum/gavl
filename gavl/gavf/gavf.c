@@ -28,6 +28,12 @@
  *  send as "elementary stream" using gavl_msg_write().
  *
  *  Messages from dst to src:
+ *
+ *  GAVL_CMD_SRC_SELECT_TRACK
+ *  GAVL_CMD_SRC_START
+ *  GAVL_CMD_SRC_SEEK
+ *  GAVL_CMD_SRC_PAUSE
+ *  GAVL_CMD_SRC_RESUME
  *  
  *
  */
@@ -109,22 +115,17 @@ int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
   return 1;
   }
 
-static gavl_sink_status_t do_write_packet(gavf_t * g, int32_t stream_id, int packet_flags,
-                                          int64_t default_duration, const gavl_packet_t * p)
+#if 0
+static gavl_sink_status_t do_write_packet(gavf_t * g, gavf_stream_t * s, const gavl_packet_t * p)
   {
   //  fprintf(stderr, "do_write_packet\n");
   
-  if((gavf_io_write_data(g->io,
-                         (const uint8_t*)GAVF_TAG_PACKET_HEADER, 1) < 1) ||
-     (!gavf_io_write_int32v(g->io, stream_id)))
-    return GAVL_SINK_ERROR;
-
-  if(!gavf_write_gavl_packet(g->io, g->pkt_io, default_duration, packet_flags, p))
+  if(!gavf_write_gavl_packet(g->io, s, p))
     return GAVL_SINK_ERROR;
 
   if(g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
     {
-    fprintf(stderr, "ID: %d ", stream_id);
+    fprintf(stderr, "ID: %d ", s->id);
     gavl_packet_dump(p);
     }
   
@@ -135,7 +136,7 @@ static gavl_sink_status_t do_write_packet(gavf_t * g, int32_t stream_id, int pac
   
   return GAVL_SINK_OK;
   }
-                                     
+#endif
                                           
 #if 0
 static gavl_sink_status_t
@@ -167,6 +168,14 @@ write_packet(gavf_t * g, int stream, const gavl_packet_t * p)
   }
 #endif
 
+
+
+/*
+ *  Flush packets. s is the stream of the last packet written.
+ *  If s is NULL, flush all streams
+  */
+#if 0
+
 int gavf_write_gavl_packet(gavf_io_t * io, gavf_io_t * hdr_io, int packet_duration,
                            int packet_flags,
                            const gavl_packet_t * p)
@@ -183,12 +192,6 @@ int gavf_write_gavl_packet(gavf_io_t * io, gavf_io_t * hdr_io, int packet_durati
   return 1;
   }
 
-
-/*
- *  Flush packets. s is the stream of the last packet written.
- *  If s is NULL, flush all streams
- */
-#if 0
 
 gavl_sink_status_t gavf_flush_packets(gavf_t * g, gavf_stream_t * s)
   {
@@ -397,8 +400,7 @@ static void gavf_stream_init_audio(gavf_t * g, gavf_stream_t * s)
   if(gavl_compression_constant_frame_samples(s->ci.id) ||
      sample_size)
     s->packet_duration = s->afmt->samples_per_frame;
-  else
-    s->packet_flags |= GAVF_PACKET_WRITE_DURATION;
+  
   if(GAVF_HAS_FLAG(g, GAVF_FLAG_WRITE))
     {
     /* Create packet sink */
@@ -437,16 +439,11 @@ static void gavf_stream_init_video(gavf_t * g, gavf_stream_t * s,
   s->vfmt = gavl_stream_get_video_format_nc(s->h);
   
   s->timescale = s->vfmt->timescale;
-
-  if((s->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES) ||
-     (s->type == GAVL_STREAM_OVERLAY))
-    s->packet_flags |= GAVF_PACKET_WRITE_PTS;
   
   if(s->vfmt->framerate_mode == GAVL_FRAMERATE_CONSTANT)
     s->packet_duration = s->vfmt->frame_duration;
-  else
-    s->packet_flags |= GAVF_PACKET_WRITE_DURATION;
-  
+
+#if 0  
   if(((s->vfmt->interlace_mode == GAVL_INTERLACE_MIXED) ||
       (s->vfmt->interlace_mode == GAVL_INTERLACE_MIXED_TOP) ||
       (s->vfmt->interlace_mode == GAVL_INTERLACE_MIXED_BOTTOM)) &&
@@ -455,7 +452,7 @@ static void gavf_stream_init_video(gavf_t * g, gavf_stream_t * s,
 
   if(s->flags & GAVL_COMPRESSION_HAS_FIELD_PICTURES)
     s->packet_flags |= GAVF_PACKET_WRITE_FIELD2;
-    
+#endif
   
   if(num_streams > 1)
     {
@@ -494,9 +491,6 @@ static void gavf_stream_init_text(gavf_t * g, gavf_stream_t * s,
   
   gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &s->timescale);
   
-  s->packet_flags |=
-    (GAVF_PACKET_WRITE_PTS|GAVF_PACKET_WRITE_DURATION);
-
   if(num_streams > 1)
     s->flags |= STREAM_FLAG_DISCONTINUOUS;
   
@@ -522,8 +516,6 @@ static void gavf_stream_init_msg(gavf_t * g, gavf_stream_t * s,
 
   gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &s->timescale);
   
-  s->packet_flags |= (GAVF_PACKET_WRITE_PTS);
-
   if(num_streams > 1)
     s->flags |= STREAM_FLAG_DISCONTINUOUS;
   
@@ -583,8 +575,6 @@ static void init_streams(gavf_t * g)
   
   for(i = 0; i < g->num_streams; i++)
     {
-    g->streams[i].sync_pts = GAVL_TIME_UNDEFINED;
-    
     g->streams[i].h = gavl_track_get_stream_all_nc(g->cur, i);
     g->streams[i].m = gavl_stream_get_metadata_nc(g->streams[i].h);
     
@@ -1045,11 +1035,10 @@ int gavf_reset(gavf_t * g)
       return 0;
     }
 
-  GAVF_CLEAR_FLAG(g, GAVF_FLAG_HAVE_PKT_HEADER);
-  
   return 1;
   }
 
+#if 0
 const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
   {
   int result;
@@ -1170,6 +1159,7 @@ const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
 
               switch(msg.ID)
                 {
+#if 0
                 case GAVL_MSG_SRC_RESYNC:
                   {
                   int64_t t = 0;
@@ -1182,6 +1172,7 @@ const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
                   gavl_msg_send(&msg, g->msg_callback, g->msg_data);
                   }
                   break;
+#endif
                 }
               break;
               
@@ -1259,6 +1250,7 @@ const gavf_packet_header_t * gavf_packet_read_header(gavf_t * g)
   
   return NULL;
   }
+#endif
 
 int gavf_put_message(void * data, gavl_msg_t * m)
   {
@@ -1303,11 +1295,12 @@ void gavf_packet_skip(gavf_t * g)
   gavf_io_skip(g->io, len);
   }
 
+#if 0
 int gavf_packet_read_packet(gavf_t * g, gavl_packet_t * p)
   {
   gavf_stream_t * s = NULL;
 
-  GAVF_CLEAR_FLAG(g, GAVF_FLAG_HAVE_PKT_HEADER);
+  //  GAVF_CLEAR_FLAG(g, GAVF_FLAG_HAVE_PKT_HEADER);
 
   if(!(s = gavf_find_stream_by_id(g, g->pkthdr.stream_id)))
     return 0;
@@ -1326,8 +1319,9 @@ int gavf_packet_read_packet(gavf_t * g, gavl_packet_t * p)
   
   return 1;
   }
+#endif
 
-
+#if 0
 static gavl_sink_status_t write_demuxer_message(gavf_t * g, const gavl_msg_t * msg)
   {
   gavl_sink_status_t st;
@@ -1340,7 +1334,7 @@ static gavl_sink_status_t write_demuxer_message(gavf_t * g, const gavl_msg_t * m
   gavl_packet_free(&p);
   return st;
   }
-
+#endif
 
 /* Seek to a specific time. Return the sync timestamps of
    all streams at the current position */
@@ -1574,21 +1568,6 @@ int gavf_start(gavf_t * g)
   init_streams(g);
   
   gavf_footer_init(g);
-  
-  if(g->num_streams == 1)
-    {
-    g->encoding_mode = ENC_SYNCHRONOUS;
-    g->final_encoding_mode = ENC_SYNCHRONOUS;
-    }
-  else
-    {
-    g->encoding_mode = ENC_STARTING;
-    
-    if(g->opt.flags & GAVF_OPT_FLAG_INTERLEAVE)
-      g->final_encoding_mode = ENC_INTERLEAVE;
-    else
-      g->final_encoding_mode = ENC_SYNCHRONOUS;
-    }
   
   gavl_track_delete_implicit_fields(g->cur);
 

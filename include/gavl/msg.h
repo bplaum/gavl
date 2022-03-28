@@ -111,27 +111,17 @@
 
 #define GAVL_MSG_SRC_AUTHENTICATE     4
 
-/** \brief Resync
+/** \brief Seeked
  *
- *  Sent after seeking. Must be the last packet before the new
- *  sync header for GAVF streams. Scale is taken from the seek command.
- *
- *  This can be sent asynchronously to update the timestamps e.g. after packet loss.
- *
- *  After this event was sent, all sources are set to EOF to interrupt the playback.
- *  The caller then adjusts the time accordingly and calls bg_media_source_set_eof with
- *  zero argument to clear the EOF state of the source.
- *
- *  arg0: Time  (long)
- *  arg1: Scale (int)
- *  arg2: Discard (int)
- *  arg3: Discont (int)
- *
- *  Discard means to throw away all packets *before* this message
- *  Discont means to reset the decoders *after* this message
  */
 
-#define GAVL_MSG_SRC_RESYNC           5
+#define GAVL_MSG_SRC_SEEK            5
+
+/** \brief Track selected
+ *  arg0: New track (dictionary)
+ */
+
+#define GAVL_MSG_SRC_SELECT_TRACK    6
 
 /** \brief End of file
  *
@@ -139,7 +129,11 @@
  *  track (or the same again) can be selected and the stream can newly be set up
  */
 
-#define GAVL_MSG_SRC_EOF              6
+#define GAVL_MSG_SRC_EOF             7
+
+#define GAVL_MSG_SRC_READY           8
+
+
 
 /** \brief Authentication request
  *
@@ -190,6 +184,7 @@
  */
 
 #define GAVL_CMD_SRC_RESUME            107
+
 
 /* GUI Events */
 
@@ -311,7 +306,7 @@
 /* Arg 2: discard packets (1 or 0) */
 /* Arg 3: stream is discontinuous (1 or 0) */
 
-#define GAVL_MSG_GAVF_RESYNC       2
+// #define GAVL_MSG_GAVF_RESYNC       2
 
 
 /* Emitted from within the demuxer loop */
@@ -788,12 +783,6 @@ void gavl_msg_set_last(gavl_msg_t * msg, int last);
 
 GAVL_PUBLIC 
 void gavl_msg_set_resp_for_req(gavl_msg_t * dst, const gavl_msg_t * src);
-
-GAVL_PUBLIC
-void gavl_msg_set_src_resync(gavl_msg_t * dst, int64_t t, int scale, int discard, int discont);
-
-GAVL_PUBLIC
-void gavl_msg_get_src_resync(const gavl_msg_t * src, int64_t * t, int * scale, int * discard, int * discont);
 
 
 

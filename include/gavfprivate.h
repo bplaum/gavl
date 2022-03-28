@@ -4,9 +4,11 @@
 
 #include <gavl/gavf.h>
 
-/* Supported members of stream metadata */
+/* Dictionary added to the track or stream dictionaries */
+
+#define GAVF_META_GAVF     "gavf"
+
 #define GAVF_META_STREAM_HWTYPE     "hwtype"
-#define GAVF_META_STREAM_PACKET_URI "packeturi"
 
 /* I/O */
 
@@ -102,14 +104,9 @@ typedef struct
   int timescale;
   int packet_duration;
   
-  // Next PTS (for streams with implicit PTS)
-  int64_t next_pts;
-
   // PTS Offset (to make all PTSes start near zero)
   int64_t pts_offset;
 
-  int64_t sync_pts;
-  
   gavf_packet_buffer_t * pb;
   
   gavl_packet_source_t * psrc;
@@ -160,10 +157,9 @@ gavf_stream_t * gavf_find_stream_by_id(gavf_t * g, int32_t id);
 
 /* Packet */
 
-#define GAVF_PACKET_WRITE_PTS       (1<<0)
-#define GAVF_PACKET_WRITE_INTERLACE (1<<1)
-#define GAVF_PACKET_WRITE_DURATION  (1<<2)
-#define GAVF_PACKET_WRITE_FIELD2    (1<<3)
+// #define GAVF_PACKET_WRITE_INTERLACE (1<<0)
+// #define GAVF_PACKET_WRITE_DURATION  (1<<1)
+// #define GAVF_PACKET_WRITE_FIELD2    (1<<2)
 
 int gavf_write_gavl_packet_header(gavf_io_t * io,
                                   int default_duration,
@@ -220,14 +216,16 @@ int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
 
 /* Packet */
 
-#define GAVF_EXT_PK_DURATION         0
-#define GAVF_EXT_PK_HEADER_SIZE      1
-#define GAVF_EXT_PK_SEQ_END          2
-#define GAVF_EXT_PK_TIMECODE         3
-#define GAVF_EXT_PK_SRC_RECT         4
-#define GAVF_EXT_PK_DST_COORDS       5
-#define GAVF_EXT_PK_FDS              6
+#define GAVF_EXT_PK_DURATION         1
+#define GAVF_EXT_PK_HEADER_SIZE      2
+#define GAVF_EXT_PK_SEQ_END          3
+#define GAVF_EXT_PK_TIMECODE         4
+#define GAVF_EXT_PK_SRC_RECT         5
+#define GAVF_EXT_PK_DST_COORDS       6
 #define GAVF_EXT_PK_BUF_IDX          7
+#define GAVF_EXT_PK_INTERLACE        8
+#define GAVF_EXT_PK_FIELD2           9
+#define GAVF_EXT_PK_FDS              10
 
 /* File index */
 
@@ -290,8 +288,6 @@ struct gavf_s
   
   gavf_packet_index_t   pi;
 
-  gavf_packet_header_t  pkthdr;
-  
   gavf_stream_t * streams;
   int num_streams;
   
@@ -313,9 +309,10 @@ struct gavf_s
   gavl_video_frame_t * write_vframe;
   gavl_audio_frame_t * write_aframe;
 
-  encoding_mode_t encoding_mode;
-  encoding_mode_t final_encoding_mode;
+  //  encoding_mode_t encoding_mode;
+  //  encoding_mode_t final_encoding_mode;
 
+  int separate_streams;
   
   };
 
@@ -326,5 +323,21 @@ int gavf_footer_write(gavf_t * g);
 void gavf_footer_init(gavf_t * g);
 
 int gavf_program_header_write(gavf_t * g);
+
+/* Packet */
+
+int gavf_read_gavl_packet(gavf_io_t * io,
+                          gavl_packet_t * p);
+
+int gavf_skip_gavl_packet(gavf_io_t * io,
+                          gavl_packet_t * p);
+
+int gavf_read_gavl_packet_header(gavf_io_t * io,
+                                 gavl_packet_t * p);
+
+int gavf_write_gavl_packet(gavf_io_t * io,
+                           const gavf_stream_t * s,
+                           const gavl_packet_t * p);
+
 
 #endif // GAVFPRIVATE_H_INCLUDED

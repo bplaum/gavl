@@ -1002,7 +1002,7 @@ int gavl_socket_send_fds(int socket, const int * fds, int n)
     return 1;
   }
 
-int gavl_socket_revc_fds(int socket, int * fds, int n)
+int gavl_socket_recv_fds(int socket, int * fds, int n)
   {
   struct msghdr msg = {0};
   struct cmsghdr *cmsg;

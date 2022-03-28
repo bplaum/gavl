@@ -172,7 +172,6 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
     len -= num_get;
     io->position += num_get;
     ret = num_get;
-    
     }
 
   if(len > 0)
@@ -250,6 +249,23 @@ int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
 
 void gavf_io_skip(gavf_io_t * io, int bytes)
   {
+  if(io->get_buf.len > 0)
+    {
+    int num_skip = io->get_buf.len > bytes ? bytes : io->get_buf.len;
+    
+    if(io->get_buf.len > num_skip)
+      memmove(io->get_buf.buf, io->get_buf.buf + num_skip, io->get_buf.len - num_skip);
+    
+    io->get_buf.len -= num_skip;
+    
+    bytes -= num_skip;
+    io->position += num_skip;
+    
+    if(!bytes)
+      return;
+    }
+  
+  
   if(io->seek_func)
     io->position = io->seek_func(io->priv, bytes, SEEK_CUR);
   else

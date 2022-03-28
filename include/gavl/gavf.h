@@ -21,7 +21,7 @@
 /* Stream properties */
 #define GAVF_FLAG_MULTITRACK      (1<<0)
 #define GAVF_FLAG_MULTI_HEADER    (1<<1)
-#define GAVF_FLAG_HAVE_PKT_HEADER (1<<2)
+// #define GAVF_FLAG_HAVE_PKT_HEADER (1<<2)
 #define GAVF_FLAG_WRITE           (1<<3)
 #define GAVF_FLAG_EOF             (1<<4)
 
@@ -463,20 +463,11 @@ void gavl_buffer_flush(gavl_buffer_t * buf, int len);
 GAVL_PUBLIC
 const char * gavf_stream_type_name(gavl_stream_type_t t);
 
-
-typedef struct
-  {
-  int32_t stream_id;
-  } gavf_packet_header_t;
-
 typedef void (*gavf_packet_unref_func)(gavl_packet_t * p, void * priv);
 
 /* Options */
 
-#define GAVF_OPT_FLAG_SYNC_INDEX   (1<<0)
 #define GAVF_OPT_FLAG_PACKET_INDEX (1<<1)
-#define GAVF_OPT_FLAG_INTERLEAVE   (1<<2)
-#define GAVF_OPT_FLAG_BUFFER_READ  (1<<3)
 
 #define GAVF_OPT_FLAG_DUMP_HEADERS (1<<4)
 #define GAVF_OPT_FLAG_DUMP_INDICES (1<<5)
@@ -571,8 +562,6 @@ const gavf_stream_header_t * gavf_get_stream(gavf_t *, int index, int type);
 
 #endif
 
-GAVL_PUBLIC
-const gavf_packet_header_t * gavf_packet_read_header(gavf_t * gavf);
 
 /* Mark this stream as skipable. */
 
@@ -815,22 +804,6 @@ int gavl_dictionary_read(gavf_io_t * io, gavl_dictionary_t * ci);
 GAVL_PUBLIC
 int gavl_dictionary_write(gavf_io_t * io, const gavl_dictionary_t * ci);
 
-/* Packet */
-
-GAVL_PUBLIC
-int gavf_read_gavl_packet(gavf_io_t * io,
-                          int default_duration,
-                          int packet_flags,
-                          int64_t * next_pts,
-                          int64_t pts_offset,
-                          gavl_packet_t * p);
-
-GAVL_PUBLIC
-int gavf_write_gavl_packet(gavf_io_t * io,
-                           gavf_io_t * hdr_io,
-                           int packet_duration,
-                           int packet_flags,
-                           const gavl_packet_t * p);
 
 /* Utilify functions for messages */
 

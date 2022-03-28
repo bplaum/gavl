@@ -105,6 +105,7 @@ gavl_buffer_t * gavf_io_buf_get(gavf_io_t * io)
 void gavf_io_buf_reset(gavf_io_t * io)
   {
   gavl_buffer_reset(io->priv);
+  io->position = 0;
   }
 
 void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf)

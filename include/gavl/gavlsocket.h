@@ -170,7 +170,7 @@ GAVL_PUBLIC
 int gavl_socket_send_fds(int socket, const int * fds, int n);
 
 GAVL_PUBLIC
-int gavl_socket_revc_fds(int socket, int * fds, int n);
+int gavl_socket_recv_fds(int socket, int * fds, int n);
 
 
 GAVL_PUBLIC

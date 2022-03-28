@@ -1,33 +1,42 @@
 #include <gavfprivate.h>
+#include <gavl/metatags.h>
 
 /* Packet source */
 
 static gavl_source_status_t
-read_packet_func_nobuffer(void * priv, gavl_packet_t ** p)
+read_packet_func_separate(void * priv, gavl_packet_t ** p)
   {
+  gavl_msg_t msg;
   gavf_stream_t * s = priv;
 
-  if(!GAVF_HAS_FLAG(s->g, GAVF_FLAG_HAVE_PKT_HEADER) && !gavf_packet_read_header(s->g))
-    return GAVL_SOURCE_EOF;
+  gavl_packet_t pkt;
+  gavl_packet_init(&pkt);
 
-  if(s->g->pkthdr.stream_id != s->id)
-    return GAVL_SOURCE_AGAIN;
+  gavl_msg_init(&msg);
 
-  GAVF_CLEAR_FLAG(s->g, GAVF_FLAG_HAVE_PKT_HEADER);
+  gavl_msg_set_id_ns(&msg, GAVL_MSG_SRC_READY, GAVL_MSG_NS_SRC);
+  gavl_msg_write(&msg, s->io);
+  gavl_msg_free(&msg);
   
-  if(!gavf_read_gavl_packet(s->g->io, s->packet_duration, s->packet_flags,
-                            &s->next_pts, s->pts_offset, *p))
+  if(!gavf_read_gavl_packet_header(s->io, &pkt))
     return GAVL_SOURCE_EOF;
 
-  (*p)->id = s->id;
-
-  if(s->g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
+  if(pkt.id == GAVL_META_STREAM_ID_MSG_GAVF)
     {
-    fprintf(stderr, "ID: %d ", s->g->pkthdr.stream_id);
-    gavl_packet_dump(*p);
+    return GAVL_SOURCE_EOF;
     }
 
+  gavl_packet_copy_metadata(*p, &pkt);
+
+  if(!gavf_read_gavl_packet(s->io, *p))
+    {
+    return GAVL_SOURCE_EOF;
+    }
   
+  if(s->g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
+    {
+    gavl_packet_dump(*p);
+    }
   
   return GAVL_SOURCE_OK;
   }
@@ -35,38 +44,44 @@ read_packet_func_nobuffer(void * priv, gavl_packet_t ** p)
 /* Process one packet */
 gavl_source_status_t gavf_demux_iteration(gavf_t * g)
   {
-  gavl_packet_t * read_packet;
+  gavl_packet_t pkt;
   gavf_stream_t * read_stream;
-  
-  /* Read header */
-  if(!GAVF_HAS_FLAG(g, GAVF_FLAG_HAVE_PKT_HEADER) &&
-     !gavf_packet_read_header(g))
+
+  if(!gavf_read_gavl_packet_header(g->io, &pkt))
+    return GAVL_SOURCE_EOF;
+
+  if(pkt.id == GAVL_META_STREAM_ID_MSG_GAVF)
     {
-    //      fprintf(stderr, "Have no header\n");
+    /* TODO: Handle messages */
     return GAVL_SOURCE_EOF;
     }
-
-  read_stream = gavf_find_stream_by_id(g, g->pkthdr.stream_id);
+  
+  read_stream = gavf_find_stream_by_id(g, pkt.id);
   if(!read_stream)
     {
     /* Should never happen */
     return GAVL_SOURCE_EOF;
     }
-  
-  read_packet = gavf_packet_buffer_get_write(read_stream->pb);
 
-  if(!gavf_read_gavl_packet(g->io, read_stream->packet_duration, read_stream->packet_flags,
-                            &read_stream->next_pts, read_stream->pts_offset, read_packet))
-    return GAVL_SOURCE_EOF;
+  if(read_stream->flags & STREAM_FLAG_SKIP)
+    {
+    if(!gavf_skip_gavl_packet(g->io, &pkt))
+      return GAVL_SOURCE_EOF;
+    }
+  else
+    {
+    gavl_packet_t * read_packet;
 
-  read_packet->id = read_stream->id;
-  
-  gavf_packet_buffer_done_write(read_stream->pb);
-  //    fprintf(stderr, "Got packet id: %d\n", read_stream->h->id);
-  //    gavl_packet_dump(read_packet);
+    read_packet = gavf_packet_buffer_get_write(read_stream->pb);
+    gavl_packet_copy_metadata(read_packet, &pkt);
+
+    if(!gavf_read_gavl_packet(g->io, read_packet))
+      return GAVL_SOURCE_EOF;
     
-
-  GAVF_CLEAR_FLAG(g, GAVF_FLAG_HAVE_PKT_HEADER);
+    gavf_packet_buffer_done_write(read_stream->pb);
+    }
+  
+  
   
   return GAVL_SOURCE_OK;
   }
@@ -86,7 +101,6 @@ read_packet_func_buffer_cont(void * priv, gavl_packet_t ** p)
   
   if(g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
     {
-    fprintf(stderr, "ID: %d ", g->pkthdr.stream_id);
     gavl_packet_dump(*p);
     }
   
@@ -111,9 +125,9 @@ void gavf_stream_create_packet_src(gavf_t * g, gavf_stream_t * s)
   gavl_packet_source_func_t func;
   int flags;
   
-  if(!(g->opt.flags & GAVF_OPT_FLAG_BUFFER_READ))
+  if(g->separate_streams)
     {
-    func = read_packet_func_nobuffer;
+    func = read_packet_func_separate;
     flags = 0;
     }
   else
@@ -156,7 +170,37 @@ put_packet_func_separate(void * priv, gavl_packet_t * p)
   gavf_stream_t * s = priv;
   p->id = s->id;
 
-  
+  while(1)
+    {
+    gavl_msg_t msg;
+    gavl_msg_init(&msg);
+    
+    if(!gavl_msg_read(&msg, s->io))
+      return 0;
+
+    switch(msg.NS)
+      {
+      case GAVL_MSG_NS_SRC:
+
+        switch(msg.ID)
+          {
+          case GAVL_MSG_SRC_READY:
+            break;
+          }
+        
+        break;
+      }
+    
+    gavl_msg_free(&msg);
+    
+    }
+
+  if(!gavf_write_gavl_packet(s->io, s, p))
+    {
+    return GAVL_SINK_ERROR;
+    }
+  else
+    return GAVL_SINK_OK;
   
   }
 
@@ -164,7 +208,6 @@ static gavl_sink_status_t
 put_packet_func_multiplex(void * priv, gavl_packet_t * p)
   {
   gavf_stream_t * s = priv;
-  gavf_packet_buffer_done_write(s->pb);
   p->id = s->id;
   
   /* Update footer */
@@ -174,6 +217,9 @@ put_packet_func_multiplex(void * priv, gavl_packet_t * p)
 #endif
   
   gavl_stream_stats_update(&s->stats, p);
+
+  if(!gavf_write_gavl_packet(s->g->io, s, p))
+    return GAVL_SINK_ERROR;
   
   //  return gavf_flush_packets(s->g, s);
 
@@ -183,17 +229,26 @@ put_packet_func_multiplex(void * priv, gavl_packet_t * p)
   //    GAVL_SINK_OK : GAVL_SINK_ERROR;
   }
 
+#if 0
 static gavl_packet_t *
 get_packet_func_multiplex(void * priv)
   {
   gavf_stream_t * s = priv;
   return gavf_packet_buffer_get_write(s->pb);
   }
+#endif
 
 void gavf_stream_create_packet_sink(gavf_t * g, gavf_stream_t * s)
   {
-  /* Create packet sink */
-  s->psink = gavl_packet_sink_create(get_packet_func_multiplex,
-                                     put_packet_func_multiplex, s);
+  if(g->separate_streams)
+    {
+    s->psink = gavl_packet_sink_create(NULL,
+                                       put_packet_func_separate, s);
+    }
+  else
+    {
+    s->psink = gavl_packet_sink_create(NULL,
+                                       put_packet_func_multiplex, s);
+    }
   
   }

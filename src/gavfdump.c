@@ -28,7 +28,7 @@ int main(int argc, char ** argv)
   gavf_options_t * opt;
   FILE * f;
   gavl_packet_t p;
-  const gavf_packet_header_t * h;
+  //  const gavf_packet_header_t * h;
   
   dec = gavf_create();
 
@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
     fprintf(stderr, "Opening decoder failed\n");
     return 0;
     }
-
+#if 0
   gavl_packet_init(&p);
   
   while(1)
@@ -62,7 +62,7 @@ int main(int argc, char ** argv)
        !gavf_packet_read_packet(dec, &p))
       break;
     }
-  
+#endif
   /* Cleanup */
 
   gavf_close(dec, 0);

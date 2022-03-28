@@ -383,16 +383,24 @@ void gavl_packet_copy(gavl_packet_t * dst,
 void gavl_packet_copy_metadata(gavl_packet_t * dst,
                                const gavl_packet_t * src)
   {
+  int i;
   int data_alloc_save;
   int data_len_save;
   uint8_t * data_save;
+  int fds_save[GAVL_MAX_PLANES];
   
   data_alloc_save = dst->data_alloc;
   data_len_save   = dst->data_len;
   data_save       = dst->data;
 
+  for(i = 0; i < GAVL_MAX_PLANES; i++)
+    fds_save[i] = dst->fds[i];
+  
   memcpy(dst, src, sizeof(*src));
 
+  for(i = 0; i < GAVL_MAX_PLANES; i++)
+    dst->fds[i] = fds_save[i];
+  
   dst->data_alloc = data_alloc_save;
   dst->data_len   = data_len_save;
   dst->data       = data_save;

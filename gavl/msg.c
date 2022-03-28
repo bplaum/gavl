@@ -791,6 +791,7 @@ int gavl_msg_send(gavl_msg_t * msg, gavl_handle_msg_func func, void * priv)
   
   }
 
+#if 0
 void gavl_msg_set_src_resync(gavl_msg_t * dst, int64_t t, int scale, int discard, int discont)
   {
   gavl_msg_set_id_ns(dst, GAVL_MSG_SRC_RESYNC, GAVL_MSG_NS_SRC);
@@ -812,3 +813,4 @@ void gavl_msg_get_src_resync(const gavl_msg_t * src, int64_t * t, int * scale, i
   if(discont)
     *discont = gavl_msg_get_arg_int(src, 3);
   }
+#endif

@@ -1,8 +1,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <config.h>
 
 #include <gavfprivate.h>
+#include <gavl/log.h>
+#include <gavl/gavlsocket.h>
+
+#define LOG_DOMAIN "gavlstructs"
 
 /* Formats */
 
@@ -372,60 +377,240 @@ int gavf_write_video_format(gavf_io_t * io, const gavl_video_format_t * format)
 
 /* Packet */
 
-int gavf_read_gavl_packet(gavf_io_t * io,
-                          int default_duration,
-                          int packet_flags,
-                          int64_t * next_pts,
-                          int64_t pts_offset,
-                          gavl_packet_t * p)
+
+int gavf_write_gavl_packet(gavf_io_t * io,
+                           const gavf_stream_t * s,
+                           const gavl_packet_t * p)
   {
-  uint64_t start_pos;
-  uint32_t len;
+  uint32_t num_extensions;
+
+  uint8_t data[MAX_EXT_SIZE_PK];
+  gavl_buffer_t buf;
+  gavf_io_t bufio;
+  uint32_t flags;
+  int write_duration = 0;
   
-  if(!gavf_io_read_uint32v(io, &len))
+  /* Count extensions */
+  num_extensions = 0;
+  
+  if(!s || !s->packet_duration || (p->duration != s->packet_duration))
+    {
+    num_extensions++;
+    write_duration = 1;
+    }
+  
+  if(p->header_size)
+    num_extensions++;
+
+  if(p->sequence_end_pos)
+    num_extensions++;
+
+  if(p->field2_offset)
+    num_extensions++;
+  
+  if(p->timecode != GAVL_TIMECODE_UNDEFINED)
+    num_extensions++;
+
+  if(p->interlace_mode != GAVL_INTERLACE_NONE)
+    num_extensions++;
+
+  if(p->src_rect.w && p->src_rect.h)
+    num_extensions++;
+
+  if(p->dst_x || p->dst_y)
+    num_extensions++;
+  
+  /* Flags */
+
+  flags = p->flags;
+  if(num_extensions)
+    flags |= GAVL_PACKET_EXT;
+
+  /*
+   * 1 byte "P"
+   * stream_id: int32v
+   * pts:       int64v
+   * flags:     uint32v
+   * if(flags & GAVL_PACKET_EXT)
+   *   {
+   *   extension[i]
+   *   }
+   * 
+   */
+  
+  if(!gavf_io_write_data(io, (uint8_t*)GAVF_TAG_PACKET_HEADER, 1))
     goto fail;
   
-  start_pos = io->position;
+  if(!gavf_io_write_int32v(io, p->id))
+    goto fail;
 
+  /* PTS */
+  if(!gavf_io_write_int64v(io, p->pts))
+    goto fail;
+  
+  if(!gavf_io_write_uint32v(io, flags))
+    goto fail;
+  
+  /* Write Extensions */
+
+  if(num_extensions)
+    {
+    if(!gavf_io_write_uint32v(io, num_extensions))
+      goto fail;
+    
+    gavl_buffer_init_static(&buf, data, MAX_EXT_SIZE_AF);
+    gavf_io_init_buf_write(&bufio, &buf);
+    
+    if(write_duration)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_int64v(&bufio, p->duration) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_DURATION,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+    
+    /* Field2 offset */
+    if(p->field2_offset)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->field2_offset) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_FIELD2,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+    
+    /* Interlace mode */
+    if(p->interlace_mode != GAVL_INTERLACE_NONE)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->interlace_mode) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_INTERLACE,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+    
+    if(p->header_size)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->header_size) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_HEADER_SIZE,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+    if(p->sequence_end_pos)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->sequence_end_pos) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_SEQ_END,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+
+    if(p->timecode != GAVL_TIMECODE_UNDEFINED)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint64f(&bufio, p->timecode) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_TIMECODE,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+
+    if(p->src_rect.w && p->src_rect.h)
+      {
+      gavf_io_buf_reset(&bufio);
+      
+      if(!gavf_io_write_int32v(&bufio, p->src_rect.x) ||
+         !gavf_io_write_int32v(&bufio, p->src_rect.y) ||
+         !gavf_io_write_int32v(&bufio, p->src_rect.w) ||
+         !gavf_io_write_int32v(&bufio, p->src_rect.h) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_SRC_RECT,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+
+    if(p->dst_x || p->dst_y)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_int32v(&bufio, p->dst_x) ||
+         !gavf_io_write_int32v(&bufio, p->dst_y) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_DST_COORDS,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+
+    if(p->num_fds)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->num_fds) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_FDS,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+
+    if(p->buf_idx >= 0)
+      {
+      gavf_io_buf_reset(&bufio);
+      if(!gavf_io_write_uint32v(&bufio, p->buf_idx) ||
+         !gavf_extension_write(io, GAVF_EXT_PK_BUF_IDX,
+                               buf.len, buf.buf))
+        goto fail;
+      }
+    
+    }
+
+  if(!gavf_io_write_uint32v(io, p->data_len))
+    goto fail;
+
+  if(p->data_len && (gavf_io_write_data(io, p->data, p->data_len) < p->data_len))
+    goto fail;
+
+  if(p->num_fds)    
+    {
+    int sock;
+
+    if(!(gavf_io_get_flags(io) & GAVF_IO_IS_UNIX_SOCKET))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Passing FDs works only with UNIX-Sockets");
+      return 0;
+      }
+    
+    sock = gavf_io_get_socket(io);
+    
+    if(!gavl_socket_send_fds(sock, p->fds, p->num_fds))
+      goto fail;
+    }
+    
+  return 1;
+
+  fail:
+  return 0;
+  }
+
+
+int gavf_read_gavl_packet_header(gavf_io_t * io,
+                                 gavl_packet_t * p)
+  {
+  uint8_t c;
+  
   gavl_packet_reset(p);
 
+  /* P */
+  if(!gavf_io_get_data(io, &c, 1) || (c != GAVF_TAG_PACKET_HEADER_C))
+    goto fail;
+
+  gavf_io_skip(io, 1);
+  
+  /* Stream ID */
   
   /* Flags */
   if(!gavf_io_read_uint32v(io, (uint32_t*)&p->flags))
     goto fail;
   
   /* PTS */
-  if(packet_flags & GAVF_PACKET_WRITE_PTS)
-    {
-    if(!gavf_io_read_int64v(io, &p->pts))
-      goto fail;
-    }
-  else if(next_pts)
-    p->pts = *next_pts;
-  else
-    p->pts = GAVL_TIME_UNDEFINED;
+  if(!gavf_io_read_int64v(io, &p->pts))
+    goto fail;
   
-  /* Duration */
-  if(packet_flags & GAVF_PACKET_WRITE_DURATION)
-    {
-    if(!gavf_io_read_int64v(io, &p->duration))
-      goto fail;
-    }
-  
-  /* Field2 */
-  if(packet_flags & GAVF_PACKET_WRITE_FIELD2)
-    {
-    if(!gavf_io_read_uint32v(io, &p->field2_offset))
-      goto fail;
-    }
-
-  /* Interlace mode */
-  if(packet_flags & GAVF_PACKET_WRITE_INTERLACE)
-    {
-    if(!gavf_io_read_uint32v(io, (uint32_t*)&p->interlace_mode))
-      goto fail;
-    }
- 
   if(p->flags & GAVL_PACKET_EXT)
     {
     uint32_t num_extensions;
@@ -470,6 +655,22 @@ int gavf_read_gavl_packet(gavf_io_t * io,
              !gavf_io_read_int32v(io, &p->dst_y))
             goto fail;
           break;
+        case GAVF_EXT_PK_FIELD2:
+          if(!gavf_io_read_uint32v(io, &p->field2_offset))
+            goto fail;
+          break;
+        case GAVF_EXT_PK_INTERLACE:
+          if(!gavf_io_read_uint32v(io, (uint32_t*)&p->interlace_mode))
+            goto fail;
+          break;
+        case GAVF_EXT_PK_FDS:
+          if(!gavf_io_read_uint32v(io, (uint32_t*)&p->num_fds))
+            goto fail;
+          break;
+        case GAVF_EXT_PK_BUF_IDX:
+          if(!gavf_io_read_uint32v(io, (uint32_t*)&p->buf_idx))
+            goto fail;
+          break;
         default:
           /* Skip */
           gavf_io_skip(io, eh.len);
@@ -477,30 +678,41 @@ int gavf_read_gavl_packet(gavf_io_t * io,
         }
       }
     }
+
+  if(!gavf_io_read_uint32v(io, (uint32_t*)&p->data_len))
+    goto fail;
   
   p->flags &= ~GAVL_PACKET_EXT;
   
+  fail:
+  return 0;
+  }
+
+int gavf_read_gavl_packet(gavf_io_t * io,
+                          gavl_packet_t * p)
+  {
   /* Payload */
-  p->data_len = len - (io->position - start_pos);
   gavl_packet_alloc(p, p->data_len);
   if(gavf_io_read_data(io, p->data, p->data_len) < p->data_len)
     goto fail;
 
-  /* Duration */
-  if(!p->duration)
+  if(p->num_fds)
     {
-    if(default_duration)
-      p->duration = default_duration;
-    }
-  /* p->duration can be 0 for the first packet in a vorbis stream */
-  
-  /* Set pts */
-  if(next_pts)
-    *next_pts += p->duration;
-  
-  /* Add offset */
-  p->pts += pts_offset;
+    int sock;
 
+    if(!(gavf_io_get_flags(io) & GAVF_IO_IS_UNIX_SOCKET))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Passing FDs works only with UNIX-Sockets");
+      return 0;
+      }
+    
+    sock = gavf_io_get_socket(io);
+
+    if(!gavl_socket_recv_fds(sock, p->fds, p->num_fds))
+      goto fail;
+    
+    }
+  
   return 1;
   
   fail:
@@ -510,155 +722,29 @@ int gavf_read_gavl_packet(gavf_io_t * io,
   return 0;
   }
 
-int gavf_write_gavl_packet_header(gavf_io_t * io,
-                                  int default_duration,
-                                  int packet_flags,
-                                  const gavl_packet_t * p)
+int gavf_skip_gavl_packet(gavf_io_t * io,
+                          gavl_packet_t * p)
   {
-  uint32_t num_extensions;
+  gavf_io_skip(io, p->data_len);
 
-  uint8_t data[MAX_EXT_SIZE_PK];
-  gavl_buffer_t buf;
-  gavf_io_t bufio;
+  if(p->num_fds)
+    {
+    int sock;
 
-  uint32_t flags;
-  
-  /* Count extensions */
-  num_extensions = 0;
-  
-  if(default_duration && (p->duration < default_duration))
-    num_extensions++;
-
-  if(p->header_size)
-    num_extensions++;
-
-  if(p->sequence_end_pos)
-    num_extensions++;
-
-  if(p->timecode != GAVL_TIMECODE_UNDEFINED)
-    num_extensions++;
-
-  if(p->src_rect.w && p->src_rect.h)
-    num_extensions++;
-
-  if(p->dst_x || p->dst_y)
-    num_extensions++;
-  
-  /* Flags */
-
-  flags = p->flags;
-  if(num_extensions)
-    flags |= GAVL_PACKET_EXT;
-  if(!gavf_io_write_uint32v(io, flags))
-    return 0;
+    if(!(gavf_io_get_flags(io) & GAVF_IO_IS_UNIX_SOCKET))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Passing FDs works only with UNIX-Sockets");
+      return 0;
+      }
     
-  /* PTS */
-  if(packet_flags & GAVF_PACKET_WRITE_PTS)
-    {
-    if(p->pts == GAVL_TIME_UNDEFINED)
-      {
-      if(!gavf_io_write_int64v(io, p->pts))
-        return 0;
-      }
-    else
-      {
-      if(!gavf_io_write_int64v(io, p->pts))
-        return 0;
-      }
-    }
-  
-  /* Duration */
-  if(packet_flags & GAVF_PACKET_WRITE_DURATION)
-    {
-    if(!gavf_io_write_int64v(io, p->duration))
+    sock = gavf_io_get_socket(io);
+
+    if(!gavl_socket_recv_fds(sock, p->fds, p->num_fds))
       return 0;
     }
 
-  /* Field2 */
-  if(packet_flags & GAVF_PACKET_WRITE_FIELD2)
-    {
-    if(!gavf_io_write_uint32v(io, p->field2_offset))
-      return 0;
-    }
-
-  /* Interlace mode */
-  if(packet_flags & GAVF_PACKET_WRITE_INTERLACE)
-    {
-    if(!gavf_io_write_uint32v(io, p->interlace_mode))
-      return 0;
-    }
-  
-  /* Write Extensions */
-
-  if(num_extensions)
-    {
-    if(!gavf_io_write_uint32v(io, num_extensions))
-      return 0;
-    
-    gavl_buffer_init_static(&buf, data, MAX_EXT_SIZE_AF);
-    gavf_io_init_buf_write(&bufio, &buf);
-    
-    if(default_duration && (p->duration < default_duration))
-      {
-      gavf_io_buf_reset(&bufio);
-      buf.len = 0;
-      if(!gavf_io_write_int64v(&bufio, p->duration) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_DURATION,
-                               buf.len, buf.buf))
-        return 0;
-      }
-
-    if(p->header_size)
-      {
-      gavf_io_buf_reset(&bufio);
-      if(!gavf_io_write_uint32v(&bufio, p->header_size) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_HEADER_SIZE,
-                               buf.len, buf.buf))
-        return 0;
-      }
-    if(p->sequence_end_pos)
-      {
-      gavf_io_buf_reset(&bufio);
-      if(!gavf_io_write_uint32v(&bufio, p->sequence_end_pos) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_SEQ_END,
-                               buf.len, buf.buf))
-        return 0;
-      }
-
-    if(p->timecode != GAVL_TIMECODE_UNDEFINED)
-      {
-      gavf_io_buf_reset(&bufio);
-      if(!gavf_io_write_uint64f(&bufio, p->timecode) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_TIMECODE,
-                               buf.len, buf.buf))
-        return 0;
-      
-      }
-
-    if(p->src_rect.w && p->src_rect.h)
-      {
-      gavf_io_buf_reset(&bufio);
-      
-      if(!gavf_io_write_int32v(&bufio, p->src_rect.x) ||
-         !gavf_io_write_int32v(&bufio, p->src_rect.y) ||
-         !gavf_io_write_int32v(&bufio, p->src_rect.w) ||
-         !gavf_io_write_int32v(&bufio, p->src_rect.h) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_SRC_RECT,
-                               buf.len, buf.buf))
-        return 0;
-      }
-
-    if(p->dst_x || p->dst_y)
-      {
-      gavf_io_buf_reset(&bufio);
-      if(!gavf_io_write_int32v(&bufio, p->dst_x) ||
-         !gavf_io_write_int32v(&bufio, p->dst_y) ||
-         !gavf_extension_write(io, GAVF_EXT_PK_DST_COORDS,
-                               buf.len, buf.buf))
-        return 0;
-      }
-    }
   return 1;
+  
   }
 
 /* From / To Buffer */
