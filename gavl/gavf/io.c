@@ -1211,11 +1211,13 @@ int gavf_packet_to_msg(const gavl_packet_t * src,
   return gavl_msg_from_buffer(src->data, src->data_len, msg);
   }
 
+#if 0
 void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data)
   {
   io->msg_callback = msg_callback;
   io->msg_data = msg_data;
   }
+#endif
 
 /* Sub I/O */
 

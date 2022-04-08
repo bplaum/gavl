@@ -111,28 +111,6 @@
 
 #define GAVL_MSG_SRC_AUTHENTICATE     4
 
-/** \brief Seeked
- *
- */
-
-#define GAVL_MSG_SRC_SEEK            5
-
-/** \brief Track selected
- *  arg0: New track (dictionary)
- */
-
-#define GAVL_MSG_SRC_SELECT_TRACK    6
-
-/** \brief End of file
- *
- *  Transmitted as the last packet of a track. After that, another
- *  track (or the same again) can be selected and the stream can newly be set up
- */
-
-#define GAVL_MSG_SRC_EOF             7
-
-#define GAVL_MSG_SRC_READY           8
-
 
 
 /** \brief Authentication request
@@ -293,24 +271,48 @@
 
 // GAVL_MSG_NS_GAVF
 /* These messages control the low-level packet flow in order to allow
-   format changes, resyncs etc. They are included into a gavf message stream */
+   format changes, resyncs etc. In the direction of the AV-Data, they
+   are sent as packets of the stream-ID GAVL_META_STREAM_ID_MSG_GAVF.
+   In the opposite direction they are sent raw.
+*/
 
-/* Receiver -> Source: Acknowledge the arrival of a media (i.e. no message) packet */
-#define GAVL_MSG_GAVF_PACKET_ACK   1
+#define GAVL_MSG_GAVF_MEDIA_INFO      1
 
-/* Source -> receiver: EOF encountered. After this message was sent, one can seek or select another track
-   with the Source API */
+/** \brief Seeked
+ *
+ */
 
-/* Arg 0: New time */
-/* Arg 1: scale    */
-/* Arg 2: discard packets (1 or 0) */
-/* Arg 3: stream is discontinuous (1 or 0) */
+#define GAVL_MSG_GAVF_SEEK            5
 
-// #define GAVL_MSG_GAVF_RESYNC       2
+/** \brief Track selected
+ *  arg0: New track (dictionary)
+ */
+
+#define GAVL_MSG_GAVF_SELECT_TRACK    6
 
 
-/* Emitted from within the demuxer loop */
-#define GAVL_MSG_GAVF_GOT_EOF                       (0x1000|13)
+/** \brief End of file
+ *
+ *  Transmitted as the last packet of a track. After that, another
+ *  track (or the same again) can be selected and the stream can newly be set up
+ */
+
+#define GAVL_MSG_GAVF_EOF             7
+
+#define GAVL_MSG_GAVF_READY           8
+
+/** \brief Transport started
+ *  arg0: New track (dictionary)
+ */
+
+#define GAVL_MSG_GAVF_START           9
+
+/** \brief Transport started
+ *  arg0: Stream ID (int)
+ *  arg1: 1 = on, 0 = off
+ */
+
+#define GAVL_CMD_GAVF_SELECT_STREAM   (0x100+1)
 
 
 /* Header fields */

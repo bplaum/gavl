@@ -65,14 +65,11 @@ int gavf_footer_write(gavf_t * g)
 #if 1
   
   /* Write indices */  
-  if(g->opt.flags & GAVF_OPT_FLAG_PACKET_INDEX)
-    {
-    if(g->opt.flags & GAVF_OPT_FLAG_DUMP_INDICES)
-      gavf_packet_index_dump(&g->pi);
-    if(!gavf_packet_index_write(g->io, &g->pi))
-      return 0;
-    }
-
+  if(g->opt.flags & GAVF_OPT_FLAG_DUMP_INDICES)
+    gavf_packet_index_dump(&g->pi);
+  if(!gavf_packet_index_write(g->io, &g->pi))
+    return 0;
+  
 #endif
   
   gavf_chunk_finish(g->io, &footer, 1);

@@ -14,7 +14,44 @@ read_packet_func_separate(void * priv, gavl_packet_t ** p)
 
   gavl_msg_init(&msg);
 
-  gavl_msg_set_id_ns(&msg, GAVL_MSG_SRC_READY, GAVL_MSG_NS_SRC);
+  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READY, GAVL_MSG_NS_GAVF);
+  gavl_msg_write(&msg, s->io);
+  gavl_msg_free(&msg);
+  
+  if(!gavf_read_gavl_packet_header(s->io, &pkt))
+    return GAVL_SOURCE_EOF;
+
+  if(pkt.id == GAVL_META_STREAM_ID_MSG_GAVF)
+    {
+    return GAVL_SOURCE_EOF;
+    }
+
+  gavl_packet_copy_metadata(*p, &pkt);
+
+  if(!gavf_read_gavl_packet(s->io, *p))
+    {
+    return GAVL_SOURCE_EOF;
+    }
+  
+  if(s->g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
+    {
+    gavl_packet_dump(*p);
+    }
+  
+  return GAVL_SOURCE_OK;
+  }
+
+static gavl_source_status_t
+read_packet_func_separate_discont(void * priv, gavl_packet_t ** p)
+  {
+  gavl_msg_t msg;
+  gavf_stream_t * s = priv;
+
+  gavl_packet_t pkt;
+  gavl_packet_init(&pkt);
+  
+  gavl_msg_init(&msg);
+  gavl_msg_set_id_ns(&msg, GAVL_MSG_GAVF_READY, GAVL_MSG_NS_GAVF);
   gavl_msg_write(&msg, s->io);
   gavl_msg_free(&msg);
   
@@ -47,6 +84,8 @@ gavl_source_status_t gavf_demux_iteration(gavf_t * g)
   gavl_packet_t pkt;
   gavf_stream_t * read_stream;
 
+  gavl_packet_init(&pkt);
+  
   if(!gavf_read_gavl_packet_header(g->io, &pkt))
     return GAVL_SOURCE_EOF;
 
@@ -124,8 +163,7 @@ void gavf_stream_create_packet_src(gavf_t * g, gavf_stream_t * s)
   {
   gavl_packet_source_func_t func;
   int flags;
-  
-  if(g->separate_streams)
+  if(GAVF_HAS_FLAG(g, GAVF_FLAG_SEPARATE_STREAMS))
     {
     func = read_packet_func_separate;
     flags = 0;
@@ -182,13 +220,18 @@ put_packet_func_separate(void * priv, gavl_packet_t * p)
       {
       case GAVL_MSG_NS_SRC:
 
-        switch(msg.ID)
-          {
-          case GAVL_MSG_SRC_READY:
-            break;
-          }
         
         break;
+
+      case GAVL_MSG_NS_GAVF:
+
+        switch(msg.ID)
+          {
+          case GAVL_MSG_GAVF_READY:
+            break;
+          }
+        break;
+        
       }
     
     gavl_msg_free(&msg);
@@ -240,7 +283,7 @@ get_packet_func_multiplex(void * priv)
 
 void gavf_stream_create_packet_sink(gavf_t * g, gavf_stream_t * s)
   {
-  if(g->separate_streams)
+  if(GAVF_HAS_FLAG(g, GAVF_FLAG_SEPARATE_STREAMS))
     {
     s->psink = gavl_packet_sink_create(NULL,
                                        put_packet_func_separate, s);

@@ -1172,12 +1172,14 @@ int gavl_unix_socket_create(char ** name, int queue_size)
   return gavl_listen_socket_create_unix(*name, queue_size);
   }
 
+#if 0
 void gavl_unix_socket_close(int fd, char * name)
   {
   unlink(name);
   free(name);
   gavl_socket_close(fd);
   }
+#endif
 
 void gavl_socket_close(int fd)
   {

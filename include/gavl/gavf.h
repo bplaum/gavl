@@ -19,14 +19,22 @@
 #include <stdio.h>
 
 /* Stream properties */
-#define GAVF_FLAG_MULTITRACK      (1<<0)
-#define GAVF_FLAG_MULTI_HEADER    (1<<1)
+// #define GAVF_FLAG_MULTITRACK      (1<<0)
+// #define GAVF_FLAG_MULTI_HEADER    (1<<1)
 // #define GAVF_FLAG_HAVE_PKT_HEADER (1<<2)
 #define GAVF_FLAG_WRITE           (1<<3)
 #define GAVF_FLAG_EOF             (1<<4)
 
 /* No seek support */
-#define GAVF_FLAG_STREAMING       (1<<5)
+// #define GAVF_FLAG_STREAMING       (1<<5)
+
+#define GAVF_FLAG_INTERACTIVE      (1<<6)
+#define GAVF_FLAG_UNIX             (1<<7)
+#define GAVF_FLAG_SEPARATE_STREAMS (1<<8)
+
+/* on-disk */
+#define GAVF_FLAG_ONDISK           (1<<9)
+#define GAVF_FLAG_STARTED          (1<<10)
 
 /* IO flags */
 
@@ -48,6 +56,19 @@
 
 /* Generic protocol for selecting the right plugin with gmerlin */
 #define GAVF_PROTOCOL          "gavf"
+
+#define GAVF_EXTENSION         "gavf"
+
+/* gavf specific dictionary */
+#define GAVF_DICT              "gavf"
+#define GAVF_META_HWSTORAGE    "hw" // Where the frames are stored
+
+/*
+ *  Also allowed in a GAVF_DICT:
+ *  GAVL_META_URI Address for passing stream packets
+ */
+
+
 
 /* gavf is a stream format, which is basically a serialized version 
    of the internal stream structures, which are used throughout the
@@ -244,8 +265,8 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flag
 // GAVL_PUBLIC
 // void gavf_io_set_cb(gavf_io_t * io, gavf_io_cb_func cb, void * cb_priv);
 
-GAVL_PUBLIC
-void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data);
+// GAVL_PUBLIC
+// void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data);
 
 GAVL_PUBLIC
 int gavf_io_got_error(gavf_io_t * io);
@@ -424,7 +445,7 @@ int gavf_io_write_32_be(gavf_io_t * ctx,uint32_t val);
 GAVL_PUBLIC
 int gavf_io_write_64_be(gavf_io_t * ctx, uint64_t val);
 
-/** \brief Read a message using a callback
+/** \brief Read a message
  *  \param ret Where the message will be copied
  *  \param io I/O context
  *  \returns 1 on success, 0 on error
@@ -433,7 +454,7 @@ int gavf_io_write_64_be(gavf_io_t * ctx, uint64_t val);
 GAVL_PUBLIC
 int gavl_msg_read(gavl_msg_t * ret, gavf_io_t * io);
 
-/** \brief Write a message using a callback
+/** \brief Write a message
  *  \param msg A message
  *  \param io I/O context
  *  \returns 1 on success, 0 on error
@@ -467,8 +488,6 @@ typedef void (*gavf_packet_unref_func)(gavl_packet_t * p, void * priv);
 
 /* Options */
 
-#define GAVF_OPT_FLAG_PACKET_INDEX (1<<1)
-
 #define GAVF_OPT_FLAG_DUMP_HEADERS (1<<4)
 #define GAVF_OPT_FLAG_DUMP_INDICES (1<<5)
 #define GAVF_OPT_FLAG_DUMP_PACKETS (1<<6)
@@ -482,10 +501,6 @@ void gavf_options_set_flags(gavf_options_t *, int flags);
 
 GAVL_PUBLIC
 int gavf_options_get_flags(gavf_options_t *);
-
-GAVL_PUBLIC
-void gavf_options_set_sync_distance(gavf_options_t *,
-                                    gavl_time_t sync_distance);
 
 GAVL_PUBLIC
 gavf_options_t * gavf_options_create();
@@ -516,6 +531,17 @@ void gavf_set_options(gavf_t *, const gavf_options_t *);
 GAVL_PUBLIC
 int gavf_get_flags(gavf_t *);
 
+GAVL_PUBLIC
+int gavf_handle_reader_command(gavf_t *, const gavl_msg_t * m);
+
+GAVL_PUBLIC
+int gavf_read_writer_command(gavf_t * g, int timeout);
+
+GAVL_PUBLIC
+gavf_io_t * gavf_get_io(gavf_t * g);
+
+
+
 /* Read support */
 
 GAVL_PUBLIC
@@ -540,8 +566,8 @@ gavl_dictionary_t * gavf_get_current_track_nc(gavf_t * g);
 GAVL_PUBLIC
 const gavl_dictionary_t * gavf_get_current_track(const gavf_t * g);
 
-GAVL_PUBLIC
-int gavf_select_track(gavf_t * g, int track);
+// GAVL_PUBLIC
+// int gavf_select_track(gavf_t * g, int track);
 
 GAVL_PUBLIC
 gavl_source_status_t gavf_demux_iteration(gavf_t * g);
@@ -575,8 +601,8 @@ void gavf_stream_set_unref(gavf_t * gavf, uint32_t id,
 GAVL_PUBLIC
 void gavf_packet_skip(gavf_t * gavf);
 
-GAVL_PUBLIC
-int gavf_packet_read_packet(gavf_t * gavf, gavl_packet_t * p);
+// GAVL_PUBLIC
+//int gavf_packet_read_packet(gavf_t * gavf, gavl_packet_t * p);
 
 GAVL_PUBLIC
 int gavf_reset(gavf_t * gavf);
@@ -628,18 +654,21 @@ void gavf_shrink_audio_frame(gavl_audio_frame_t * f,
 
 /* Write support */
 
+#if 0
 GAVL_PUBLIC
 int gavf_open_write(gavf_t * g, gavf_io_t * io,
                     const gavl_dictionary_t * m);
+#endif
 
 GAVL_PUBLIC
-int gavf_open_uri_write(gavf_t * g, const char * uri, const gavl_dictionary_t * m);
+int gavf_open_uri_write(gavf_t * g, const char * uri);
 
 
 /*
  *  Return value: >= 0 is the stream index passed to gavf_write_packet()
  *  < 0 means error
  */
+#if 0
 
 GAVL_PUBLIC
 int gavf_append_audio_stream(gavf_t * g,
@@ -649,26 +678,28 @@ int gavf_append_audio_stream(gavf_t * g,
 
 GAVL_PUBLIC
 int gavf_append_video_stream(gavf_t * g,
-                          const gavl_compression_info_t * ci,
-                          const gavl_video_format_t * format,
-                          const gavl_dictionary_t * m);
+                             const gavl_compression_info_t * ci,
+                             const gavl_video_format_t * format,
+                             const gavl_dictionary_t * m);
 
 GAVL_PUBLIC
 int gavf_append_text_stream(gavf_t * g,
-                         uint32_t timescale,
-                         const gavl_dictionary_t * m);
+                            uint32_t timescale,
+                            const gavl_dictionary_t * m);
 
 GAVL_PUBLIC
 int gavf_append_overlay_stream(gavf_t * g,
-                            const gavl_compression_info_t * ci,
-                            const gavl_video_format_t * format,
-                            const gavl_dictionary_t * m);
+                               const gavl_compression_info_t * ci,
+                               const gavl_video_format_t * format,
+                               const gavl_dictionary_t * m);
 
 GAVL_PUBLIC
 void gavf_add_msg_stream(gavf_t * g, int id);
 
+#endif
+
 GAVL_PUBLIC
-void gavf_add_streams(gavf_t * g, const gavl_dictionary_t * track);
+int gavf_set_media_info(gavf_t * g, const gavl_dictionary_t * mi);
 
 /* Call this after adding all streams and before writing the first packet */
 GAVL_PUBLIC
@@ -758,6 +789,7 @@ int gavl_metadata_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * 
 GAVL_PUBLIC
 uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
 
+
 #if 0
 GAVL_PUBLIC
 int gavl_compression_info_from_buffer(const uint8_t * buf, int len, gavl_compression_info_t * fmt);
@@ -803,6 +835,7 @@ int gavl_dictionary_read(gavf_io_t * io, gavl_dictionary_t * ci);
 
 GAVL_PUBLIC
 int gavl_dictionary_write(gavf_io_t * io, const gavl_dictionary_t * ci);
+
 
 
 /* Utilify functions for messages */

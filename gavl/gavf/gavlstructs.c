@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <config.h>
 
@@ -725,6 +726,7 @@ int gavf_read_gavl_packet(gavf_io_t * io,
 int gavf_skip_gavl_packet(gavf_io_t * io,
                           gavl_packet_t * p)
   {
+  int i;
   gavf_io_skip(io, p->data_len);
 
   if(p->num_fds)
@@ -741,6 +743,12 @@ int gavf_skip_gavl_packet(gavf_io_t * io,
 
     if(!gavl_socket_recv_fds(sock, p->fds, p->num_fds))
       return 0;
+
+    for(i = 0; i < p->num_fds; i++)
+      {
+      close(p->fds[i]);
+      p->fds[i] = -1;
+      }
     }
 
   return 1;

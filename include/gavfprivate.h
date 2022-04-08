@@ -6,10 +6,6 @@
 
 /* Dictionary added to the track or stream dictionaries */
 
-#define GAVF_META_GAVF     "gavf"
-
-#define GAVF_META_STREAM_HWTYPE     "hwtype"
-
 /* I/O */
 
 struct gavl_io_s
@@ -33,9 +29,6 @@ struct gavl_io_s
   char * mimetype;
   int64_t total_bytes;
 
-  gavl_handle_msg_func msg_callback;
-  void * msg_data;
-  
   gavl_buffer_t get_buf;
 
   int flags;
@@ -90,6 +83,7 @@ void gavf_packet_buffer_clear(gavf_packet_buffer_t * b);
 
 #define STREAM_FLAG_DISCONTINUOUS (1<<3)
 #define STREAM_FLAG_SKIP          (1<<4)
+#define STREAM_FLAG_READY         (1<<5)
 
 typedef struct
   {
@@ -120,6 +114,7 @@ typedef struct
 
   gavl_hw_context_t * hwctx; // For importing frames sent off-band
   gavf_io_t * io; // Streams can have separate IO
+  int server_fd;
   
   gavf_t * g;
 
@@ -171,7 +166,6 @@ int gavf_write_gavl_packet_header(gavf_io_t * io,
 struct gavf_options_s
   {
   uint32_t flags;
-  gavl_time_t sync_distance;
   };
 
 /* Extension header */
@@ -282,7 +276,7 @@ struct gavf_s
   gavf_io_t * io_orig;
   gavf_io_t * io;
   
-  gavl_dictionary_t * cur;
+  gavl_dictionary_t cur;
   
   gavl_dictionary_t mi;
   
@@ -295,24 +289,22 @@ struct gavf_s
   void * msg_data;
 
   gavf_chunk_t packets_chunk;
-  gavf_chunk_t sync_chunk;
+  //  gavf_chunk_t sync_chunk;
   
   gavf_options_t opt;
   
   gavf_io_t * pkt_io;
   
-  uint64_t first_sync_pos;
+  //  uint64_t first_sync_pos;
   
   //  gavl_packet_t write_pkt;
-  gavl_packet_t skip_pkt;
+  //  gavl_packet_t skip_pkt;
   
   gavl_video_frame_t * write_vframe;
   gavl_audio_frame_t * write_aframe;
 
   //  encoding_mode_t encoding_mode;
   //  encoding_mode_t final_encoding_mode;
-
-  int separate_streams;
   
   };
 
