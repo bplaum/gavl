@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include <config.h>
 
@@ -119,230 +120,7 @@ int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
   return 1;
   }
 
-#if 0
-static gavl_sink_status_t do_write_packet(gavf_t * g, gavf_stream_t * s, const gavl_packet_t * p)
-  {
-  //  fprintf(stderr, "do_write_packet\n");
-  
-  if(!gavf_write_gavl_packet(g->io, s, p))
-    return GAVL_SINK_ERROR;
-
-  if(g->opt.flags & GAVF_OPT_FLAG_DUMP_PACKETS)
-    {
-    fprintf(stderr, "ID: %d ", s->id);
-    gavl_packet_dump(p);
-    }
-  
-
-  if(!gavf_io_flush(g->io))
-    return GAVL_SINK_ERROR;
-  
-  
-  return GAVL_SINK_OK;
-  }
-#endif
                                           
-#if 0
-static gavl_sink_status_t
-write_packet(gavf_t * g, int stream, const gavl_packet_t * p)
-  {
-  gavf_stream_t * s;
-
-  //  fprintf(stderr, "Write packet\n");
-  
-  if(stream >= 0)
-    s = &g->streams[stream];
-  else
-    s = NULL;
-  
-  /* Update packet index */
-  
-  if(g->opt.flags & GAVF_OPT_FLAG_PACKET_INDEX)
-    {
-    gavf_packet_index_add(&g->pi,
-                          s->id, p->flags, g->io->position,
-                          p->pts);
-    }
-    
-  if(do_write_packet(g, s->id, s->packet_flags,
-                     s->packet_duration, p) != GAVL_SINK_OK)
-    return GAVL_SINK_ERROR;
-
-  return GAVL_SINK_OK;
-  }
-#endif
-
-
-
-/*
- *  Flush packets. s is the stream of the last packet written.
- *  If s is NULL, flush all streams
-  */
-#if 0
-
-int gavf_write_gavl_packet(gavf_io_t * io, gavf_io_t * hdr_io, int packet_duration,
-                           int packet_flags,
-                           const gavl_packet_t * p)
-  {
-  gavl_buffer_t * buf;
-  buf = gavf_io_buf_get(hdr_io);
-  gavf_io_buf_reset(hdr_io);
-
-  if(!gavf_write_gavl_packet_header(hdr_io, packet_duration, packet_flags, p) ||
-     !gavf_io_write_uint32v(io, buf->len + p->data_len) ||
-     (gavf_io_write_data(io, buf->buf, buf->len) < buf->len) ||
-     (gavf_io_write_data(io, p->data, p->data_len) < p->data_len))
-    return 0;
-  return 1;
-  }
-
-
-gavl_sink_status_t gavf_flush_packets(gavf_t * g, gavf_stream_t * s)
-  {
-  int i;
-  const gavl_packet_t * p;
-  int min_index;
-  gavl_time_t min_time;
-  gavl_time_t test_time;
-  gavf_stream_t * ws;
-  gavl_sink_status_t st;
-#if 0
-  if(s)
-    fprintf(stderr, "gavf_flush_packets %d %"PRId64"\n", s->id, g->first_sync_pos);
-  else
-    fprintf(stderr, "gavf_flush_packets NULL %"PRId64"\n", g->first_sync_pos);
-#endif
-  /* Special case for message streams with undefined timestamp: Transmit out of band */
-
-  if((g->first_sync_pos > 0) && s && (s->type == GAVL_STREAM_MSG))
-    {
-    for(i = 0; i < g->num_streams; i++)
-      {
-      if(&g->streams[i] == s)
-        {
-        if((p = gavf_packet_buffer_get_last(s->pb)) &&
-           (p->pts == GAVL_TIME_UNDEFINED))
-          {
-          st = write_packet(g, i, p);
-          gavf_packet_buffer_remove_last(s->pb);
-          
-          if(st != GAVL_SINK_OK)
-            return st;
-          }
-        }
-      }
-    }
-    
-  //  fprintf(stderr, "flush_packets\n");
-  
-  if(!g->first_sync_pos)
-    {
-    for(i = 0; i < g->num_streams; i++)
-      {
-      if(!(g->streams[i].flags & STREAM_FLAG_DISCONTINUOUS) &&
-         (g->streams[i].stats.pts_start == GAVL_TIME_UNDEFINED))
-        return GAVL_SINK_OK;
-      }
-    }
-
-  if(g->first_sync_pos > 0)
-    {
-    /* Flush discontinuous streams */
-    for(i = 0; i < g->num_streams; i++)
-      {
-      ws = &g->streams[i];
-      if(!(ws->flags & STREAM_FLAG_DISCONTINUOUS))
-        continue;
-      
-      while((p = gavf_packet_buffer_get_read(ws->pb)))
-        {
-        fprintf(stderr, "flush_discontinuous\n");
-        if((st = write_packet(g, i, p)) != GAVL_SINK_OK)
-          return st;
-        }
-      }
-    }
-    
-  /* Flush as many packets as possible */
-  while(1)
-    {
-    /*
-     *  1. Find stream we need to output now
-     */
-
-    min_index = -1;
-    min_time = GAVL_TIME_UNDEFINED;
-    for(i = 0; i < g->num_streams; i++)
-      {
-      ws = &g->streams[i];
-
-      if(ws->flags & STREAM_FLAG_DISCONTINUOUS)
-        continue;
-      
-      test_time =
-        gavf_packet_buffer_get_min_pts(ws->pb);
-      
-      if(test_time != GAVL_TIME_UNDEFINED)
-        {
-        if((min_time == GAVL_TIME_UNDEFINED) ||
-           (test_time < min_time))
-          {
-          min_time = test_time;
-          min_index = i;
-          }
-        }
-      else
-        {
-        if(!(ws->flags & STREAM_FLAG_DISCONTINUOUS) &&
-           s && (g->encoding_mode == ENC_INTERLEAVE))
-          {
-          /* Some streams without packets: stop here */
-          return GAVL_SINK_OK;
-          }
-        }
-      }
-
-    /*
-     *  2. Exit if we are done
-     */
-    if(min_index < 0)
-      return GAVL_SINK_OK;
-
-    /*
-     *  3. Output packet
-     */
-
-    ws = &g->streams[min_index];
-    p = gavf_packet_buffer_get_read(ws->pb);
-
-    if((st = write_packet(g, min_index, p)) != GAVL_SINK_OK)
-      return st;
-    
-    /*
-     *  4. If we have B-frames, output the complete Mini-GOP
-     */
-    
-    if(ws->type == GAVL_STREAM_VIDEO)
-      {
-      while(1)
-        {
-        p = gavf_packet_buffer_peek_read(ws->pb);
-        if(p && ((p->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B))
-          {
-          if((st = write_packet(g, min_index, p)) != GAVL_SINK_OK)
-            return st;
-          }
-        else
-          break;
-        }
-      }
-
-    /* Continue */
-    
-    }
-  
-  }
-#endif
 
 static int get_audio_sample_size(const gavl_audio_format_t * fmt,
                                  const gavl_compression_info_t * ci)
@@ -1477,124 +1255,22 @@ int gavf_open_write(gavf_t * g, gavf_io_t * io,
   }
 #endif
 
-#if 0
-int gavf_append_audio_stream(gavf_t * g,
-                             const gavl_compression_info_t * ci,
-                             const gavl_audio_format_t * format,
-                             const gavl_dictionary_t * m)
-  {
-  int ret = 0;
-  gavl_audio_format_t * fmt;
-  gavl_dictionary_t * s = gavl_track_append_stream(g->cur, GAVL_STREAM_AUDIO);
-
-  //  fprintf(stderr, "gavf_append_audio_stream\n");
-  //  gavl_dictionary_dump(m, 2);
-  
-  fmt = gavl_dictionary_get_audio_format_nc(s, GAVL_META_STREAM_FORMAT);
-  gavl_audio_format_copy(fmt, format);
-
-  if(ci)
-    gavl_stream_set_compression_info(s, ci);
-  if(m)
-    gavl_dictionary_copy(gavl_stream_get_metadata_nc(s), m);
-
-  gavl_stream_get_id(s, &ret);
-  return ret;
-  }
-
-
-int gavf_append_video_stream(gavf_t * g,
-                             const gavl_compression_info_t * ci,
-                             const gavl_video_format_t * format,
-                             const gavl_dictionary_t * m)
-  {
-  int ret = 0;
-  gavl_video_format_t * fmt;
-  gavl_dictionary_t * s = gavl_track_append_stream(g->cur, GAVL_STREAM_VIDEO);
-
-  fmt = gavl_dictionary_get_video_format_nc(s, GAVL_META_STREAM_FORMAT);
-  gavl_video_format_copy(fmt, format);
-
-  if(ci)
-    gavl_stream_set_compression_info(s, ci);
-  if(m)
-    gavl_dictionary_copy(gavl_stream_get_metadata_nc(s), m);
-  
-  gavl_stream_get_id(s, &ret);
-  return ret;
-  }
-
-int gavf_append_text_stream(gavf_t * g,
-                            uint32_t timescale,
-                            const gavl_dictionary_t * m)
-  {
-  int ret = 0;
-  gavl_dictionary_t * m_dst;
-  gavl_dictionary_t * s = gavl_track_append_stream(g->cur, GAVL_STREAM_TEXT);
-  
-  m_dst = gavl_stream_get_metadata_nc(s);
-  gavl_dictionary_set_int(m_dst, GAVL_META_STREAM_SAMPLE_TIMESCALE, timescale);
-  gavl_dictionary_set_int(m_dst, GAVL_META_STREAM_PACKET_TIMESCALE, timescale);
-  
-  gavl_stream_get_id(s, &ret);
-  return ret;
-  }
-
-
-int gavf_append_overlay_stream(gavf_t * g,
-                            const gavl_compression_info_t * ci,
-                            const gavl_video_format_t * format,
-                            const gavl_dictionary_t * m)
-  {
-  int ret = 0;
-  gavl_video_format_t * fmt;
-  gavl_dictionary_t * s = gavl_track_append_stream(g->cur, GAVL_STREAM_OVERLAY);
-  
-  fmt = gavl_dictionary_get_video_format_nc(s, GAVL_META_STREAM_FORMAT);
-  gavl_video_format_copy(fmt, format);
-
-  if(ci)
-    gavl_stream_set_compression_info(s, ci);
-  if(m)
-    gavl_dictionary_copy(gavl_stream_get_metadata_nc(s), m);
-  
-  gavl_stream_get_id(s, &ret);
-  return ret;
-  }
-
-void gavf_add_msg_stream(gavf_t * g, int id)
-  {
-  gavl_track_append_msg_stream(g->cur, id);
-  }
-#endif
-
 static int check_media_info(gavf_t * g, const gavl_dictionary_t * mi)
   {
   int i, j;
   int num_streams;
   gavl_stream_type_t type;
-  int num_tracks = gavl_get_num_tracks(mi);
 
   const gavl_dictionary_t * track;
   const gavl_dictionary_t * stream;
+  int num_tracks = gavl_get_num_tracks(mi);
   
-  if(GAVF_HAS_FLAG(g, GAVF_FLAG_ONDISK))
+  if(num_tracks < 1)
     {
-    if(num_tracks != 1)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "On disk format requires exactly one track\n");
-      return 0;
-      }
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Need at least one track\n");
+    return 0;
     }
-  else
-    {
-    if(num_tracks < 1)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Need at least one track\n");
-      return 0;
-      }
-    }
-
+  
   for(i = 0; i < num_tracks; i++)
     {
     track = gavl_get_track(mi, i);
@@ -1653,10 +1329,19 @@ int gavf_set_media_info(gavf_t * g, const gavl_dictionary_t * mi)
     gavf_msg_to_packet(&msg, &pkt);
     pkt.id = GAVL_META_STREAM_ID_MSG_GAVF;
     pkt.pts = 0;
-    gavf_write_gavl_packet(g->io, NULL, &pkt);
 
+    if(!gavf_write_gavl_packet(g->io, NULL, &pkt))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Writing media info failed");
+      }
+    
     gavl_packet_free(&pkt);
     gavl_msg_free(&msg);
+
+    //    fprintf(stderr, "Wrote media info:\n");
+    //    gavl_dictionary_dump(&g->mi, 2);
+    
+    
     }
   
   return 1;
@@ -2360,16 +2045,26 @@ static int skip_to_msg(gavf_t * g, gavl_msg_t * ret, int id, int ns)
     gavl_packet_init(&pkt);
   
     if(!gavf_read_gavl_packet_header(g->io, &pkt))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Readig packet header failed");
       return 0;
+      }
+
+    //    fprintf(stderr, "Got packet: ");
+    //    gavl_packet_dump(&pkt);
     
     if(pkt.id == GAVL_META_STREAM_ID_MSG_GAVF)
       {
       if(!gavf_read_gavl_packet(g->io, &pkt))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Readig packet failed");
         return 0;
-
+        }
       if(!gavf_packet_to_msg(&pkt, ret))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Parsing message failed");
         return 0;
-
+        }
       if((ret->NS == ns) && (ret->ID == id))
         return 1;
       else
@@ -2381,7 +2076,10 @@ static int skip_to_msg(gavf_t * g, gavl_msg_t * ret, int id, int ns)
     else
       {
       if(!gavf_skip_gavl_packet(g->io, &pkt))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Skipping packet failed");
         return 0;
+        }
       }
     gavl_packet_free(&pkt);
     }
@@ -2412,7 +2110,16 @@ int gavf_open_uri_write(gavf_t * g, const char * uri)
     }
   else if(!strcmp(uri, "-"))
     {
+    if(isatty(fileno(stdout)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Won't write to terminal");
+      return 0;
+      }
+    
     io =  gavf_io_create_file(stdout, 1, 0, 0);
+
+      
+
     }
   else if(open_socket(uri, 1, &io))
     {
@@ -2453,6 +2160,8 @@ int gavf_open_uri_write(gavf_t * g, const char * uri)
     gavl_http_request_write(g->io, &header);
     gavl_dictionary_free(&header);
     free(redirect_uri);
+
+    gavf_io_flush(g->io);
     
     fd = gavl_listen_socket_accept(server_fd, 1000, NULL);
     gavl_listen_socket_destroy(server_fd);
@@ -2536,7 +2245,7 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
     
     gavl_dictionary_init(&header);
 
-    if(!gavl_http_request_read(g->io, &header))
+    if(!gavl_http_request_read(g->io_orig, &header))
       return 0;
 
     if(!(method = gavl_http_request_get_method(&header)))
@@ -2547,7 +2256,9 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
 
     if(strcmp(method, "REDIRECT"))
       return 0;
-
+    
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got redirection to %s", path);
+    
     ret = gavf_open_uri_read(g, path);
 
     gavl_dictionary_free(&header);
@@ -2562,7 +2273,16 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
     }
   else if(GAVF_HAS_FLAG(g, GAVF_FLAG_INTERACTIVE))
     {
-    
+    /* Read media info */
+    gavl_msg_t msg;
+    gavl_msg_init(&msg);
+    if(!skip_to_msg(g, &msg, GAVL_MSG_GAVF_MEDIA_INFO, GAVL_MSG_NS_GAVF))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no media info");
+      return 0;
+      }
+    gavl_msg_get_arg_dictionary(&msg, 0, &g->mi);
+    gavl_msg_free(&msg);
     }
   
   return 1;
@@ -2810,6 +2530,9 @@ int gavf_handle_reader_command(gavf_t * g, const gavl_msg_t * m)
             {
             gavl_msg_write(m, g->io);
             GAVF_SET_FLAG(g, GAVF_FLAG_STARTED);
+
+            
+
             }
           else
             {
@@ -2838,4 +2561,33 @@ int gavf_handle_reader_command(gavf_t * g, const gavl_msg_t * m)
 gavf_io_t * gavf_get_io(gavf_t * g)
   {
   return g->io;
+  }
+
+/* Called for writers */
+int gavf_start_program(gavf_t * g, const gavl_dictionary_t * track)
+  {
+  if(!GAVF_HAS_FLAG(g, GAVF_FLAG_WRITE))
+    return 0;
+
+  gavl_dictionary_reset(&g->cur);
+  gavl_dictionary_copy(&g->cur, track);
+  
+  if(GAVF_HAS_FLAG(g, GAVF_FLAG_INTERACTIVE))
+    {
+    gavl_msg_t resp;
+    gavl_msg_init(&resp);
+    gavl_msg_set_id_ns(&resp, GAVL_MSG_GAVF_START, GAVL_MSG_NS_GAVF);
+    gavl_msg_set_arg_dictionary(&resp, 0, &g->cur);
+
+    /* TODO: Initialize streams */
+    
+    }
+  else if(GAVF_HAS_FLAG(g, GAVF_FLAG_ONDISK))
+    {
+    /* TODO: Finalize last program */
+    
+    /* TODO: Remove disabled streams and write program header */
+    
+    }
+  return 1;  
   }

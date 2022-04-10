@@ -538,6 +538,10 @@ GAVL_PUBLIC
 int gavf_read_writer_command(gavf_t * g, int timeout);
 
 GAVL_PUBLIC
+int gavf_start_program(gavf_t * g, const gavl_dictionary_t * track);
+
+
+GAVL_PUBLIC
 gavf_io_t * gavf_get_io(gavf_t * g);
 
 

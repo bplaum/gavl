@@ -592,26 +592,38 @@ int gavf_write_gavl_packet(gavf_io_t * io,
 int gavf_read_gavl_packet_header(gavf_io_t * io,
                                  gavl_packet_t * p)
   {
+  int ret = 0;
   uint8_t c;
   
   gavl_packet_reset(p);
 
   /* P */
   if(!gavf_io_get_data(io, &c, 1) || (c != GAVF_TAG_PACKET_HEADER_C))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet marker");
     goto fail;
-
+    }
   gavf_io_skip(io, 1);
   
   /* Stream ID */
+  if(!gavf_io_read_int32v(io, &p->id))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read stream ID");
+    goto fail;
+    }
+  /* PTS */
+  if(!gavf_io_read_int64v(io, &p->pts))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet pts");
+    goto fail;
+    }
   
   /* Flags */
   if(!gavf_io_read_uint32v(io, (uint32_t*)&p->flags))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet flags");
     goto fail;
-  
-  /* PTS */
-  if(!gavf_io_read_int64v(io, &p->pts))
-    goto fail;
-  
+    }
   if(p->flags & GAVL_PACKET_EXT)
     {
     uint32_t num_extensions;
@@ -620,57 +632,92 @@ int gavf_read_gavl_packet_header(gavf_io_t * io,
     
     /* Extensions */
     if(!gavf_io_read_uint32v(io, &num_extensions))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read number of packet extensions");
       goto fail;
-
+      }
     for(i = 0; i < num_extensions; i++)
       {
       if(!gavf_extension_header_read(io, &eh))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet extension header");
         goto fail;
+        }
       switch(eh.key)
         {
         case GAVF_EXT_PK_DURATION:
           if(!gavf_io_read_int64v(io, &p->duration))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet duration");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_HEADER_SIZE:
           if(!gavf_io_read_uint32v(io, &p->header_size))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet header_size");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_SEQ_END:
           if(!gavf_io_read_uint32v(io, &p->sequence_end_pos))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet sequence_end_pos");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_TIMECODE:
           if(!gavf_io_read_uint64f(io, &p->timecode))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet timecode");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_SRC_RECT:
           if(!gavf_io_read_int32v(io, &p->src_rect.x) ||
              !gavf_io_read_int32v(io, &p->src_rect.y) ||
              !gavf_io_read_int32v(io, &p->src_rect.w) ||
              !gavf_io_read_int32v(io, &p->src_rect.h))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet src_rect");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_DST_COORDS:
           if(!gavf_io_read_int32v(io, &p->dst_x) ||
              !gavf_io_read_int32v(io, &p->dst_y))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet dst_coords");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_FIELD2:
           if(!gavf_io_read_uint32v(io, &p->field2_offset))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet field2_offset");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_INTERLACE:
           if(!gavf_io_read_uint32v(io, (uint32_t*)&p->interlace_mode))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet interlace_mode");
             goto fail;
-          break;
+            }
+            break;
         case GAVF_EXT_PK_FDS:
           if(!gavf_io_read_uint32v(io, (uint32_t*)&p->num_fds))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet num_fds");
             goto fail;
+            }
           break;
         case GAVF_EXT_PK_BUF_IDX:
           if(!gavf_io_read_uint32v(io, (uint32_t*)&p->buf_idx))
+            {
+            gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet buf_idx");
             goto fail;
+            }
           break;
         default:
           /* Skip */
@@ -681,12 +728,16 @@ int gavf_read_gavl_packet_header(gavf_io_t * io,
     }
 
   if(!gavf_io_read_uint32v(io, (uint32_t*)&p->data_len))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet data_len");
     goto fail;
-  
+    }
   p->flags &= ~GAVL_PACKET_EXT;
+
+  ret = 1;
   
   fail:
-  return 0;
+  return ret;
   }
 
 int gavf_read_gavl_packet(gavf_io_t * io,

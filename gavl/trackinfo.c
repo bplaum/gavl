@@ -2325,3 +2325,26 @@ void gavl_track_set_countries(gavl_dictionary_t * track)
   
   }
 
+int
+gavl_stream_is_enabled(const gavl_dictionary_t * s)
+  {
+  int val = 0;
+  const gavl_dictionary_t * m;
+
+  if((m = gavl_stream_get_metadata(s)) &&
+     gavl_dictionary_get_int(m, GAVL_META_STREAM_ENABLED, &val) &&
+     val)
+    return 1;
+  else
+    return 0;
+  }
+
+void
+gavl_stream_set_enabled(gavl_dictionary_t * s, int enabled)
+  {
+  gavl_dictionary_t * m;
+
+  m = gavl_dictionary_get_dictionary_create(s, GAVL_META_METADATA);
+  gavl_dictionary_set_int(m, GAVL_META_STREAM_ENABLED, enabled);
+  }
+  
