@@ -38,8 +38,7 @@
 
 #define MAX_FORMAT_FRAMES 16
 
-
-//#define DUMP_PACKETS
+// #define DUMP_PACKETS
 // #define DUMP_EXTRADATA
 
 #define POLL_TIMEOUT 2000
@@ -1147,8 +1146,10 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   memset(&ci, 0, sizeof(ci));
   
   if(!gavl_stream_get_compression_info(stream, &ci))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no compression info");
     goto fail;
-
+    }
   gavl_stream_stats_init(&stats);
   gavl_stream_get_stats(stream, &stats);
 
@@ -1213,8 +1214,10 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   
   
   if(!(dev->num_output_bufs = request_buffers_mmap(dev, dev->buf_type_output, DECODER_NUM_PACKETS, dev->output_bufs)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting buffers failed");
     goto fail;
-
+    }
 
   packets_to_send = dev->num_output_bufs;
   

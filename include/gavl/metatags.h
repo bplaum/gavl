@@ -135,7 +135,7 @@
 /** \brief Referenced URL (means: Redirector)
  */
 
-#define GAVL_META_REFURL      "RefURL"
+// #define GAVL_META_REFURL      "RefURL"
 
 /** \brief Software
  *

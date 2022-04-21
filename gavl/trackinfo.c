@@ -1405,6 +1405,7 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
   num_audio_streams = gavl_track_get_num_audio_streams(dict);
   num_video_streams = gavl_track_get_num_video_streams(dict);
 
+#if 0  
   if(!num_audio_streams && !num_video_streams && (location = gavl_dictionary_get_string(m, GAVL_META_REFURL)))
     {
     gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
@@ -1412,6 +1413,7 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
       gavl_dictionary_set_string(m, GAVL_META_LABEL, location);
     return;
     }
+#endif
   
   gavl_dictionary_get_src(m, GAVL_META_SRC, 0,
                           NULL, &location);

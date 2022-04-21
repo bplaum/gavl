@@ -22,6 +22,9 @@
 /* Request */
 
 GAVL_PUBLIC
+int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf);
+
+GAVL_PUBLIC
 void gavl_http_request_init(gavl_dictionary_t * req,
                             const char * method,
                             const char * path,

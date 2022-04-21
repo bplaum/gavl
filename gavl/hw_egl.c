@@ -436,7 +436,7 @@ void gavl_hw_egl_unset_current(gavl_hw_context_t * ctx)
 
   //  fprintf(stderr, "gavl_hw_glx_unset %p\n", ctx);
 
-  eglMakeCurrent(p->display, EGL_NO_CONTEXT, EGL_NO_SURFACE, EGL_NO_SURFACE);
+  eglMakeCurrent(p->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   p->current_surf = EGL_NO_SURFACE;
   }
 

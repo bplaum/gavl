@@ -513,3 +513,115 @@ int gavl_http_request_from_string(gavl_dictionary_t * req, const char * buf)
   gavl_strbreak_free(str);
   return result;
   }
+
+int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf)
+  {
+  char * length_str = NULL;
+  int length_alloc = 0;
+
+  int success = 0;
+  const char * var;
+  int chunked = 0;
+  int result;
+  
+  
+  //  gavl_dictionary_dump(res, 0);
+
+  var = gavl_dictionary_get_string_i(res, "Transfer-Encoding");
+  if(var && !strcasecmp(var, "chunked"))
+    chunked = 1;
+  else
+    {
+    if(!gavl_dictionary_get_int_i(res, "Content-Length", &buf->len))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No length given in http response");
+      goto fail;
+      }
+    }
+  
+  if(chunked)
+    {
+    int chunk_len;
+    uint8_t crlf[2];
+    while(1)
+      {
+      /* Read length */
+      if(!gavf_io_read_line(io, &length_str,
+                            &length_alloc, 10000) ||
+         (sscanf(length_str, "%x", &chunk_len) < 1))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading chunk length failed");
+        goto fail;
+        }
+      //      fprintf(stderr, "Chunk length: %d", chunk_len);
+      if(chunk_len > 0)
+        {
+        if((buf->len) + chunk_len > 10 * 1024 * 1024) // Never download more then 10 MB
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length %d outside allowed range", (buf->len) + chunk_len);
+          goto fail;
+          }
+
+        gavl_buffer_alloc(buf, buf->len + chunk_len + 1);
+        
+        result = gavf_io_read_data(io, buf->buf + buf->len, chunk_len);
+        
+        if(result < chunk_len)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading %d bytes failed (got %d)", chunk_len, result);
+          goto fail;
+          }
+
+        buf->len += chunk_len;
+        }
+        
+      /* Read trailing \r\n */
+      if((gavf_io_read_data(io, crlf, 2) < 2) ||
+         (crlf[0] != '\r') ||
+         (crlf[1] != '\n'))
+        goto fail;
+
+      if(chunk_len <= 0)
+        {
+        //        fprintf(stderr, "Downloaded chunked http %d bytes\n", *len);
+        // gavl_hexdump(ret, *len, 16);
+        break;
+        }
+      }
+    }
+  else
+    {
+    if((buf->len <= 0) || (buf->len > 10 * 1024 * 1024)) // Never download more then 10 MB
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length %d outside allowed range", buf->len);
+      goto fail;
+      }
+
+    gavl_buffer_alloc(buf, buf->len+1);
+    
+    result = gavf_io_read_data(io, buf->buf, buf->len);
+    
+    if(result < buf->len)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading %d bytes failed (got %d)", buf->len, result);
+      goto fail;
+      }
+    }
+    
+  buf->buf[buf->len] = '\0'; // Become string friendly
+  // Success :)
+  success = 1;
+
+  fail:
+  
+  if(length_str)
+    free(length_str);
+
+  if(!success)
+    {
+    gavl_buffer_free(buf);
+    /* Prevent double free later on */
+    gavl_buffer_init(buf);
+    }
+  return success;
+  }

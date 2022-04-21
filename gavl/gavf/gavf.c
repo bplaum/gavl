@@ -2221,6 +2221,8 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
     {
     FILE * f;
     f = fopen(uri, "r");
+    if(!f)
+      return 0;
     io =  gavf_io_create_file(f, 0, 1, 1);
     }
 
