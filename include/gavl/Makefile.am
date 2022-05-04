@@ -20,6 +20,7 @@ hw_vaapi_x11.h \
 keycodes.h \
 log.h \
 numptr.h \
+state.h \
 timecode.h \
 trackinfo.h \
 gavldefs.h \

@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -317,3 +318,103 @@ gavl_time_t gavl_frames_to_time(int rate_num, int rate_den, int64_t frames)
   }
 
 // ((gavl_time_t)((GAVL_TIME_SCALE*((int64_t)frames)*((int64_t)rate_den))/((int64_t)rate_num)))
+
+/*
+ *  Parse an iso-8601 formatted time string.
+ *  If you divide the resuly by GAVL_TIME_SCALE, it will be a time_t
+ */
+
+int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret)
+  {
+  int year;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  double seconds_f;
+  int sec;
+  int microseconds;
+  time_t t;
+  int tz_hour = 0;
+  int tz_minute = 0;
+  struct tm tm;
+  
+  //  "2014-11-12T19:12:14.505Z"
+
+  if(sscanf(str, "%d-%d-%dT%d:%d:%lfZ", &year, &month, &day, &hour, &minute, &seconds_f) < 6)
+    return 0;
+  
+  // "2014-11-12T12:12:14.505-5:00"
+
+  if(sscanf(str, "%d-%d-%dT%d:%d:%lf%d:%d", &year, &month, &day, &hour, &minute, &seconds_f, &tz_hour, &tz_minute) < 6)
+    return 0;
+
+  if(tz_hour < 0)
+    tz_minute = -tz_minute;
+
+  microseconds = (int)(seconds_f * GAVL_TIME_SCALE) % GAVL_TIME_SCALE;
+  sec = (int)seconds_f;
+
+  tm.tm_year   = year - 1900;
+  tm.tm_mon    = month - 1;
+  tm.tm_mday   = day;
+  tm.tm_hour   = hour;
+  tm.tm_min    = minute;
+  tm.tm_sec    = sec;
+  tm.tm_isdst  = 0;
+  
+  t = timegm(&tm);
+  t -= (tz_hour * 60 + tz_minute) * 60;
+
+  *ret = t;
+  *ret *= GAVL_TIME_SCALE;
+  *ret += microseconds;
+
+  return 1;
+  }
+
+void
+gavl_time_prettyprint_absolute(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_LEN_ABSOLUTE], int local)
+  {
+  struct tm tm;
+  time_t t = gavl_time / GAVL_TIME_SCALE;
+  
+  if(local)
+    localtime_r(&t, &tm);
+  else
+    gmtime_r(&t, &tm);
+  
+  snprintf(str,
+           GAVL_TIME_STRING_LEN_ABSOLUTE,
+           "%04d-%02d-%02d %02d:%02d:%02d",
+           tm.tm_year + 1900,
+           tm.tm_mon + 1,
+           tm.tm_mday,
+           tm.tm_hour,
+           tm.tm_min,
+           tm.tm_sec);
+  }
+
+void
+gavl_time_prettyprint_absolute_full(gavl_time_t gavl_time, char * str, int local)
+  {
+  struct tm tm;
+  time_t t = gavl_time / GAVL_TIME_SCALE;
+  
+  if(local)
+    localtime_r(&t, &tm);
+  else
+    gmtime_r(&t, &tm);
+  
+  snprintf(str,
+           GAVL_TIME_STRING_LEN_ABSOLUTE,
+           "%04d-%02d-%02d %02d:%02d:%02d.%06d",
+           tm.tm_year + 1900,
+           tm.tm_mon + 1,
+           tm.tm_mday,
+           tm.tm_hour,
+           tm.tm_min,
+           tm.tm_sec,
+           (int)(gavl_time % GAVL_TIME_SCALE));
+  
+  }

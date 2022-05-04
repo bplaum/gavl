@@ -169,6 +169,9 @@ gavl_time_prettyprint(gavl_time_t time, char str[GAVL_TIME_STRING_LEN]);
 
 #define GAVL_TIME_STRING_LEN_MS 15
 
+/* 2022-10-10 23:05:12.000001 */
+#define GAVL_TIME_STRING_LEN_ABSOLUTE 27
+  
 /*! \ingroup time
  * \brief Convert a time to a string with millisecond precision
  * \param time Time to print
@@ -185,13 +188,21 @@ gavl_time_prettyprint_ms(gavl_time_t time, char str[GAVL_TIME_STRING_LEN_MS]);
 
 GAVL_PUBLIC void
 gavl_time_prettyprint_ms_full(gavl_time_t time, char str[GAVL_TIME_STRING_LEN_MS]);
-  
+
+GAVL_PUBLIC void
+gavl_time_prettyprint_absolute(gavl_time_t time, char * str, int local);
+
+GAVL_PUBLIC void
+gavl_time_prettyprint_absolute_full(gavl_time_t time, char * str, int local);
 
 /* Scan time: format is hhh:mm:ss with hh: hours, mm: minutes, ss: seconds. Seconds can be a fractional
    value (i.e. with decimal point) */
 
 GAVL_PUBLIC
 int gavl_time_parse(const char * str, gavl_time_t * ret);
+
+GAVL_PUBLIC
+int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret);
 
 
 /* Simple software timer */

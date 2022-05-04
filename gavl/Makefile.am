@@ -183,6 +183,7 @@ scale_table.c \
 shm.c \
 socket.c \
 ssim.c \
+state.c \
 stats.c \
 time.c \
 timecode.c \

@@ -418,6 +418,20 @@ int gavl_string_array_indexof(const gavl_array_t * arr, const char * str)
   return -1;
   }
 
+int gavl_string_array_indexof_i(const gavl_array_t * arr, const char * str)
+  {
+  int i;
+  const char * str1;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((str1 = gavl_value_get_string(&arr->entries[i])) &&
+       !strcasecmp(str1, str))
+      return i;
+    }
+  return -1;
+  }
+
 char * gavl_string_array_join(const gavl_array_t * arr, const char * glue)
   {
   char * ret;

@@ -107,6 +107,15 @@ LIBGAVL_LDFLAGS="-no-undefined $LIBGAVL_LDFLAGS"
 fi
 
 dnl
+dnl nettle
+dnl
+
+PKG_CHECK_MODULES(NETTLE, nettle >= "3.7.0",, AC_MSG_ERROR(["nettle crypto library not found"]))
+
+LIBGAVL_CFLAGS="$LIBGAVL_CFLAGS $NETTLE_CFLAGS"
+LIBGAVL_LIBS="$LIBGAVL_LIBS $NETTLE_LIBS"
+
+dnl
 dnl gnutls
 dnl
 

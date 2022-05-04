@@ -36,6 +36,7 @@
 #define GAVL_MSG_NS_SRC       3
 #define GAVL_MSG_NS_GUI       4
 #define GAVL_MSG_NS_GAVF      5
+#define GAVL_MSG_NS_STATE     6
 
 /* Message IDs */
 
@@ -84,7 +85,7 @@
  *  arg0: Metadata
  */
 
-#define GAVL_MSG_SRC_METADATA_CHANGED  1
+// #define GAVL_MSG_SRC_METADATA_CHANGED  1
 
 /** \brief Pixel aspect ratio changed
  *
@@ -110,6 +111,15 @@
  */
 
 #define GAVL_MSG_SRC_AUTHENTICATE     4
+
+/** \brief Seek window
+ *
+ *  arg0: Long: Window start (absolute time)
+ *  arg1: Long: Window end (absolute time)
+ */
+
+// #define GAVL_MSG_SRC_SEEK_WINDOW          4
+// #define GAVL_MSG_SRC_DISPLAY_TIME_OFFSET  5
 
 
 

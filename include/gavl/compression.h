@@ -373,7 +373,7 @@ typedef struct
   int32_t dst_x;             //!< X-coordinate in the destination frame (for overlays)
   int32_t dst_y;             //!< Y-coordinate in the destination frame (for overlays)
 
-  uint32_t id;    //!< ID of the gavf stream where this packet belongs
+  int32_t id;    //!< ID of the gavf stream where this packet belongs
   
   int fds[GAVL_MAX_PLANES];
   int num_fds;

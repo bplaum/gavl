@@ -634,6 +634,9 @@ GAVL_PUBLIC
 int gavl_string_array_indexof(const gavl_array_t * arr, const char * str);
 
 GAVL_PUBLIC
+int gavl_string_array_indexof_i(const gavl_array_t * arr, const char * str);
+
+GAVL_PUBLIC
 const char * gavl_string_array_get(const gavl_array_t * arr, int idx);
  
 GAVL_PUBLIC

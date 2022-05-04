@@ -316,7 +316,7 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
 
   gnutls_credentials_set(p->session, GNUTLS_CRD_CERTIFICATE, xcred);
 
-  gnutls_session_set_verify_cert(p->session, server_name, 0);
+  //  gnutls_session_set_verify_cert(p->session, server_name, 0);
 
   gnutls_transport_set_int(p->session, fd);
   gnutls_handshake_set_timeout(p->session,

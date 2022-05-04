@@ -483,6 +483,7 @@ gavl_msg_get_progress(gavl_msg_t * msg, const char ** activity, float * perc)
     *perc = gavl_msg_get_arg_float(msg, 1);
   }
 
+#if 0
 void
 gavl_msg_set_src_metadata(gavl_msg_t * msg, int64_t time, const gavl_dictionary_t * m)
   {
@@ -499,7 +500,7 @@ gavl_msg_get_src_metadata(gavl_msg_t * msg, int64_t * time, gavl_dictionary_t * 
   if(m)
     gavl_msg_get_arg_dictionary(msg, 1, m);
   }
-
+#endif
 
 void
 gavl_msg_set_src_aspect(gavl_msg_t * msg, int64_t time, int scale, int stream,

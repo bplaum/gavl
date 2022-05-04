@@ -49,6 +49,25 @@
 #define GAVF_IO_IS_PIPE           (1<<8)
 #define GAVF_IO_IS_TTY            (1<<9)
 
+/* Crypto I/O */
+typedef enum
+  {
+    GAVL_CIPHER_AES128,
+  } gavl_cipher_algo_t;
+
+typedef enum
+  {
+    GAVL_CIPHER_MODE_CBC,
+    
+  } gavl_cipher_mode_t;
+
+typedef enum
+  {
+    GAVL_CIPHER_PADDING_PKCS7,
+    
+  } gavl_cipher_padding_t;
+
+
 #define GAVF_PROTOCOL_TCP      "gavf-tcp"
 #define GAVF_PROTOCOL_TCPSERV  "gavf-tcpserv"
 #define GAVF_PROTOCOL_UNIX     "gavf-unix"
@@ -62,6 +81,7 @@
 /* gavf specific dictionary */
 #define GAVF_DICT              "gavf"
 #define GAVF_META_HWSTORAGE    "hw" // Where the frames are stored
+
 
 /*
  *  Also allowed in a GAVF_DICT:
@@ -261,6 +281,26 @@ gavf_io_t * gavf_io_create_mem_write();
 
 GAVL_PUBLIC
 gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flags);
+
+GAVL_PUBLIC
+gavf_io_t * gavf_io_create_cipher_read(gavf_io_t * base,
+                                       gavl_cipher_algo_t algo,
+                                       gavl_cipher_mode_t mode,
+                                       gavl_cipher_padding_t padding);
+GAVL_PUBLIC
+void gavf_io_create_cipher_init(gavf_io_t * io,
+                                const uint8_t * key,
+                                const uint8_t * iv);
+
+
+#if 0
+GAVL_PUBLIC
+gavf_io_t * gavf_io_create_cipher_write(gavf_io_t * base,
+                                       gavl_cipher_algo_t algo,
+                                       gavl_cipher_mode_t mode,
+                                       gavl_cipher_padding_t padding);
+#endif
+                                       
 
 // GAVL_PUBLIC
 // void gavf_io_set_cb(gavf_io_t * io, gavf_io_cb_func cb, void * cb_priv);
