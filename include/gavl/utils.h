@@ -22,6 +22,7 @@
 #ifndef GAVL_UTILS_H_INCLUDED
 #define GAVL_UTILS_H_INCLUDED
 
+#include <gavl/value.h>
 
 /** \defgroup utils Utilities
  *  \brief Utility functions
@@ -295,6 +296,17 @@ int gavl_url_split(const char * url,
                    char ** hostname,
                    int * port,
                    char ** path);
+
+GAVL_PUBLIC
+char * 
+gavl_base64_encode_data(void * data, int length);
+
+GAVL_PUBLIC
+int
+gavl_base64_decode_data(const char * str, gavl_buffer_t * ret);
+
+GAVL_PUBLIC
+char * gavl_get_absolute_uri(const char * rel_uri, const char * abs_uri);
 
 #endif // GAVL_UTILS_H_INCLUDED
 

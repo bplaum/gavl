@@ -99,4 +99,55 @@ void gavl_http_header_set_empty_var(gavl_dictionary_t * h, const char * name);
 GAVL_PUBLIC
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 
+/* http client */
+
+GAVL_PUBLIC
+gavf_io_t * gavl_http_client_create();
+
+GAVL_PUBLIC int
+gavl_http_client_open(gavf_io_t *,
+                    const char * host,
+                    int port,
+                    const char * protocol);
+
+GAVL_PUBLIC int
+gavl_http_client_send_request(gavf_io_t *,
+                            const gavl_dictionary_t * request,
+                            gavl_dictionary_t ** response);
+
+GAVL_PUBLIC int
+gavl_http_client_read_body(gavf_io_t *,
+                           gavl_buffer_t * buf);
+
+GAVL_PUBLIC int
+gavl_http_client_open_full(gavf_io_t * io,
+                           const char * method,
+                           const char * uri1,
+                           const gavl_dictionary_t * vars,
+                           gavl_dictionary_t ** resp);
+
+
+/* URL variables */
+
+GAVL_PUBLIC
+void gavl_url_get_vars_c(const char * path,
+                         gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+void gavl_url_get_vars(char * path,
+                       gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+char * gavl_url_append_vars(char * path,
+                            const gavl_dictionary_t * vars);
+
+
+/* Append/Remove http variables from the URL */
+
+GAVL_PUBLIC
+char * gavl_url_append_http_vars(char * url, const gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+char * gavl_url_extract_http_vars(char * url, gavl_dictionary_t * vars);
+
 #endif // GAVLHTTP_H_INCLUDED

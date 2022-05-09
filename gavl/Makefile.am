@@ -138,6 +138,7 @@ audioframe.c \
 audiooptions.c \
 audiosink.c \
 audiosource.c \
+base64.c \
 blend.c \
 buffer.c \
 chapterlist.c \
@@ -159,6 +160,7 @@ hw.c \
 hw_dmabuf.c \
 hw_shm.c \
 http.c \
+httpclient.c \
 interleave.c \
 log.c \
 memalign.c \

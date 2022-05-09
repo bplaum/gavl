@@ -263,6 +263,8 @@
 // ISO 3166-1 alpha-2
 #define GAVL_META_COUNTRY_CODE_2   "CountryCode2"
 
+#define GAVL_META_GROUP            "Group"
+
 
 #define GAVL_META_DESCRIPTION "Description"
 

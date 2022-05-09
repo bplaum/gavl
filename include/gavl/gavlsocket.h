@@ -51,7 +51,7 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
 
 GAVL_PUBLIC
 int gavl_socket_address_set(gavl_socket_address_t *, const char * host,
-                          int port, int socktype);
+                            int port, int socktype);
 
 GAVL_PUBLIC
 void gavl_socket_address_set_port(gavl_socket_address_t * addr, int port);

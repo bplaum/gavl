@@ -2272,6 +2272,8 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
   if(GAVF_HAS_FLAG(g, GAVF_FLAG_ONDISK))
     {
     /* TODO: Read program header */
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "On-disk not supported yet");
+    return 0;
     }
   else if(GAVF_HAS_FLAG(g, GAVF_FLAG_INTERACTIVE))
     {

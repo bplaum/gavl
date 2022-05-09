@@ -54,6 +54,7 @@ int gavf_io_can_read(gavf_io_t * io, int timeout)
   }
 
 
+
 gavf_io_t * gavf_io_create(gavf_read_func  r,
                            gavf_write_func w,
                            gavf_seek_func  s,
@@ -94,7 +95,9 @@ void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes, const char * filename
   if(total_bytes > 0)
     io->total_bytes = total_bytes;
   io->filename = gavl_strrep(io->filename, filename);
-  io->mimetype = gavl_strrep(io->filename, mimetype);
+  io->mimetype = gavl_strrep(io->mimetype, mimetype);
+  io->position = 0;
+  io->flags &= ~(GAVF_IO_ERROR|GAVF_IO_EOF);
   }
 
 void gavf_io_set_poll_func(gavf_io_t * io, gavf_poll_func f)
@@ -123,19 +126,44 @@ const char * gavf_io_mimetype(gavf_io_t * io)
 int gavf_io_flush(gavf_io_t * io)
   {
   int ret = 1;
-  if(io->got_error)
+  if(gavf_io_got_error(io))
     return 0;
   
   if(io->flush_func)
     ret = io->flush_func(io->priv);
   if(!ret)
-    io->got_error = 1;
+    gavf_io_set_error(io);
   return ret;
   }
 
 int gavf_io_got_error(gavf_io_t * io)
   {
-  return io->got_error;
+  return io->flags & GAVF_IO_ERROR;
+  }
+
+int gavf_io_got_eof(gavf_io_t * io)
+  {
+  return io->flags & GAVF_IO_EOF;
+  }
+
+void gavf_io_set_error(gavf_io_t * io)
+  {
+  io->flags |= GAVF_IO_ERROR;
+  }
+
+void gavf_io_clear_error(gavf_io_t * io)
+  {
+  io->flags &= ~GAVF_IO_ERROR;
+  }
+
+void gavf_io_set_eof(gavf_io_t * io)
+  {
+  io->flags |= GAVF_IO_EOF;
+  }
+
+void gavf_io_clear_eof(gavf_io_t * io)
+  {
+  io->flags &= ~GAVF_IO_EOF;
   }
 
 int64_t gavf_io_position(gavf_io_t * io)
@@ -180,6 +208,9 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
       result = io->read_func_nonblock(io->priv, buf, len);
     else
       result = io->read_func(io->priv, buf, len);
+
+    if(result < 0)
+      gavf_io_set_error(io);
     
     if(result > 0)
       {
@@ -187,19 +218,24 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
       ret += result;
       }
 
-    if(!result && block)
-      io->got_error = 1;
+    if(((io->total_bytes > 0) && (io->position == io->total_bytes)) ||
+       (!result && block))
+      gavf_io_set_eof(io);
     }
   return ret;
   }
 
 int gavf_io_read_data(gavf_io_t * io, uint8_t * buf, int len)
   {
+  if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
+    return 0;
   return io_read_data(io, buf, len, 1);
   }
 
 int gavf_io_read_data_nonblock(gavf_io_t * io, uint8_t * buf, int len)
   {
+  if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
+    return 0;
   return io_read_data(io, buf, len, 0);
   }
 
@@ -233,7 +269,7 @@ int gavf_io_get_data(gavf_io_t * io, uint8_t * buf, int len)
 int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
   {
   int ret;
-  if(io->got_error)
+  if(gavf_io_got_error(io))
     return -1;
 
   if(!io->write_func)
@@ -243,7 +279,7 @@ int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
     io->position += ret;
 
   if(ret < len)
-    io->got_error = 1;
+    gavf_io_set_error(io);
   return ret;
   }
 

@@ -22,7 +22,6 @@ struct gavl_io_s
   void * priv;
   
   int64_t position;
-  int got_error;    // Got write error
   
   /* Informational data */
   char * filename;

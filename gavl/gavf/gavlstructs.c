@@ -846,7 +846,7 @@ uint8_t * gavl_video_format_to_buffer(int * len, const gavl_video_format_t * fmt
   return ret;
   }
 
-int gavl_metadata_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt)
+int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt)
   {
   int result;
   gavf_io_t * io = gavf_io_create_mem_read(buf, len);

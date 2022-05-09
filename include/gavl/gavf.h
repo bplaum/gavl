@@ -49,22 +49,29 @@
 #define GAVF_IO_IS_PIPE           (1<<8)
 #define GAVF_IO_IS_TTY            (1<<9)
 
+/* Flags which change at runtime */
+
+#define GAVF_IO_EOF               (1<<16)
+#define GAVF_IO_ERROR             (1<<17)
+
 /* Crypto I/O */
 typedef enum
   {
+    GAVL_CIPHER_NONE = 0,
     GAVL_CIPHER_AES128,
   } gavl_cipher_algo_t;
 
 typedef enum
   {
+    GAVL_CIPHER_MODE_NONE = 0,
     GAVL_CIPHER_MODE_CBC,
     
   } gavl_cipher_mode_t;
 
 typedef enum
   {
+    GAVL_CIPHER_PADDING_NONE = 0,
     GAVL_CIPHER_PADDING_PKCS7,
-    
   } gavl_cipher_padding_t;
 
 
@@ -261,6 +268,18 @@ GAVL_PUBLIC
 int gavf_io_get_socket(gavf_io_t * io);
 
 GAVL_PUBLIC
+gavf_io_t * gavf_io_create_cipher(gavf_io_t * src,
+                                  gavl_cipher_algo_t algo,
+                                  gavl_cipher_mode_t mode,
+                                  gavl_cipher_padding_t padding, int wr);
+                               
+GAVL_PUBLIC
+void gavf_io_cipher_init(gavf_io_t * io,
+                         const uint8_t * key,
+                         const uint8_t * iv);
+
+
+GAVL_PUBLIC
 int gavf_io_get_flags(gavf_io_t * io);
 
 GAVL_PUBLIC
@@ -309,7 +328,23 @@ gavf_io_t * gavf_io_create_cipher_write(gavf_io_t * base,
 // void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data);
 
 GAVL_PUBLIC
+void gavf_io_set_error(gavf_io_t * io);
+
+GAVL_PUBLIC
+void gavf_io_clear_error(gavf_io_t * io);
+
+GAVL_PUBLIC
+void gavf_io_set_eof(gavf_io_t * io);
+
+GAVL_PUBLIC
+void gavf_io_clear_eof(gavf_io_t * io);
+
+GAVL_PUBLIC
 int gavf_io_got_error(gavf_io_t * io);
+
+GAVL_PUBLIC
+int gavf_io_got_eof(gavf_io_t * io);
+
 
 GAVL_PUBLIC
 int gavf_io_can_seek(gavf_io_t * io);
@@ -828,7 +863,7 @@ GAVL_PUBLIC
 uint8_t * gavl_video_format_to_buffer(int * len, const gavl_video_format_t * fmt);
 
 GAVL_PUBLIC
-int gavl_metadata_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt);
+int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt);
   
 GAVL_PUBLIC
 uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
