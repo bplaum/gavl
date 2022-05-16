@@ -30,6 +30,15 @@
 
 #include <hw_private.h>
 
+#ifdef HAVE_DRM_DRM_FOURCC_H 
+#define HAVE_DRM
+#else // !HAVE_DRM_DRM_FOURCC_H 
+
+#ifdef HAVE_LIBDRM_DRM_FOURCC_H 
+#define HAVE_DRM
+#endif
+#endif // !HAVE_DRM_DRM_FOURCC_H 
+
 
 
 #define MAX_BUFFERS 16 // From libavcodec
@@ -1798,9 +1807,11 @@ static int exports_type_v4l2(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
   {
   switch(hw)
     {
+#ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
       return 1;
       break;
+#endif
     default:
       break;
     }
@@ -1815,6 +1826,7 @@ static int export_video_frame_v4l2(gavl_hw_context_t * ctx, gavl_video_format_t 
 
   switch(dst_hw_type)
     {
+#ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
       {
       int i;
@@ -1867,6 +1879,7 @@ static int export_video_frame_v4l2(gavl_hw_context_t * ctx, gavl_video_format_t 
       
       dst->buf_idx = src->buf_idx;
       }
+#endif
     default:
       break;
     }

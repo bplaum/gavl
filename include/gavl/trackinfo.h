@@ -478,6 +478,13 @@ void gavl_track_get_page_children_end(const gavl_dictionary_t * parent_orig,
                                       int start, int len,
                                       gavl_array_t * ret);
 
+GAVL_PUBLIC int
+gavl_track_sort_source(gavl_dictionary_t * s,
+                       const char * member,
+                       const char * attribute,
+                       int ascend);
+
+
 /* */
 
 #endif // GAVL_TRACKINFO_H_INCLUDED

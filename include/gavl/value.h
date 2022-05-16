@@ -411,7 +411,7 @@ void gavl_array_splice_array_nocopy(gavl_array_t * arr,
 
 // uses qsort(3)
 GAVL_PUBLIC
-void gavl_array_sort(gavl_array_t * arr, int (*compare)(const void *, const void *));
+void gavl_array_sort(gavl_array_t * arr, int (*compare)(const void *, const void *, void * priv), void * priv);
 
 GAVL_PUBLIC
 void gavl_dictionary_append_string_array_nocopy(gavl_dictionary_t * d,

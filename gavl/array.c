@@ -19,6 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
+#define _GNU_SOURCE // qsort_r
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -345,9 +347,9 @@ void gavl_array_destroy(gavl_array_t * arr)
   free(arr);
   }
 
-void gavl_array_sort(gavl_array_t * arr, int (*compare)(const void *, const void *))
+void gavl_array_sort(gavl_array_t * arr, int (*compare)(const void *, const void *, void * data), void * data)
   {
-  qsort(arr->entries, arr->num_entries, sizeof(*arr->entries), compare);
+  qsort_r(arr->entries, arr->num_entries, sizeof(*arr->entries), compare, data);
   }
 
 /* String array */

@@ -41,6 +41,7 @@ read_packet_func_separate(void * priv, gavl_packet_t ** p)
   return GAVL_SOURCE_OK;
   }
 
+#if 0
 static gavl_source_status_t
 read_packet_func_separate_discont(void * priv, gavl_packet_t ** p)
   {
@@ -77,6 +78,7 @@ read_packet_func_separate_discont(void * priv, gavl_packet_t ** p)
   
   return GAVL_SOURCE_OK;
   }
+#endif
 
 /* Process one packet */
 gavl_source_status_t gavf_demux_iteration(gavf_t * g)

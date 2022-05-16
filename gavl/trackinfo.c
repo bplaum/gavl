@@ -1873,7 +1873,7 @@ gavl_dictionary_t * gavl_get_track_by_id_nc(gavl_dictionary_t * dict, const char
   return NULL;
   }
 
-static int compare_metadata_string(const void * p1, const void * p2)
+static int compare_metadata_string(const void * p1, const void * p2, void * data)
   {
   const char * s1;
   const char * s2;
@@ -1885,8 +1885,8 @@ static int compare_metadata_string(const void * p1, const void * p2)
      !(dict2 = gavl_value_get_dictionary(p2)) ||
      !(dict1 = gavl_track_get_metadata(dict1)) ||
      !(dict2 = gavl_track_get_metadata(dict2)) ||
-     !(s1 = gavl_dictionary_get_string(dict1, GAVL_META_LABEL)) ||
-     !(s2 = gavl_dictionary_get_string(dict2, GAVL_META_LABEL)))
+     !(s1 = gavl_dictionary_get_string(dict1, data)) ||
+     !(s2 = gavl_dictionary_get_string(dict2, data)))
     return 0;
   
   return strcoll(s1, s2);
@@ -1894,7 +1894,7 @@ static int compare_metadata_string(const void * p1, const void * p2)
   
 void gavl_sort_tracks_by_label(gavl_array_t * arr)
   {
-  gavl_array_sort(arr, compare_metadata_string);
+  gavl_array_sort(arr, compare_metadata_string, GAVL_META_LABEL);
   }
 
 /* Compression info */
@@ -2349,4 +2349,62 @@ gavl_stream_set_enabled(gavl_dictionary_t * s, int enabled)
   m = gavl_dictionary_get_dictionary_create(s, GAVL_META_METADATA);
   gavl_dictionary_set_int(m, GAVL_META_STREAM_ENABLED, enabled);
   }
+
+typedef struct
+  {
+  const char * attr;
+  int ascend;
+  } sort_src_t;
+
+static int sort_src_func(const void * v1, const void * v2, void * data)
+  {
+  int64_t val1, val2;
+  const gavl_dictionary_t * src;
+
+  sort_src_t * s = data;  
+
+  src = gavl_value_get_dictionary(v1);
+  gavl_dictionary_get_long(src, s->attr, &val1);
+
+  src = gavl_value_get_dictionary(v2);
+  gavl_dictionary_get_long(src, s->attr, &val2);
+
+  if(val1 == val2)
+    return 0;
   
+  if(s->ascend)
+    return val1 > val2 ? -1 : 1;
+  else
+    return val1 < val2 ? 1 : -1;
+  }
+
+
+int
+gavl_track_sort_source(gavl_dictionary_t * dict,
+                       const char * member,
+                       const char * attribute,
+                       int ascend)
+  {
+  int i;
+  sort_src_t d; 
+  int64_t dummy;
+  const gavl_dictionary_t * src;
+  gavl_array_t * arr;
+  
+  if(!(dict = gavl_dictionary_get_dictionary_nc(dict, GAVL_META_METADATA)) ||
+     !(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)))
+    return 0;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if(!(src = gavl_value_get_dictionary(&arr->entries[i])) ||
+       !gavl_dictionary_get_long(src, attribute, &dummy))
+      return 0;
+    }
+
+  d.attr = attribute;
+  d.ascend = ascend;
+
+  gavl_array_sort(arr, sort_src_func, &d);
+  return 1;
+  }

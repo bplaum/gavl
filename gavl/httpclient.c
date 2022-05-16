@@ -476,10 +476,10 @@ gavl_http_client_open_full(gavf_io_t * io,
 
   uri = gavl_url_extract_http_vars(uri, &http_vars);
 
-  fprintf(stderr, "Opening %s\n", uri1);
   
-  fprintf(stderr, "Got http variables:\n");
-  gavl_dictionary_dump(&http_vars, 2);
+  //  fprintf(stderr, "Opening %s\n", uri1);
+  //  fprintf(stderr, "Got http variables:\n");
+  //  gavl_dictionary_dump(&http_vars, 2);
 
   if(vars)
     gavl_dictionary_merge2(&http_vars, vars);

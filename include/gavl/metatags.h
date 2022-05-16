@@ -487,7 +487,7 @@
 #define GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS     "container.root.playlists" 
 #define GAVL_META_MEDIA_CLASS_ROOT_MOVIES        "container.root.movies"
 #define GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS      "container.root.tvshows"
-#define GAVL_META_MEDIA_CLASS_ROOT_WEBRADIO      "container.root.webradio"
+#define GAVL_META_MEDIA_CLASS_ROOT_STREAMS       "container.root.streams"
 #define GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES   "container.root.directories"
 #define GAVL_META_MEDIA_CLASS_ROOT_PHOTOS        "container.root.photos"
 #define GAVL_META_MEDIA_CLASS_ROOT_PODCASTS      "container.root.podcasts"
