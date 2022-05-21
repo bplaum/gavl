@@ -162,6 +162,7 @@ hw_shm.c \
 http.c \
 httpclient.c \
 interleave.c \
+language.c \
 log.c \
 memalign.c \
 memcpy.c \

@@ -77,6 +77,11 @@
 
 #define GAVL_META_GENRE       "Genre"
 
+/** \brief Category */
+
+#define GAVL_META_CATEGORY     "Category"
+
+
 /** \brief Tracknumber within the album or (more generically) index within parent container
  *
  *  Integer starting with 1

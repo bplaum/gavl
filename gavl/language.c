@@ -21,6 +21,7 @@ static const char * find_by_code(const char * code, const char ** label)
   if(code[2] == '\0')
     {
     /* 2 digit code */
+    code_str[2] = '\0';
     
     for(i = 0; i < sizeof(languages)/sizeof(languages[0]); i++)
       {
@@ -38,10 +39,11 @@ static const char * find_by_code(const char * code, const char ** label)
     {
     /* 3 digit code */
     code_str[2] = tolower(code[2]);
-
+    code_str[3] = '\0';
+    
     for(i = 0; i < sizeof(languages)/sizeof(languages[0]); i++)
       {
-      if(!strcmp(code_str, languages[i].ISO_639_2_B) || (languages[i].ISO_639_2_T && strcmp(code_str, languages[i].ISO_639_2_T)))
+      if(!strcmp(code_str, languages[i].ISO_639_2_B) || (languages[i].ISO_639_2_T && !strcmp(code_str, languages[i].ISO_639_2_T)))
         {
         if(label)
           *label = languages[i].label;

@@ -308,6 +308,16 @@ gavl_base64_decode_data(const char * str, gavl_buffer_t * ret);
 GAVL_PUBLIC
 char * gavl_get_absolute_uri(const char * rel_uri, const char * abs_uri);
 
+GAVL_PUBLIC
+const char * gavl_language_get_iso639_2_b_from_code(const char * code);
+
+GAVL_PUBLIC
+const char * gavl_language_get_iso639_2_b_from_label(const char * label);
+
+GAVL_PUBLIC
+const char * gavl_language_get_label_from_code(const char * label);
+
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 
