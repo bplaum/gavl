@@ -99,8 +99,8 @@ static int next_block(cipher_t * c)
   
   if(c->last_block)
     {
-    fprintf(stderr, "Got last block:\n");
-    gavl_hexdump(c->buf_out, c->cipher->block_size, c->cipher->block_size);
+    //    fprintf(stderr, "Got last block:\n");
+    //    gavl_hexdump(c->buf_out, c->cipher->block_size, c->cipher->block_size);
 
     switch(c->padding)
       {

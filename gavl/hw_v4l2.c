@@ -41,11 +41,15 @@
 
 
 
-#define MAX_BUFFERS 16 // From libavcodec
+// #define MAX_BUFFERS 16 // From libavcodec
+
+// Low-Bitrate streams from ZDF need 32 packets to get the format!
+
+#define MAX_BUFFERS 16  
 #define DECODER_NUM_PACKETS 16
 #define DECODER_NUM_FRAMES  16
 
-#define MAX_FORMAT_FRAMES 16
+#define MAX_FORMAT_FRAMES 32
 
 // #define DUMP_PACKETS
 // #define DUMP_EXTRADATA

@@ -227,7 +227,10 @@ gavl_http_client_open(gavf_io_t * io,
   if(!do_close && c->io_int && c->host && c->protocol)
     {
     if(strcmp(host, c->host) || strcmp(protocol, c->protocol) || (c->port != port))
+      {
       do_close = 1;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (adress or protocol changed)");
+      }
     }
   
   if(c->io_int && do_close)
@@ -236,6 +239,10 @@ gavl_http_client_open(gavf_io_t * io,
     c->io_int = NULL;
     }
 
+  c->host     = gavl_strrep(c->host, host);
+  c->protocol = gavl_strrep(c->protocol, protocol);
+  c->port     = port;
+  
   if(!c->io_int)
     {
     int fd;
@@ -260,7 +267,6 @@ gavl_http_client_open(gavf_io_t * io,
       }
     
     gavl_socket_address_set(c->addr, host, port, SOCK_STREAM);
-    c->host = gavl_strrep(c->host, host);
     
     fd = gavl_socket_connect_inet(c->addr, 5000);
     if(fd < 0)
@@ -330,6 +336,11 @@ static int check_keepalive(gavl_dictionary_t * res)
   return 0;
   }
 
+static void append_header_var(gavl_dictionary_t * header, const char * name, const char * val)
+  {
+  if(!gavl_dictionary_get_string_i(header, name))
+    gavl_dictionary_set_string(header, name, val);
+  }
 
 static int
 http_client_open(gavf_io_t * io,
@@ -350,6 +361,8 @@ http_client_open(gavf_io_t * io,
   int status;
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
+  //  fprintf(stderr, "http_client_open %s\n", uri1);
+  
   uri = gavl_strdup(uri1);
   
   gavl_dictionary_init(&request);
@@ -380,6 +393,10 @@ http_client_open(gavf_io_t * io,
   if(vars)
     gavl_dictionary_merge2(&request, vars);
 
+  /* Send standard headers */
+  append_header_var(&request, "Accept", "*/*");
+  append_header_var(&request, "User-Agent", "gavl http client version ("VERSION")");
+  
   if(!gavl_http_client_send_request(io, &request, &resp))
     {
     goto fail;
@@ -421,7 +438,7 @@ http_client_open(gavf_io_t * io,
   else if(status < 400)
     {
     /* Redirection */
-    const char * location = gavl_dictionary_get_string(resp, "Location");
+    const char * location = gavl_dictionary_get_string_i(resp, "Location");
 
     if(location)
       *redirect = gavl_get_absolute_uri(location, uri);
@@ -495,6 +512,7 @@ gavl_http_client_open_full(gavf_io_t * io,
       {
       free(uri);
       uri = redirect;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got http redirection to %s", uri);
       }
     else
       {

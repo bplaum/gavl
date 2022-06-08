@@ -708,11 +708,13 @@ char * gavl_url_append_vars(char * path,
     if(!(val_string = gavl_value_to_string(&vars->entries[i].v)))
       {
       if(vars->entries[i].v.type != GAVL_TYPE_STRING)
+        {
         gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Value type %s of var %s not supported in URL variables",
                  gavl_type_to_string(vars->entries[i].v.type), vars->entries[i].name);
-      continue;
+        continue;
+        }
       }
-
+    
     if(!val_string)
       tmp_string = gavl_sprintf("%c%s=", sep, vars->entries[i].name);
     else
@@ -722,7 +724,8 @@ char * gavl_url_append_vars(char * path,
     path = gavl_strcat(path, tmp_string);
     
     free(tmp_string);
-    if(!val_string)
+
+    if(val_string)
       free(val_string);
     }
   return path;

@@ -259,6 +259,7 @@
 
 #define GAVL_META_COUNTRY          "Country"
 
+
 /** \brief Country (). Can be array for multiple entries
  */
 
@@ -327,6 +328,9 @@
 #define GAVL_META_AVG_BITRATE    "AVGBitrate"   // Float, kbps
 #define GAVL_META_AVG_FRAMERATE  "AVGFramerate" // Float
 
+/* If present and nonzero, "tracks" refer to the same content with different bitrates */
+#define GAVL_META_MULTIVARIANT       "Multivariant"
+
 /* Purely informational entries for the global metadata or per Location */
 #define GAVL_META_AUDIO_CHANNELS     "Channels"
 #define GAVL_META_AUDIO_SAMPLERATE   "Samplerate"
@@ -379,6 +383,8 @@
 #define GAVL_META_STREAM_PACKET_TIMESCALE "pscale"
 #define GAVL_META_STREAM_SAMPLE_TIMESCALE "sscale"
 #define GAVL_META_STREAM_ENABLED          "enabled"
+// #define GAVL_META_STREAM_FIRST_PACKET_PTS "pstart"
+
 
 /* Set to the absolute stream index offset by one by default
    but can be changed to anything */
@@ -390,7 +396,6 @@
 #define GAVL_META_STREAM_ID_MSG_PROGRAM -1
 
 #define GAVL_META_STREAM_ID_MEDIA_START    1
-
 
 
 #define GAVL_META_STREAM_STATS "stats"
