@@ -100,9 +100,6 @@ int gavl_listen_socket_create_unix(const char * name,
 GAVL_PUBLIC
 int gavl_unix_socket_create(char ** name, int queue_size);
 
-// GAVL_PUBLIC
-// void gavl_unix_socket_close(int fd, char * name);
-
 
 /* Accept a new client connection, return -1 if there is none */
 

@@ -715,13 +715,6 @@ gavl_msg_set_progress(gavl_msg_t * msg, const char * activity, float perc);
 GAVL_PUBLIC void
 gavl_msg_get_progress(gavl_msg_t * msg, const char ** activity, float * perc);
 
-
-GAVL_PUBLIC void
-gavl_msg_set_src_metadata(gavl_msg_t * msg, gavl_time_t time, const gavl_dictionary_t * m);
-
-GAVL_PUBLIC void
-gavl_msg_get_src_metadata(gavl_msg_t * msg, gavl_time_t * time, gavl_dictionary_t * m);
-
 GAVL_PUBLIC void
 gavl_msg_set_src_aspect(gavl_msg_t * msg, int64_t time, int scale, int stream,
                         int pixel_width, int pixel_height);

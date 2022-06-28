@@ -321,11 +321,6 @@ gavf_io_t * gavf_io_create_cipher_write(gavf_io_t * base,
 #endif
                                        
 
-// GAVL_PUBLIC
-// void gavf_io_set_cb(gavf_io_t * io, gavf_io_cb_func cb, void * cb_priv);
-
-// GAVL_PUBLIC
-// void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data);
 
 GAVL_PUBLIC
 void gavf_io_set_error(gavf_io_t * io);
@@ -645,9 +640,6 @@ gavl_dictionary_t * gavf_get_current_track_nc(gavf_t * g);
 GAVL_PUBLIC
 const gavl_dictionary_t * gavf_get_current_track(const gavf_t * g);
 
-// GAVL_PUBLIC
-// int gavf_select_track(gavf_t * g, int track);
-
 GAVL_PUBLIC
 gavl_source_status_t gavf_demux_iteration(gavf_t * g);
 
@@ -679,9 +671,6 @@ void gavf_stream_set_unref(gavf_t * gavf, uint32_t id,
 
 GAVL_PUBLIC
 void gavf_packet_skip(gavf_t * gavf);
-
-// GAVL_PUBLIC
-//int gavf_packet_read_packet(gavf_t * gavf, gavl_packet_t * p);
 
 GAVL_PUBLIC
 int gavf_reset(gavf_t * gavf);
@@ -733,49 +722,9 @@ void gavf_shrink_audio_frame(gavl_audio_frame_t * f,
 
 /* Write support */
 
-#if 0
-GAVL_PUBLIC
-int gavf_open_write(gavf_t * g, gavf_io_t * io,
-                    const gavl_dictionary_t * m);
-#endif
 
 GAVL_PUBLIC
 int gavf_open_uri_write(gavf_t * g, const char * uri);
-
-
-/*
- *  Return value: >= 0 is the stream index passed to gavf_write_packet()
- *  < 0 means error
- */
-#if 0
-
-GAVL_PUBLIC
-int gavf_append_audio_stream(gavf_t * g,
-                          const gavl_compression_info_t * ci,
-                          const gavl_audio_format_t * format,
-                          const gavl_dictionary_t * m);
-
-GAVL_PUBLIC
-int gavf_append_video_stream(gavf_t * g,
-                             const gavl_compression_info_t * ci,
-                             const gavl_video_format_t * format,
-                             const gavl_dictionary_t * m);
-
-GAVL_PUBLIC
-int gavf_append_text_stream(gavf_t * g,
-                            uint32_t timescale,
-                            const gavl_dictionary_t * m);
-
-GAVL_PUBLIC
-int gavf_append_overlay_stream(gavf_t * g,
-                               const gavl_compression_info_t * ci,
-                               const gavl_video_format_t * format,
-                               const gavl_dictionary_t * m);
-
-GAVL_PUBLIC
-void gavf_add_msg_stream(gavf_t * g, int id);
-
-#endif
 
 GAVL_PUBLIC
 int gavf_set_media_info(gavf_t * g, const gavl_dictionary_t * mi);
