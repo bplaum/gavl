@@ -648,8 +648,10 @@ static void url_vars_to_metadata(const char * pos, gavl_dictionary_t * vars)
       {
       key = gavl_strndup(str[i], pos);
       pos++;
-
-      gavl_dictionary_set_string(vars, key, pos);
+      
+      if(*key != '\0')
+        gavl_dictionary_set_string(vars, key, pos);
+      
       free(key);
       }
     i++;
