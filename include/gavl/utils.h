@@ -306,6 +306,14 @@ int
 gavl_base64_decode_data(const char * str, gavl_buffer_t * ret);
 
 GAVL_PUBLIC
+char * 
+gavl_base64_encode_data_urlsafe(void * data, int length);
+
+GAVL_PUBLIC
+int
+gavl_base64_decode_data_urlsafe(const char * str, gavl_buffer_t * ret);
+
+GAVL_PUBLIC
 char * gavl_get_absolute_uri(const char * rel_uri, const char * abs_uri);
 
 GAVL_PUBLIC

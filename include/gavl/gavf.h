@@ -340,7 +340,6 @@ int gavf_io_got_error(gavf_io_t * io);
 GAVL_PUBLIC
 int gavf_io_got_eof(gavf_io_t * io);
 
-
 GAVL_PUBLIC
 int gavf_io_can_seek(gavf_io_t * io);
 
@@ -374,7 +373,7 @@ const char * gavf_io_mimetype(gavf_io_t * io);
 
 GAVL_PUBLIC
 void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
-                      const char * filename, const char * mimetype);
+                      const char * filename, const char * mimetype, int flags);
 
 GAVL_PUBLIC
 int64_t gavf_io_position(gavf_io_t * io);

@@ -556,6 +556,9 @@ int gavl_url_split(const char * url,
   at_pos = strchr(pos1, '@');
   slash_pos = strchr(pos1, '/');
 
+  if(!slash_pos)
+    slash_pos = pos1 + strlen(pos1);
+  
   if(colon_pos && at_pos && at_pos &&
      (colon_pos < at_pos) && 
      (at_pos < slash_pos))
@@ -746,7 +749,7 @@ char * gavl_url_extract_http_vars(char * url, gavl_dictionary_t * vars)
     {
     gavl_buffer_t buf;
     gavl_buffer_init(&buf);
-    gavl_base64_decode_data(str, &buf);
+    gavl_base64_decode_data_urlsafe(str, &buf);
 
     if(!gavl_dictionary_from_buffer(buf.buf, buf.len, vars))
       gavl_dictionary_reset(vars);
@@ -783,7 +786,7 @@ char * gavl_url_append_http_vars(char * url, const gavl_dictionary_t * vars)
 
   if((str = gavl_dictionary_get_string(&url_vars, HTTP_VARS_KEY)))
     {
-    gavl_base64_decode_data(str, &buf);
+    gavl_base64_decode_data_urlsafe(str, &buf);
     
     if(!gavl_dictionary_from_buffer(buf.buf, buf.len, &http_vars))
       gavl_dictionary_reset(&http_vars);
@@ -795,7 +798,7 @@ char * gavl_url_append_http_vars(char * url, const gavl_dictionary_t * vars)
   gavl_dictionary_merge2(&http_vars, vars);
 
   buf_new = gavl_dictionary_to_buffer(&len_new, &http_vars);
-  str_new = gavl_base64_encode_data(buf_new, len_new);
+  str_new = gavl_base64_encode_data_urlsafe(buf_new, len_new);
 
   gavl_dictionary_set_string_nocopy(&url_vars, HTTP_VARS_KEY, str_new);
 

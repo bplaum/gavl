@@ -37,6 +37,7 @@
 #define GAVL_MSG_NS_GUI       4
 #define GAVL_MSG_NS_GAVF      5
 #define GAVL_MSG_NS_STATE     6
+#define GAVL_MSG_NS_SINK      7
 
 /* Message IDs */
 
@@ -324,6 +325,10 @@
 
 #define GAVL_CMD_GAVF_SELECT_STREAM   (0x100+1)
 
+/* Sink */
+
+/* Underrun (no args) */
+#define GAVL_MSG_SINK_UNDERRUN        1
 
 /* Header fields */
 #define GAVL_MSG_ID         "ID"

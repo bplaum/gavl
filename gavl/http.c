@@ -626,4 +626,15 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
   return success;
   }
 
+char * gavl_make_basic_auth(const char * username, const char * password)
+  {
+  char * ret; 
+  char * str = gavl_sprintf("%s:%s", username, password);
+  char * str_enc = gavl_base64_encode_data(str, -1);
+  
+  ret = gavl_sprintf("Basic %s", str_enc);
 
+  free(str);
+  free(str_enc);
+  return ret;
+  }

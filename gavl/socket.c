@@ -693,46 +693,44 @@ int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
 int gavl_socket_read_data(int fd, uint8_t * data, int len, int milliseconds)
   {
   int result;
+  int bytes_read = 0;
   
-  if((milliseconds >= 0) && !gavl_socket_can_read(fd, milliseconds))
+  while(bytes_read < len)
     {
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got read timeout (t: %d, len: %d)", milliseconds, len);
+    if((milliseconds >= 0) && !gavl_socket_can_read(fd, milliseconds))
+      {
+      gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got read timeout (t: %d, len: %d)", milliseconds, len);
+      return bytes_read;
+      }
 
+    if(milliseconds < 0)
+      result = recv(fd, data + bytes_read, len - bytes_read, MSG_WAITALL);
+    else
+      result = recv(fd, data + bytes_read, len - bytes_read, MSG_DONTWAIT);
     
-    return 0;
-    }
-
-  while(1)
-    {
-
-    result = recv(fd, data, len, MSG_WAITALL);
     if(result < 0)
       {
-      if((errno == EAGAIN) || (errno == EWOULDBLOCK))
-        {
-        gavl_time_t delay_time = GAVL_TIME_SCALE / 20;
-        gavl_time_delay(&delay_time);
-        fprintf(stderr, "gavl_socket_read_data: trying again\n");
-        }
-      else
+      if((errno != EAGAIN) && (errno != EWOULDBLOCK))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,  "Reading %d bytes failed: %s (timeout was %d)",
-               len, strerror(errno), milliseconds);
+                 len - bytes_read, strerror(errno), milliseconds);
         
-        return 0;
+        return bytes_read;
         }
       }
     else if(result == 0)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,  "Reading %d bytes failed: Connection closed (timeout was %d)",
-             len, milliseconds);
+             len - bytes_read, milliseconds);
       break;
       }
     else
-      break;
+      {
+      bytes_read += result;
+      }
     }
   
-  return result;
+  return bytes_read;
   }
 
 int gavl_socket_write_data(int fd, const void * data, int len)

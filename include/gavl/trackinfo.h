@@ -408,6 +408,9 @@ GAVL_PUBLIC
 void gavl_sort_tracks_by_label(gavl_array_t * children);
 
 GAVL_PUBLIC
+void gavl_sort_tracks_by_bitrate(gavl_array_t * children);
+
+GAVL_PUBLIC
 int gavl_track_get_num_children(const gavl_dictionary_t * track);
 
 GAVL_PUBLIC

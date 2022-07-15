@@ -186,6 +186,10 @@
 
 #define GAVL_META_BITRATE     "Bitrate"
 
+/* Framerate (float, exact value is in the video format) */
+
+#define GAVL_META_FRAMERATE   "Framerate"
+
 /** \brief Valid bits per audio sample
  */
 
@@ -328,7 +332,11 @@
 #define GAVL_META_AVG_BITRATE    "AVGBitrate"   // Float, kbps
 #define GAVL_META_AVG_FRAMERATE  "AVGFramerate" // Float
 
-/* If present and nonzero, "tracks" refer to the same content with different bitrates */
+/*
+ *  If present and nonzero, different adresses in GAVL_META_SRC differ in quality, with
+ *  the highest being the first
+ */
+
 #define GAVL_META_MULTIVARIANT       "Multivariant"
 
 /* Purely informational entries for the global metadata or per Location */
@@ -346,6 +354,8 @@
 #define GAVL_META_X      "x"
 #define GAVL_META_Y      "y"
 
+/* Specify that a file got transcoded, i.e. has not the original format */
+#define GAVL_META_TRANSCODED "transcoded"
 
 #define GAVL_META_IMAGE_ORIENTATION "ImageOrientation" // See GAVL_META_IMAGE_ORIENT_ 
 

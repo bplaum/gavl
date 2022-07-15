@@ -1897,6 +1897,31 @@ void gavl_sort_tracks_by_label(gavl_array_t * arr)
   gavl_array_sort(arr, compare_metadata_string, GAVL_META_LABEL);
   }
 
+static int compare_metadata_int_reverse(const void * p1,
+                                        const void * p2, void * data)
+  {
+  int i1 = 0;
+  int i2 = 0;
+  
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+
+  if(!(dict1 = gavl_value_get_dictionary(p1)) ||
+     !(dict2 = gavl_value_get_dictionary(p2)) ||
+     !(dict1 = gavl_track_get_metadata(dict1)) ||
+     !(dict2 = gavl_track_get_metadata(dict2)) ||
+     !gavl_dictionary_get_int(dict1, data, &i1) ||
+     !gavl_dictionary_get_int(dict2, data, &i2))
+    return 0;
+  
+  return (i2 - i1);
+  }
+
+void gavl_sort_tracks_by_bitrate(gavl_array_t * arr)
+  {
+  gavl_array_sort(arr, compare_metadata_int_reverse, GAVL_META_BITRATE);
+  }
+
 /* Compression info */
 
 #if 0

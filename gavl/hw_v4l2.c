@@ -49,7 +49,7 @@
 #define DECODER_NUM_PACKETS 16
 #define DECODER_NUM_FRAMES  16
 
-#define MAX_FORMAT_FRAMES 32
+#define MAX_FORMAT_FRAMES 16
 
 // #define DUMP_PACKETS
 // #define DUMP_EXTRADATA
@@ -858,6 +858,8 @@ static int do_poll(gavl_v4l2_device_t * dev, int events, int * revents)
   int result;
   struct pollfd fds;
 
+  //  fprintf(stderr, "do_poll\n");
+  
   fds.fd = dev->fd;
   
   
