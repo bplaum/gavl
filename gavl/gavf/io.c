@@ -42,7 +42,7 @@ void * gavf_io_get_priv(gavf_io_t * io)
 
 int gavf_io_can_seek(gavf_io_t * io)
   {
-  return (io->seek_func && io->flags & GAVF_IO_CAN_SEEK) ? 1 : 0;
+  return (io->seek_func && (io->flags & GAVF_IO_CAN_SEEK)) ? 1 : 0;
   }
 
 int gavf_io_can_read(gavf_io_t * io, int timeout)
@@ -90,7 +90,8 @@ void gavf_io_destroy(gavf_io_t * io)
   free(io);
   }
 
-void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes, const char * filename, const char * mimetype, int flags)
+void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
+                      const char * filename, const char * mimetype, int flags)
   {
   if(total_bytes > 0)
     io->total_bytes = total_bytes;

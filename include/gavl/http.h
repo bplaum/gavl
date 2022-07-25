@@ -109,15 +109,40 @@ GAVL_PUBLIC int
 gavl_http_client_read_body(gavf_io_t *,
                            gavl_buffer_t * buf);
 
+/* Call before gavl_http_client_open() to specify a byte range */
+GAVL_PUBLIC void
+gavl_http_client_set_range(gavf_io_t * io, int64_t start, int64_t end);
+
+/*
+ *  Call before gavl_http_client_open() to specify extra header
+ *  variables
+ */
+
+GAVL_PUBLIC void
+gavl_http_client_set_req_vars(gavf_io_t * io,
+                              const gavl_dictionary_t * vars);
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_http_client_get_response(gavf_io_t * io);
+
 /* Open a connection, send a request and read the response.
    Handles redirections (300 codes), proxies, https */
 
 GAVL_PUBLIC int
 gavl_http_client_open(gavf_io_t * io,
                       const char * method,
-                      const char * uri1,
-                      const gavl_dictionary_t * vars,
-                      gavl_dictionary_t ** resp);
+                      const char * uri1);
+
+GAVL_PUBLIC int
+gavl_http_client_can_pause(gavf_io_t * io);
+
+GAVL_PUBLIC void
+gavl_http_client_pause(gavf_io_t * io);
+
+GAVL_PUBLIC void
+gavl_http_client_resume(gavf_io_t * io);
+
+
 
 /* URL variables */
 
