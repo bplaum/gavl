@@ -75,6 +75,11 @@ int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const cha
 GAVL_PUBLIC
 int gavl_socket_connect_inet(gavl_socket_address_t*, int timeout);
 
+/* Check if a previous call with zero timeout succeeded
+   Retur value: -1: Error, 0: In Progress, 1. Connected */
+GAVL_PUBLIC
+int gavl_socket_connect_inet_complete(int fd, int milliseconds);
+
 GAVL_PUBLIC
 int gavl_socket_connect_unix(const char *);
 

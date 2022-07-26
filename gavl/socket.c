@@ -328,13 +328,35 @@ int gavl_socket_get_address(int sock, gavl_socket_address_t * local,
 
 /* Client connection (stream oriented) */
 
-int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
+static int finalize_connection(int ret)
   {
-  int ret = -1;
   int err;
   socklen_t err_len;
 
-                                                                               
+  err_len = sizeof(err);
+  getsockopt(ret, SOL_SOCKET, SO_ERROR, &err, &err_len);
+
+  if(err)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connecting failed: %s",
+           strerror(err));
+    return -1;
+    }
+  
+  /* Set back to blocking mode */
+  
+  if(fcntl(ret, F_SETFL, 0) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set blocking mode");
+    return -1;
+    }
+  return 1;
+  }
+
+int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
+  {
+  int ret = -1;
+  
   /* Create the socket */
   if((ret = create_socket(a->addr.ss_family, SOCK_STREAM, 0)) < 0)
     {
@@ -354,6 +376,9 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
     {
     if(errno == EINPROGRESS)
       {
+      if(!milliseconds)
+        return ret;
+      
       if(!gavl_socket_can_write(ret, milliseconds))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection timed out");
@@ -369,25 +394,20 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
     }
 
   /* Check for error */
-
-  err_len = sizeof(err);
-  getsockopt(ret, SOL_SOCKET, SO_ERROR, &err, &err_len);
-
-  if(err)
+  if(finalize_connection(ret) < 0)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connecting failed: %s",
-           strerror(err));
+    gavl_socket_close(ret);
     return -1;
     }
   
-  /* Set back to blocking mode */
-  
-  if(fcntl(ret, F_SETFL, 0) < 0)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set blocking mode");
-    return -1;
-    }
   return ret;
+  }
+
+int gavl_socket_connect_inet_complete(int fd, int milliseconds)
+  {
+  if(!gavl_socket_can_write(fd, milliseconds))
+    return 0;
+  return finalize_connection(fd);
   }
 
 int gavl_socket_connect_unix(const char * name)

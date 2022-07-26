@@ -142,7 +142,14 @@ gavl_http_client_pause(gavf_io_t * io);
 GAVL_PUBLIC void
 gavl_http_client_resume(gavf_io_t * io);
 
+/* Asynchronpus http download */
 
+GAVL_PUBLIC int
+gavl_http_client_get_async(gavf_io_t * io, const char * uri, const gavl_dictionary_t * vars,
+                           gavl_buffer_t * ret);
+
+GAVL_PUBLIC int
+gavl_http_client_get_async_done(gavf_io_t * io);
 
 /* URL variables */
 

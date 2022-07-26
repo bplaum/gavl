@@ -19,6 +19,7 @@
 #define FLAG_KEEPALIVE        (1<<1)
 #define FLAG_CHUNKED          (1<<2)
 #define FLAG_USE_PROXY_TUNNEL (1<<3)
+#define FLAG_USE_TLS          (1<<4)
 
 #define DUMP_HEADERS
 
@@ -31,9 +32,13 @@ typedef struct
   char * host;
   char * protocol;
   int port;
+
+  char * proxy_host;
+  int proxy_port;
   
   gavl_dictionary_t resp;
-
+  gavl_dictionary_t req;
+  
   gavl_socket_address_t * addr;
 
   int chunk_length;
@@ -55,6 +60,11 @@ typedef struct
 
   int64_t range_start;
   int64_t range_end;
+
+  /* Async stuff */
+
+  gavl_buffer_t * async_buffer;
+  int async_state;
   
   } gavl_http_client_t;
 
@@ -161,72 +171,60 @@ static int read_chunk_tail(gavl_http_client_t * c)
   return 1;
   }
 
-static int read_func(void * priv, uint8_t * data, int len)
+static int read_chunked(void * priv, uint8_t * data, int len, int block)
   {
   int bytes_read = 0;
   int bytes_to_read = 0;
   int result;
   gavl_http_client_t * c = priv;
-
-  if(c->flags & FLAG_CHUNKED)
+  
+  while(bytes_read < len)
     {
-    while(bytes_read < len)
+    if(c->pos == c->chunk_length)
       {
-      if(c->pos == c->chunk_length)
+      if(c->chunk_length)
         {
-        if(c->chunk_length)
-          {
-          if(!read_chunk_tail(c))
-            return bytes_read;
-          }
-      
-        /* Read chunk_len */
-
-        if(!read_chunk_length(c))
-          {
-          goto fail;
-          }
-        c->pos = 0;
+        if(!block && !gavf_io_can_read(c->io_int, 0))
+          return bytes_read;
+        
+        if(!read_chunk_tail(c))
+          return bytes_read;
         }
+      
+      /* Read chunk_len */
 
-      bytes_to_read = len - bytes_read;
-
-      if(c->pos + bytes_to_read >= c->chunk_length)
-        bytes_to_read = c->chunk_length - c->pos;
-
-      result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
-
-      if(result < bytes_to_read)
+      if(!block && !gavf_io_can_read(c->io_int, 0))
+        return bytes_read;
+      
+      if(!read_chunk_length(c))
         {
         goto fail;
         }
-      bytes_read += result;
-      c->pos += result;
+      c->pos = 0;
       }
-    }
-  else
-    {
-    if(c->total_bytes)
+
+    bytes_to_read = len - bytes_read;
+
+    if(c->pos + bytes_to_read >= c->chunk_length)
+      bytes_to_read = c->chunk_length - c->pos;
+
+    if(!block)
       {
-      if(c->pos + len > c->total_bytes)
-        len = c->total_bytes - c->pos;
-
-      if(len)
-        {
-        bytes_read = gavf_io_read_data(c->io_int, data, len);
-
-        if(bytes_read < len)
-          {
-          goto fail;
-          }
-        
-        c->pos += len;
-        }
-      
-      return len;
+      result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
+      if(result < 0)
+        goto fail;
       }
     else
-      return gavf_io_read_data(c->io_int, data, len);
+      {
+      result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
+      if(result < bytes_to_read)
+        goto fail;
+      }
+    bytes_read += result;
+    c->pos += result;
+
+    if(!block)
+      break;
     }
 
   return bytes_read;
@@ -234,7 +232,54 @@ static int read_func(void * priv, uint8_t * data, int len)
   fail:
 
   return -1;
+  }
+
+static int read_normal(void * priv, uint8_t * data, int len, int block)
+  {
+  int result;
+  gavl_http_client_t * c = priv;
+
+  if(c->total_bytes)
+    {
+    if(c->pos + len > c->total_bytes)
+      len = c->total_bytes - c->pos;
+    }
+
+  if(!block && !gavf_io_can_read(c->io_int, 0))
+    return 0;
+
+  result = gavf_io_read_data(c->io_int, data, len);
+
+  if(result < 0)
+    goto fail;
   
+  if(block && (result < len))
+    goto fail;
+  
+  c->pos += result;
+  return result;
+
+  fail:
+  return -1;
+  }
+
+static int read_func(void * priv, uint8_t * data, int len)
+  {
+  gavl_http_client_t * c = priv;
+  if(c->flags & FLAG_CHUNKED)
+    return read_chunked(priv, data, len, 1);
+  else
+    return read_normal(priv, data, len, 1);
+  
+  }
+
+static int read_nonblock_func(void * priv, uint8_t * data, int len)
+  {
+  gavl_http_client_t * c = priv;
+  if(c->flags & FLAG_CHUNKED)
+    return read_chunked(priv, data, len, 0);
+  else
+    return read_normal(priv, data, len, 0);
   }
 
 static int write_func(void * priv, const uint8_t * data, int len)
@@ -268,7 +313,10 @@ static void close_func(void * priv)
     free(c->method);
   if(c->proxy_auth)
     free(c->proxy_auth);
+  if(c->proxy_host)
+    free(c->proxy_host);
 
+  
   gavl_dictionary_free(&c->resp);
   free(c);
   }
@@ -346,25 +394,25 @@ gavf_io_t * gavl_http_client_create()
   c->io = ret;
   
   gavf_io_set_poll_func(ret, poll_func);
+  gavf_io_set_nonblock_read(ret, read_nonblock_func);
+  
   
   return ret;
   }
 
-
-static int
-do_connect(gavf_io_t * io,
-           const char * host,
-           int port,
-           const char * protocol)
+static int prepare_connection(gavf_io_t * io,
+                              const char * host,
+                              int port,
+                              const char * protocol)
   {
   int ret = 0;
   int do_close = 0;
-  int use_tls = 0;
+
   const char * proxy = NULL;
   int i;
 
-  char * proxy_host = NULL;
-  int proxy_port = -1;
+  //  char * proxy_host = NULL;
+  //  int proxy_port = -1;
 
   char * proxy_user = NULL;
   char * proxy_password = NULL;
@@ -374,8 +422,9 @@ do_connect(gavf_io_t * io,
   
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
+  c->proxy_host = gavl_strrep(c->proxy_host, NULL);
+  c->proxy_port = -1;
   
-
   gavl_dictionary_init(&req);
   gavl_dictionary_init(&res);
   
@@ -395,7 +444,7 @@ do_connect(gavf_io_t * io,
   else if(!strcmp(protocol, "https") || !strcmp(protocol, "hlss"))
     {
     proxy = https_proxy;
-    use_tls = 1;
+    c->flags |= FLAG_USE_TLS;
     }
   else
     {
@@ -422,7 +471,7 @@ do_connect(gavf_io_t * io,
 
   if(proxy)
     {
-    if(use_tls)
+    if(c->flags & FLAG_USE_TLS)
       {
       if(!no_tunnel)
         {
@@ -433,7 +482,8 @@ do_connect(gavf_io_t * io,
         {
         c->flags = FLAG_USE_PROXY;
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using https proxy %s (http mode)", proxy);
-        use_tls = 0;
+
+        c->flags &= ~FLAG_USE_TLS;
         }
       }
     else
@@ -447,8 +497,8 @@ do_connect(gavf_io_t * io,
                        NULL,
                        &proxy_user,
                        &proxy_password,
-                       &proxy_host,
-                       &proxy_port,
+                       &c->proxy_host,
+                       &c->proxy_port,
                        NULL))
       goto fail;
 
@@ -489,21 +539,58 @@ do_connect(gavf_io_t * io,
   c->protocol = gavl_strrep(c->protocol, protocol);
   c->port     = port;
   
+
   if(!c->io_int)
     {
-    int fd;
-
     if(port <= 0)
       {
-      if(use_tls)
+      if(c->flags & FLAG_USE_TLS)
         port = 443;
       else
         port = 80;
       c->port     = port;
       }
+    }
+  
+  ret = 1;
+  
+  fail:
+
+  if(!proxy_user)
+    free(proxy_user);
+  if(!proxy_password)
+    free(proxy_password);
+  
+  return ret;
+  
+  }
+
+static int
+do_connect(gavf_io_t * io,
+           const char * host,
+           int port,
+           const char * protocol)
+  {
+  int ret = 0;
+  //  int use_tls = 0;
+  
+  char * proxy_user = NULL;
+  char * proxy_password = NULL;
+  
+  gavl_dictionary_t req;
+  gavl_dictionary_t res;
+  
+  gavl_http_client_t * c = gavf_io_get_priv(io);
+  
+  prepare_connection(io, host, port, protocol);
+
+  
+  if(!c->io_int)
+    {
+    int fd;
     
     if(c->flags & (FLAG_USE_PROXY | FLAG_USE_PROXY_TUNNEL))
-      gavl_socket_address_set(c->addr, proxy_host, proxy_port, SOCK_STREAM);
+      gavl_socket_address_set(c->addr, c->proxy_host, c->proxy_port, SOCK_STREAM);
     else
       gavl_socket_address_set(c->addr, c->host, c->port, SOCK_STREAM);
     
@@ -511,7 +598,7 @@ do_connect(gavf_io_t * io,
     if(fd < 0)
       goto fail;
     
-    if(use_tls)
+    if(c->flags & FLAG_USE_TLS)
       {
       if(c->flags & FLAG_USE_PROXY_TUNNEL)
         {
@@ -571,8 +658,6 @@ do_connect(gavf_io_t * io,
   gavl_dictionary_free(&req);
   gavl_dictionary_free(&res);
   
-  if(proxy_host)
-    free(proxy_host);
   if(proxy_user)
     free(proxy_user);
   if(proxy_password)
@@ -582,9 +667,7 @@ do_connect(gavf_io_t * io,
   }
 
 static int
-gavl_http_client_send_request(gavf_io_t * io,
-                              const gavl_dictionary_t * request,
-                              gavl_dictionary_t ** resp)
+gavl_http_client_send_request(gavf_io_t * io)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
   
@@ -592,15 +675,16 @@ gavl_http_client_send_request(gavf_io_t * io,
   c->position = 0;
   c->chunk_length = 0;
   c->pos = 0;
+  
   gavl_dictionary_reset(&c->resp);
   gavf_io_clear_eof(io);
   
 #ifdef DUMP_HEADERS
   gavl_dprintf("Sending request\n");
-  gavl_dictionary_dump(request, 2);
+  gavl_dictionary_dump(&c->req, 2);
 #endif
   
-  if(!gavl_http_request_write(c->io_int, request))
+  if(!gavl_http_request_write(c->io_int, &c->req))
     return 0;
   
   if(!gavl_http_response_read(c->io_int, &c->resp))
@@ -611,8 +695,6 @@ gavl_http_client_send_request(gavf_io_t * io,
   gavl_dictionary_dump(&c->resp, 2);
 #endif
   
-  if(resp)
-    *resp = &c->resp;
   return 1;
   }
 
@@ -649,42 +731,14 @@ static void append_header_var(gavl_dictionary_t * header, const char * name, con
     gavl_dictionary_set_string(header, name, val);
   }
 
-static int
-http_client_open(gavf_io_t * io,
-                 const char * method,
-                 const char * uri,
-                 const gavl_dictionary_t * vars, // http variables
-                 char ** redirect)
+static void prepare_header(gavl_http_client_t * c,
+                           gavl_dictionary_t * request,
+                           const char * uri,
+                           const char * host,
+                           int port,
+                           const char * path,
+                           const gavl_dictionary_t * vars)
   {
-  int ret = 0;
-  char * protocol = NULL;
-  char * host = NULL;
-  char * path = NULL;
-  int port = 0;
-  gavl_dictionary_t request;
-  int status;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
-
-  //  fprintf(stderr, "http_client_open %s\n", uri1);
-  
-  //  uri = gavl_strdup(uri1);
-  
-  gavl_dictionary_init(&request);
-  
-  if(!gavl_url_split(uri,
-                     &protocol,
-                     NULL,
-                     NULL,
-                     &host,
-                     &port,
-                     &path))
-    {
-    goto fail;
-    }
-
-  if(!do_connect(io, host, port, protocol))
-    goto fail;
-
   if(c->flags & FLAG_USE_PROXY)
     {
     char * real_uri = NULL;
@@ -701,46 +755,50 @@ http_client_open(gavf_io_t * io,
       
     if(real_uri)
       {
-      gavl_http_request_init(&request, method, real_uri, "HTTP/1.1");
+      gavl_http_request_init(request, c->method, real_uri, "HTTP/1.1");
       free(real_uri);
       }
     else
-      gavl_http_request_init(&request, method, uri, "HTTP/1.1");
+      gavl_http_request_init(request, c->method, uri, "HTTP/1.1");
     
     if(c->proxy_auth)
-      gavl_dictionary_set_string(&request, "Proxy-Authorization",
+      gavl_dictionary_set_string(request, "Proxy-Authorization",
                                  c->proxy_auth);
     }
   else
-    gavl_http_request_init(&request, method, path, "HTTP/1.1");
+    gavl_http_request_init(request, c->method, path, "HTTP/1.1");
   
   if(port > 0)
-    gavl_dictionary_set_string_nocopy(&request, "Host", gavl_sprintf("%s:%d", host, port));
+    gavl_dictionary_set_string_nocopy(request, "Host", gavl_sprintf("%s:%d", host, port));
   else
-    gavl_dictionary_set_string(&request, "Host", host);
+    gavl_dictionary_set_string(request, "Host", host);
   
   /* Append http variables from URI */
   if(vars)
-    gavl_dictionary_merge2(&request, vars);
+    gavl_dictionary_merge2(request, vars);
 
   /* Send standard headers */
-  append_header_var(&request, "Accept", "*");
-  append_header_var(&request, "User-Agent", "gavl/"VERSION);
+  append_header_var(request, "Accept", "*");
+  append_header_var(request, "User-Agent", "gavl/"VERSION);
 
   if((c->range_start > 0) || (c->range_end > 0))
     {
     if(c->range_end <= 0)
-      gavl_dictionary_set_string_nocopy(&request, "Range", gavl_sprintf("bytes=%"PRId64"-", c->range_start));
+      gavl_dictionary_set_string_nocopy(request, "Range", gavl_sprintf("bytes=%"PRId64"-", c->range_start));
     else
-      gavl_dictionary_set_string_nocopy(&request, "Range", gavl_sprintf("bytes=%"PRId64"-%"PRId64,
+      gavl_dictionary_set_string_nocopy(request, "Range", gavl_sprintf("bytes=%"PRId64"-%"PRId64,
                                                                         c->range_start, c->range_end - 1));
     }
-  
-  if(!gavl_http_client_send_request(io, &request, NULL))
-    {
-    goto fail;
-    }
-  
+
+  }
+                                                          
+static int handle_get_response(gavf_io_t * io,
+                               char ** redirect)
+  {
+  int ret = 0;
+  int status;
+  gavl_http_client_t * c = gavf_io_get_priv(io);
+
   status = gavl_http_response_get_status_int(&c->resp);
 
   if(status < 200)
@@ -788,7 +846,7 @@ http_client_open(gavf_io_t * io,
         
         }
       
-      if(!strcmp(method, "GET"))
+      if(!strcmp(c->method, "GET"))
         {
         var = gavl_dictionary_get_string_i(&c->resp, "Transfer-Encoding");
         if(var && !strcasecmp(var, "chunked"))
@@ -822,7 +880,7 @@ http_client_open(gavf_io_t * io,
       if(check_keepalive(&c->resp))
         c->flags |= FLAG_KEEPALIVE;
 
-      gavf_io_set_info(io, c->total_bytes, uri,
+      gavf_io_set_info(io, c->total_bytes, c->uri,
                        gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
                        flags);
       }
@@ -835,7 +893,7 @@ http_client_open(gavf_io_t * io,
     const char * location = gavl_dictionary_get_string_i(&c->resp, "Location");
 
     if(location)
-      *redirect = gavl_get_absolute_uri(location, uri);
+      *redirect = gavl_get_absolute_uri(location, c->uri);
     else
       goto fail;
     }
@@ -848,10 +906,64 @@ http_client_open(gavf_io_t * io,
     
     fprintf(stderr, "Request was:\n");
     
-    gavl_dictionary_dump(&request, 2);
+    gavl_dictionary_dump(&c->req, 2);
     
     goto fail;
     }
+
+  ret = 1;
+  fail:
+
+  return ret;
+  
+  }
+
+static int
+http_client_open(gavf_io_t * io,
+                 const char * uri,
+                 const gavl_dictionary_t * vars, // http variables
+                 char ** redirect)
+  {
+  int ret = 0;
+  char * protocol = NULL;
+  char * host = NULL;
+  char * path = NULL;
+  int port = 0;
+  //  int status;
+  gavl_http_client_t * c = gavf_io_get_priv(io);
+
+  //  fprintf(stderr, "http_client_open %s\n", uri1);
+  
+  //  uri = gavl_strdup(uri1);
+  
+  gavl_dictionary_reset(&c->req);
+  
+  if(!gavl_url_split(uri,
+                     &protocol,
+                     NULL,
+                     NULL,
+                     &host,
+                     &port,
+                     &path))
+    {
+    goto fail;
+    }
+
+  if(!do_connect(io, host, port, protocol))
+    goto fail;
+
+  prepare_header(c, &c->req, uri, host, port, path, vars);
+  /* */
+  
+  if(!gavl_http_client_send_request(io))
+    goto fail;
+
+  if(!strcmp(c->method, "GET"))
+    {
+    if(!handle_get_response(io, redirect))
+      goto fail;
+    }
+  
   ret = 1;
   fail:
 
@@ -862,8 +974,6 @@ http_client_open(gavf_io_t * io,
     free(host);
   if(path)
     free(path);
-  
-  gavl_dictionary_free(&request);
   
   return ret;
   }
@@ -910,7 +1020,7 @@ reopen(gavf_io_t * io)
     {
     redirect = NULL;
     
-    if(!http_client_open(io, c->method, uri, &http_vars, &redirect))
+    if(!http_client_open(io, uri, &http_vars, &redirect))
       goto fail;
 
     if(redirect)
@@ -1059,6 +1169,31 @@ void gavl_http_client_resume(gavf_io_t * io)
   reopen(io);
   }
 
+/* Asynchronous states */
+
+#define ASYNC_STATE_RESOLVE               1
+#define ASYNC_STATE_CONNECT               2
+#define ASYNC_STATE_SEND_CONNECT_HEADER   3
+#define ASYNC_STATE_READ_CONNECT_RESPONSE 4
+#define ASYNC_STATE_SEND_HEADER           5
+#define ASYNC_STATE_READ_RESPONSE         6
+#define ASYNC_STATE_READ_BODY             7
+#define ASYNC_STATE_COMPLETE              8
+
+#if 0
+int gavl_http_client_get_async(gavf_io_t * io,
+                               const char * uri,
+                               const gavl_dictionary_t * vars, // http variables
+                               gavl_buffer_t * ret)
+  {
+  
+  }
+
+int gavl_http_client_get_async_done(gavf_io_t * io)
+  {
+  
+  }
+#endif
 
 #if defined(__GNUC__) && defined(__ELF__)
 static void cleanup_proxies() __attribute__ ((destructor));
