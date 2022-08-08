@@ -237,6 +237,10 @@ GAVL_PUBLIC
 char * gavl_strip_space(char * str);
 
 GAVL_PUBLIC
+void gavl_strip_space_inplace(char * str);
+
+
+GAVL_PUBLIC
 char ** gavl_strbreak(const char * str, char delim);
 
 GAVL_PUBLIC
@@ -280,6 +284,12 @@ void gavl_buffer_copy(gavl_buffer_t * dst, const gavl_buffer_t * src);
 
 GAVL_PUBLIC
 void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src);
+
+GAVL_PUBLIC
+void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len);
+
+GAVL_PUBLIC
+void gavl_buffer_prepend_data(gavl_buffer_t * dst, const uint8_t * data, int len);
 
 GAVL_PUBLIC
 void gavl_buffer_flush(gavl_buffer_t * buf, int len);

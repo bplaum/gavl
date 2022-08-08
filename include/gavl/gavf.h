@@ -189,7 +189,8 @@ typedef int (*gavf_write_func)(void * priv, const uint8_t * data, int len);
 typedef int64_t (*gavf_seek_func)(void * priv, int64_t pos, int whence);
 typedef void (*gavf_close_func)(void * priv);
 typedef int (*gavf_flush_func)(void * priv);
-typedef int (*gavf_poll_func)(void * priv, int timeout);
+
+typedef int (*gavf_poll_func)(void * priv, int timeout, int wr);
 
 
 
@@ -202,6 +203,10 @@ void gavf_io_set_poll_func(gavf_io_t * io, gavf_poll_func f);
 
 GAVL_PUBLIC
 int gavf_io_can_read(gavf_io_t * io, int timeout);
+
+GAVL_PUBLIC
+int gavf_io_can_write(gavf_io_t * io, int timeout);
+
 
 GAVL_PUBLIC
 int gavf_read_dictionary(gavf_io_t * io,
@@ -347,7 +352,14 @@ GAVL_PUBLIC
 int gavf_io_read_data(gavf_io_t * io, uint8_t * buf, int len);
 
 GAVL_PUBLIC
+void gavf_io_unread_data(gavf_io_t * io, const uint8_t * buf, int len);
+
+
+GAVL_PUBLIC
 int gavf_io_read_data_nonblock(gavf_io_t * io, uint8_t * buf, int len);
+
+GAVL_PUBLIC
+int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len);
 
 /* Get data but don't remove from input */
 GAVL_PUBLIC
@@ -376,7 +388,13 @@ void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
                       const char * filename, const char * mimetype, int flags);
 
 GAVL_PUBLIC
+gavl_dictionary_t * gavf_io_info(gavf_io_t * io);
+
+
+GAVL_PUBLIC
 int64_t gavf_io_position(gavf_io_t * io);
+
+
 
 /* Reset position to zero. This is necessary for socket based
    io to subtract the handshake headers from the file offsets */

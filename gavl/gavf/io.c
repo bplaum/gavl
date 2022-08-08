@@ -6,6 +6,7 @@
 #include <gavl/utils.h>
 #include <gavl/numptr.h>
 #include <gavl/value.h>
+#include <gavl/metatags.h>
 
 // #define DUMP_MSG_WRITE
 // #define DUMP_MSG_READ
@@ -33,7 +34,11 @@ void gavf_io_set_nonblock_read(gavf_io_t * io, gavf_read_func read_nonblock)
   {
   io->read_func_nonblock = read_nonblock;
   }
-  
+
+void gavf_io_set_nonblock_write(gavf_io_t * io, gavf_write_func write_nonblock)
+  {
+  io->write_func_nonblock = write_nonblock;
+  }
 
 void * gavf_io_get_priv(gavf_io_t * io)
   {
@@ -48,7 +53,15 @@ int gavf_io_can_seek(gavf_io_t * io)
 int gavf_io_can_read(gavf_io_t * io, int timeout)
   {
   if(io->poll_func)
-    return io->poll_func(io->priv, timeout);
+    return io->poll_func(io->priv, timeout, 0);
+  else
+    return 1;
+  }
+
+int gavf_io_can_write(gavf_io_t * io, int timeout)
+  {
+  if(io->poll_func)
+    return io->poll_func(io->priv, timeout, 1);
   else
     return 1;
   }
@@ -77,10 +90,9 @@ void gavf_io_cleanup(gavf_io_t * io)
     io->flush_func(io->priv);
   if(io->close_func)
     io->close_func(io->priv);
-  if(io->filename)
-    free(io->filename);
-  if(io->mimetype)
-    free(io->mimetype);
+
+  gavl_dictionary_free(&io->info);
+  
   gavl_buffer_free(&io->get_buf);
   }
 
@@ -95,8 +107,10 @@ void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
   {
   if(total_bytes > 0)
     io->total_bytes = total_bytes;
-  io->filename = gavl_strrep(io->filename, filename);
-  io->mimetype = gavl_strrep(io->mimetype, mimetype);
+
+  gavl_dictionary_set_string(&io->info, GAVL_META_URI, filename);
+  gavl_dictionary_set_string(&io->info, GAVL_META_MIMETYPE, mimetype);
+  
   io->position = 0;
 
   io->flags &= ~(GAVF_IO_ERROR|GAVF_IO_EOF|
@@ -123,15 +137,18 @@ int64_t gavf_io_total_bytes(gavf_io_t * io)
 
 const char * gavf_io_filename(gavf_io_t * io)
   {
-  return io->filename;
+  return gavl_dictionary_get_string(&io->info, GAVL_META_URI);
   }
 
 const char * gavf_io_mimetype(gavf_io_t * io)
   {
-  return io->mimetype;
+  return gavl_dictionary_get_string(&io->info, GAVL_META_MIMETYPE);
   }
 
-
+gavl_dictionary_t * gavf_io_info(gavf_io_t * io)
+  {
+  return &io->info;
+  }
 
 int gavf_io_flush(gavf_io_t * io)
   {
@@ -249,6 +266,15 @@ int gavf_io_read_data_nonblock(gavf_io_t * io, uint8_t * buf, int len)
   return io_read_data(io, buf, len, 0);
   }
 
+
+
+void gavf_io_unread_data(gavf_io_t * io, const uint8_t * buf, int len)
+  {
+  gavl_buffer_prepend_data(&io->get_buf, buf, len);
+  io->position -= len;
+  }
+
+
 int gavf_io_get_data(gavf_io_t * io, uint8_t * buf, int len)
   {
   int ret;
@@ -292,6 +318,27 @@ int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
     gavf_io_set_error(io);
   return ret;
   }
+
+int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len)
+  {
+  int ret;
+  if(gavf_io_got_error(io))
+    return -1;
+
+  if(io->write_func_nonblock)
+    ret = io->write_func_nonblock(io->priv, buf, len);
+  else if(io->write_func)
+    ret = io->write_func(io->priv, buf, len);
+  else
+    ret = 0;
+  
+  if(ret > 0)
+    io->position += ret;
+  
+  return ret;
+  }
+
+
 
 void gavf_io_skip(gavf_io_t * io, int bytes)
   {

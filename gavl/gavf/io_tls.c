@@ -96,37 +96,47 @@ typedef struct
   
   } tls_t;
 
-static int flush_tls(void * priv)
+static int do_flush(void * priv, int block)
   {
   tls_t * p = priv;
 
   //  fprintf(stderr, "flush_tls\n");
   //  gavl_hexdump(p->write_buffer.buf, p->write_buffer.len, 16);
+
+  if(!p->write_buffer.len)
+    return 1;
   
-  if(p->write_buffer.len > p->write_buffer.pos)
+  if(p->write_buffer.len)
     {
     ssize_t result;
 
     do
       {
-      result = gnutls_record_send(p->session, p->write_buffer.buf + p->write_buffer.pos,
-                                  p->write_buffer.len - p->write_buffer.pos);
+      result = gnutls_record_send(p->session, p->write_buffer.buf, p->write_buffer.len);
+
+      if((result == GNUTLS_E_AGAIN) && !block)
+        break;
       
       } while((result == GNUTLS_E_AGAIN) || (result == GNUTLS_E_INTERRUPTED));
-
+        
     if(result <= 0)
       return 0;
 
     if(result > 0)
-      p->write_buffer.pos += result;
+      gavl_buffer_flush(&p->write_buffer, result);
     }
 
-  p->write_buffer.len = 0;
-  p->write_buffer.pos = 0;
+  //  p->write_buffer.len = 0;
+  //  p->write_buffer.pos = 0;
   
   return 1;
   }
 
+static int flush_tls(void * priv)
+  {
+  return do_flush(priv, 1);
+  }
+  
 static int read_record(tls_t * p, int block)
   {
   ssize_t result;
@@ -134,7 +144,7 @@ static int read_record(tls_t * p, int block)
   int bytes_to_read;
   int bytes_in_buffer;
   
-  if(!flush_tls(p))
+  if(!do_flush(p, block))
     return 0;
 
   bytes_to_read = BUFFER_SIZE;
@@ -220,7 +230,7 @@ static int read_nonblock_tls(void * priv, uint8_t * data, int len)
   }
 
 
-static int write_tls(void * priv, const uint8_t * data, int len)
+static int do_write(void * priv, const uint8_t * data, int len, int block)
   {
   int bytes_to_copy;
   int bytes_sent = 0;
@@ -230,10 +240,12 @@ static int write_tls(void * priv, const uint8_t * data, int len)
     {
     if(p->write_buffer.len == BUFFER_SIZE)
       {
-      if(!flush_tls(priv))
-        return 0;
+      do_flush(priv, block);
+      
+      if(p->write_buffer.len == BUFFER_SIZE)
+        return bytes_sent;
       }
-
+    
     bytes_to_copy = len - bytes_sent;
 
     if(bytes_to_copy > BUFFER_SIZE - p->write_buffer.len)
@@ -249,6 +261,16 @@ static int write_tls(void * priv, const uint8_t * data, int len)
   return bytes_sent;
   }
 
+static int write_tls(void * priv, const uint8_t * data, int len)
+  {
+  return do_write(priv, data, len, 1);
+  }
+
+static int write_nonblock_tls(void * priv, const uint8_t * data, int len)
+  {
+  return do_write(priv, data, len, 0);
+  }
+
 // static int64_t (*gavf_seek_func)(void * priv, int64_t pos, int whence);
 
 static void close_tls(void * priv)
@@ -260,7 +282,6 @@ static void close_tls(void * priv)
 
   gavl_buffer_free(&p->read_buffer);
   gavl_buffer_free(&p->write_buffer);
-
   if(p->server_name)
     free(p->server_name);
 
@@ -270,22 +291,42 @@ static void close_tls(void * priv)
   free(p);
   }
 
-static int poll_tls(void * priv, int timeout)
+static int poll_tls(void * priv, int timeout, int wr)
   {
   tls_t * p = priv;
 
-  if(!flush_tls(p))
-    return 0;
-  
-  /* Check if we have buffered data */
-  if(p->read_buffer.len > p->read_buffer.pos)
-    return 1;
+  if(wr)
+    {
+    do_flush(p, 0);
 
-  /* Check if TLS has buffered data */
-  if(gnutls_record_check_pending(p->session) > 0)
-    return 1;
+    if(p->write_buffer.len < BUFFER_SIZE)
+      return 1;
+    
+    if((timeout > 0) && gavl_socket_can_write(p->fd, timeout))
+      {
+      do_flush(p, 0);
+      
+      if(p->write_buffer.len < BUFFER_SIZE)
+        return 1;
+      }
+    return 0;
+    }
+  else
+    {
+    do_flush(p, 0);
+      
+    /* Check if we have buffered data */
+    if(p->read_buffer.len > p->read_buffer.pos)
+      return 1;
+
+    /* Check if TLS has buffered data */
+    if(gnutls_record_check_pending(p->session) > 0)
+      return 1;
+    
+    return gavl_socket_can_read(p->fd, timeout);
+    }
   
-  return gavl_socket_can_read(p->fd, timeout);
+  
   }
 
 gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int socket_flags)
@@ -369,6 +410,7 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
                       p);
   
   gavf_io_set_nonblock_read(io, read_nonblock_tls);
+  gavf_io_set_nonblock_write(io, write_nonblock_tls);
   gavf_io_set_poll_func(io, poll_tls);
   
   

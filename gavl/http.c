@@ -249,6 +249,33 @@ char * gavl_http_request_to_string(const gavl_dictionary_t * req, int * lenp)
   return ret;
   }
 
+int gavl_http_request_to_buffer(const gavl_dictionary_t * req, gavl_buffer_t * ret)
+  {
+  gavf_io_t * io;
+  uint8_t * buf;
+  int len;
+  
+  io = gavf_io_create_mem_write();
+
+  if(!http_request_write(io, req))
+    {
+    gavf_io_destroy(io);
+    return 0;
+    }
+  
+  buf = gavf_io_mem_get_buf(io, &len);
+
+  gavl_buffer_alloc(ret, len+1);
+  memcpy(ret->buf, buf, len);
+  ret->buf[len] = '\0';
+  ret->len = len;
+  
+  free(buf);
+  gavf_io_destroy(io);
+  
+  return 1;
+  }
+
 int gavl_http_request_write(gavf_io_t * io,
                             const gavl_dictionary_t * req)
   {
@@ -322,6 +349,112 @@ void gavl_http_response_init(gavl_dictionary_t * res,
   gavl_dictionary_set_string(res, GAVL_HTTP_META_STATUS_STR, status_str);
   
   }
+
+#define BYTES_TO_READ 1024
+
+int gavl_http_response_read_async(gavf_io_t * io,
+                                  gavl_buffer_t * buf,
+                                  gavl_dictionary_t * res, int timeout)
+  {
+  int idx;
+  char ** lines = NULL;
+  char * pos;
+  char * pos2;
+  int result;
+  int ret = -1;
+  if(!gavf_io_can_read(io, timeout))
+    return 0;
+
+  gavl_buffer_alloc(buf, buf->len + BYTES_TO_READ + 1);
+  result = gavf_io_read_data_nonblock(io, buf->buf + buf->len, BYTES_TO_READ);
+  
+  if(result > 0)
+    buf->len += result;
+  
+  buf->buf[buf->len] = '\0';
+
+  //  fprintf(stderr, "Got header 1 \"%s\"\n", (char*)buf->buf);
+  //  gavl_hexdump(buf->buf, buf->len, 16);
+  
+  pos = strstr((char*)buf->buf, "\n\n");
+  pos2 = strstr((char*)buf->buf, "\r\n\r\n");
+
+  if(!pos && !pos2)
+    return 0;
+
+  if(pos && pos2)
+    {
+    if(pos < pos2)
+      {
+      *pos = '\0';
+      pos += 2;
+      }
+    else
+      {
+      *pos2= '\0';
+      pos2 += 4;
+      pos = pos2;
+      }
+    }
+  else if(pos)
+    {
+    *pos = '\0';
+    pos += 2;
+    }
+  else // pos2
+    {
+    *pos2= '\0';
+    pos2 += 4;
+    pos = pos2;
+    }
+  
+  //  fprintf(stderr, "Got header 2 \"%s\"\n", (char*)buf->buf);
+    
+  lines = gavl_strbreak((char*)buf->buf, '\n');
+
+  idx = 0;
+  while(lines[idx])
+    {
+    gavl_strip_space_inplace(lines[idx]);
+    idx++;
+    }
+  if(!parse_response_line(res, lines[0]))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Parsing http status line \"%s\" failed", lines[0] ); 
+    goto fail;
+    }
+
+  idx = 1;
+
+  while(lines[idx])
+    {
+    if(*(lines[idx]) == '\0')
+      break;
+    
+    if(!gavl_http_parse_vars_line(res, lines[idx]))
+      goto fail;
+    idx++;
+    }
+
+  if(buf->len > (pos - (char*)buf->buf))
+    {
+    //    fprintf(stderr, "gavf_io_unread_data\n");
+    //    gavl_hexdump((uint8_t*)pos, buf->len - (pos - (char*)buf->buf), 16);
+    
+    gavf_io_unread_data(io, (uint8_t*)pos, buf->len - (pos - (char*)buf->buf));
+    }
+  
+  ret = 1;
+  
+  fail:
+
+  if(lines)
+    gavl_strbreak_free(lines);
+  
+  return ret;
+
+  }
+
 
 int gavl_http_response_read(gavf_io_t * io,
                             gavl_dictionary_t * res)

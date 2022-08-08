@@ -121,6 +121,12 @@ static int write_socket(void * priv, const uint8_t * data, int len)
   return gavl_socket_write_data(s->fd, data, len);
   }
 
+static int write_socket_nonblock(void * priv, const uint8_t * data, int len)
+  {
+  socket_t * s = priv;
+  return gavl_socket_write_data_nonblock(s->fd, data, len);
+  }
+
 static void close_socket(void * priv)
   {
   socket_t * s = priv;
@@ -132,9 +138,13 @@ static void close_socket(void * priv)
   free(s);
   }
 
-static int poll_socket(void * priv, int timeout)
+static int poll_socket(void * priv, int timeout, int wr)
   {
   socket_t * s = priv;
+
+  if(wr)
+    return gavl_socket_can_write(s->fd, timeout);
+  
   if(s->buf.len > 0)
     return 1;
   else
@@ -169,6 +179,7 @@ gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)
 
   gavf_io_set_poll_func(ret, poll_socket);
   gavf_io_set_nonblock_read(ret, read_socket_nonblock);
+  gavf_io_set_nonblock_write(ret, write_socket_nonblock);
   
   return ret;
   }

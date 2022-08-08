@@ -396,6 +396,11 @@ char * gavl_strip_space(char * str)
   return strip_space(str, 1);
   }
 
+void gavl_strip_space_inplace(char * str)
+  {
+  strip_space(str, 0);
+  }
+
 /* Support escaped delimiters (with backslash) */
 
 const char * gavl_find_char_c(const char * start, char delim)

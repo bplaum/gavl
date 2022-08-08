@@ -14,6 +14,7 @@ struct gavl_io_s
   gavf_read_func read_func_nonblock;
   
   gavf_write_func write_func;
+  gavf_write_func write_func_nonblock;
   gavf_seek_func seek_func;
   gavf_close_func close_func;
   gavf_flush_func flush_func;
@@ -24,10 +25,11 @@ struct gavl_io_s
   int64_t position;
   
   /* Informational data */
-  char * filename;
-  char * mimetype;
+  
   int64_t total_bytes;
-
+  
+  gavl_dictionary_t info;
+  
   gavl_buffer_t get_buf;
 
   int flags;
@@ -50,6 +52,7 @@ void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf);
 void gavf_io_init_buf_write(gavf_io_t * io, gavl_buffer_t * buf);
 
 void gavf_io_set_nonblock_read(gavf_io_t * io, gavf_read_func read_nonblock);
+void gavf_io_set_nonblock_write(gavf_io_t * io, gavf_write_func write_nonblock);
 
 /* Packetbuffer */
 

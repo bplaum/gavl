@@ -54,6 +54,13 @@ int gavl_socket_address_set(gavl_socket_address_t *, const char * host,
                             int port, int socktype);
 
 GAVL_PUBLIC
+int gavl_socket_address_set_async(gavl_socket_address_t *, const char * host,
+                                  int port, int socktype);
+
+GAVL_PUBLIC
+int gavl_socket_address_set_async_done(gavl_socket_address_t *, int timeout);
+
+GAVL_PUBLIC
 void gavl_socket_address_set_port(gavl_socket_address_t * addr, int port);
 
 GAVL_PUBLIC
@@ -147,6 +154,9 @@ int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len);
 
 GAVL_PUBLIC
 int gavl_socket_write_data(int fd, const void * data, int len);
+
+GAVL_PUBLIC
+int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len);
 
 GAVL_PUBLIC
 int gavl_socket_read_line(int fd, char ** ret,

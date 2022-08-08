@@ -232,6 +232,10 @@
  */
 #define GAVL_META_URI              "URI"
 
+/** \brief Actual location (i.e. after http redirection)
+ */
+#define GAVL_META_REAL_URI         "RealURI"
+
 /** \brief src attribute, can be either an array (for multiple sources) or a dictionary
     with at least GAVL_META_URI set
  */

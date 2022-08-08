@@ -124,7 +124,6 @@ PKG_CHECK_MODULES(GNUTLS, gnutls >= "3.5.18",, AC_MSG_ERROR(["gnutls not found"]
 LIBGAVL_CFLAGS="$LIBGAVL_CFLAGS $GNUTLS_CFLAGS"
 LIBGAVL_LIBS="$LIBGAVL_LIBS $GNUTLS_LIBS"
 
-
 dnl
 dnl Check for Linker flags
 dnl
@@ -142,6 +141,18 @@ AC_CHECK_DECLS([MSG_NOSIGNAL, SO_NOSIGPIPE],,,
 	       #include <sys/socket.h>])
 
 AC_CHECK_FUNCS([memalign posix_memalign strdup vasprintf isatty sched_setaffinity])
+
+dnl
+dnl getaddrinfo_a
+dnl
+ANL_LIBS=""
+OLD_LIBS=$LIBS
+LIBS="$LIBS -lanl"
+AC_CHECK_FUNC(getaddrinfo_a, LIBGAVL_LIBS="${LIBGAVL_LIBS} -lanl", AC_MSG_ERROR("getaddrinfo_a not found in libanl"))
+LIBS=$OLD_LIBS
+
+
+
 
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO

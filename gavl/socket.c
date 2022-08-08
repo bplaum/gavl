@@ -1,4 +1,6 @@
 
+#define _GNU_SOURCE
+
 #include <config.h>
 
 #include <ctype.h>
@@ -8,6 +10,8 @@
 #include <errno.h>
 #include <limits.h>
 #include <pthread.h>
+
+
 
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -57,7 +61,15 @@ struct gavl_socket_address_s
   {
   struct sockaddr_storage addr;
   size_t len;
-  //  struct addrinfo * addr;
+
+  /* For asynchronous calls */
+
+  struct addrinfo gai_ar_request;
+  struct gaicb gai;
+  struct gaicb * gai_arr[1];
+  
+  char * gai_ar_name;
+  int gai_port;
   };
 
 gavl_socket_address_t * gavl_socket_address_create()
@@ -75,6 +87,11 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
 
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
   {
+  if(a->gai.ar_result)
+    freeaddrinfo(a->gai.ar_result);
+  
+  if(a->gai_ar_name)
+    free(a->gai_ar_name);
   free(a);
   }
 
@@ -181,34 +198,42 @@ char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * 
   return NULL;
   }
 
-static struct addrinfo *
-hostbyname(const char * hostname, int socktype)
+static void set_addr_hints(struct addrinfo * hints, int socktype, const char * hostname)
   {
-  int err;
   struct in_addr ipv4_addr;
   struct in6_addr ipv6_addr;
-  
-  struct addrinfo hints;
-  struct addrinfo * ret;
 
-  memset(&hints, 0, sizeof(hints));
-  hints.ai_family   = PF_UNSPEC;
-  hints.ai_socktype = socktype; // SOCK_STREAM, SOCK_DGRAM
-  hints.ai_protocol = 0; // 0
-  hints.ai_flags    = 0;
+  memset(hints, 0, sizeof(*hints));
+  hints->ai_family   = PF_UNSPEC;
+  hints->ai_socktype = socktype; // SOCK_STREAM, SOCK_DGRAM
+  hints->ai_protocol = 0; // 0
+  hints->ai_flags    = 0;
 
   /* prevent DNS lookup for numeric IP addresses */
 
   if(inet_pton(AF_INET, hostname, &ipv4_addr))
     {
-    hints.ai_flags |= AI_NUMERICHOST;
-    hints.ai_family   = PF_INET;
+    hints->ai_flags |= AI_NUMERICHOST;
+    hints->ai_family   = PF_INET;
     }
   else if(inet_pton(AF_INET6, hostname, &ipv6_addr))
     {
-    hints.ai_flags |= AI_NUMERICHOST;
-    hints.ai_family   = PF_INET6;
+    hints->ai_flags |= AI_NUMERICHOST;
+    hints->ai_family   = PF_INET6;
     }
+
+  
+  }
+
+static struct addrinfo *
+hostbyname(const char * hostname, int socktype)
+  {
+  int err;
+  
+  struct addrinfo hints;
+  struct addrinfo * ret = NULL;
+  
+  set_addr_hints(&hints, socktype, hostname);
   
   if((err = getaddrinfo(hostname, NULL /* service */,
                         &hints, &ret)))
@@ -248,6 +273,102 @@ int gavl_socket_address_set(gavl_socket_address_t * a, const char * hostname,
   
   return 1;
   }
+
+int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
+                                  int port, int socktype)
+  {
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up %s", host);
+  set_addr_hints(&a->gai_ar_request, socktype, host);
+
+  a->gai_ar_name = gavl_strrep(a->gai_ar_name, host);
+  a->gai_port = port;
+  
+  if(a->gai.ar_result)
+    freeaddrinfo(a->gai.ar_result);
+  
+  memset(&a->gai, 0, sizeof(a->gai));
+  
+  a->gai.ar_request = &a->gai_ar_request;
+  a->gai.ar_name = a->gai_ar_name;
+
+  a->gai_arr[0] = &a->gai;
+  
+  if(getaddrinfo_a(GAI_NOWAIT, a->gai_arr, 1, NULL))
+    return 0;
+  
+  return 1;
+  }
+
+int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
+  {
+  int result;
+
+  if(timeout >= 0)
+    {
+    struct timespec to;
+    to.tv_sec = timeout / 1000;
+    to.tv_nsec = (timeout % 1000) * 1000000;
+    result = gai_suspend((const struct gaicb**)a->gai_arr, 1, &to);
+    }
+  else
+    result = gai_suspend((const struct gaicb**)a->gai_arr, 1, NULL);
+
+  switch(result)
+    {
+    case 0:
+      {
+      }
+      break;
+    case EAI_AGAIN:
+    case EAI_INTR:
+      return 0;
+      break;
+    default:
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %s", a->gai_ar_name, gai_strerror(result));
+      return -1;
+      break;
+    }
+
+  result = gai_error(&a->gai);
+
+  switch(result)
+    {
+    case 0:
+      {
+      char str[GAVL_SOCKET_ADDR_STR_LEN];
+
+      //      memcpy(&a->addr, addr->ai_addr, addr->ai_addrlen);
+      //      a->len = addr->ai_addrlen;
+      
+      memcpy(&a->addr, a->gai.ar_result->ai_addr, a->gai.ar_result->ai_addrlen);
+      a->len = a->gai.ar_result->ai_addrlen;
+      
+      //  if(!hostbyname(a, hostname))
+      //    return 0;
+      //  a->port = port;
+
+      gavl_socket_address_set_port(a, a->gai_port);
+
+
+      gavl_socket_address_to_string(a, str);
+      gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up host %s succeeded: %s", a->gai_ar_name, str);
+      return 1;
+      }
+      break;
+    case EAI_CANCELED:
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: Canceled",
+               a->gai_ar_name);
+      return -1;
+      break;
+    default:
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: %s",
+               a->gai_ar_name, gai_strerror(result));
+      return -1;
+    }
+  
+  return -1;
+  }
+
 
 int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const char * wildcard)
   {
@@ -406,7 +527,9 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
 int gavl_socket_connect_inet_complete(int fd, int milliseconds)
   {
   if(!gavl_socket_can_write(fd, milliseconds))
+    {
     return 0;
+    }
   return finalize_connection(fd);
   }
 
@@ -705,6 +828,23 @@ int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
   if(result < 0)
     {
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Nonblocking read failed: %s", strerror(errno));
+    return 0;
+    }
+  return result;
+  }
+
+int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
+  {
+  int result;
+  
+  if(!gavl_socket_can_write(fd, 0))
+    return 0;
+
+  result = send(fd, data, len, MSG_DONTWAIT);
+
+  if(result < 0)
+    {
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Nonblocking write failed: %s", strerror(errno));
     return 0;
     }
   return result;

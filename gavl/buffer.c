@@ -94,6 +94,25 @@ void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src)
   dst->len += src->len;
   }
 
+void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len)
+  {
+  gavl_buffer_alloc(dst, dst->len + len);
+  memcpy(dst->buf + dst->len, data, len);
+  dst->len += len;
+  }
+
+void gavl_buffer_prepend_data(gavl_buffer_t * dst, const uint8_t * data, int len)
+  {
+  if(!len)
+    return;
+  
+  gavl_buffer_alloc(dst, dst->len + len);
+  if(dst->len)
+    memmove(dst->buf + len, dst->buf, dst->len);
+  memcpy(dst->buf, data, len);
+  dst->len += len;
+  }
+
 void gavl_buffer_flush(gavl_buffer_t * buf, int len)
   {
   if(len < 0)
@@ -105,4 +124,8 @@ void gavl_buffer_flush(gavl_buffer_t * buf, int len)
   if(buf->len > len)
     memmove(buf->buf, buf->buf + len, buf->len - len);
   buf->len -= len;
+  
+  buf->pos -= len;
+  if(buf->pos < 0)
+    buf->pos = 0;
   }
