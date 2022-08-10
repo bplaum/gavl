@@ -117,7 +117,7 @@ static int no_tunnel = 0;
 static int
 reopen(gavf_io_t * io);
 
-static void close_connection(gavl_http_client_t * c)
+static void do_reset_connection(gavl_http_client_t * c)
   {
   gavl_dictionary_reset(&c->req);
   gavl_dictionary_reset(&c->resp);
@@ -128,31 +128,52 @@ static void close_connection(gavl_http_client_t * c)
     c->io_proxy = NULL;
     }
 
-  if(c->io_int)
-    {
-    gavf_io_destroy(c->io_int);
-    c->io_int = NULL;
-    }
   gavl_buffer_reset(&c->header_buffer);
   gavl_buffer_reset(&c->chunk_header_buffer);
-
-  c->host         = gavl_strrep(c->host, NULL);
-  c->protocol     = gavl_strrep(c->protocol, NULL);
-  c->proxy_host   = gavl_strrep(c->proxy_host, NULL);
-  c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
   c->real_uri     = NULL;
-  c->flags        = 0;
-  c->state        = STATE_START;
-  c->port         = -1;
-  c->proxy_port   = -1;
 
   c->total_bytes = 0;
   c->chunk_length = 0;
   c->pos = 0;
   c->num_redirections = 0;
+  c->state        = STATE_START;
   
   gavf_io_clear_eof(c->io);
   gavf_io_clear_error(c->io);
+
+  c->flags &= ~(FLAG_KEEPALIVE|
+                FLAG_CHUNKED|
+                FLAG_GOT_REDIRECTION|
+                FLAG_HAS_RESPONSE_BODY);
+  }
+
+static void reset_connection(gavl_http_client_t * c)
+  {
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resetting keepalive connection to %s://%s:%d", c->protocol, c->host, c->port);
+  do_reset_connection(c);
+  }
+
+static void close_connection(gavl_http_client_t * c)
+  {
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing connection: %s", c->uri);
+
+  do_reset_connection(c);
+  
+  if(c->io_int)
+    {
+    gavf_io_destroy(c->io_int);
+    c->io_int = NULL;
+    }
+
+  c->host         = gavl_strrep(c->host, NULL);
+  c->protocol     = gavl_strrep(c->protocol, NULL);
+  c->proxy_host   = gavl_strrep(c->proxy_host, NULL);
+  c->proxy_auth   = gavl_strrep(c->proxy_auth, NULL);
+  c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
+  c->flags        = 0;
+  c->port         = -1;
+  c->proxy_port   = -1;
+
   }
 
 
@@ -482,12 +503,66 @@ static int prepare_connection(gavf_io_t * io,
   
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  c->proxy_host = gavl_strrep(c->proxy_host, NULL);
-  c->proxy_port = -1;
+  /* Check if we close the old connection */
   
-  c->flags = 0;
-
-  c->proxy_auth = gavl_strrep(c->proxy_auth, NULL);
+  if(gavf_io_got_error(io))
+    {
+    do_close = 1;
+    gavf_io_clear_error(io);
+    }
+  else if(!(c->flags & FLAG_KEEPALIVE))
+    do_close = 1;
+  
+  if(!do_close && c->io_int && c->host && c->protocol && !(c->flags & FLAG_USE_PROXY))
+    {
+    if(strcmp(host, c->host))
+      {
+      do_close = 1;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (host changed fromm %s to %s)",
+               c->host, host);
+      }
+    else if(strcmp(protocol, c->protocol))
+      {
+      do_close = 1;
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (protocol changed from %s to %s)",
+               c->protocol, protocol);
+      }
+    else
+      {
+      if(port == -1)
+        {
+        if(c->flags & FLAG_USE_TLS)
+          port = 443;
+        else
+          port = 80;
+        }
+            
+      if(c->port != port)
+        {
+        do_close = 1;
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (port changed from %d to %d)",
+                 c->port, port);
+        }
+      
+      }
+    }
+  
+  if(c->io_int && do_close)
+    {
+    close_connection(c);
+    }
+  else if(c->io_int)
+    {
+    /* Keep alive */
+    reset_connection(c);
+    }
+  
+  if(c->io_int)
+    {
+    ret = 1;
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-using keepalive connection");
+    goto end;
+    }
   
   /* Check for proxy */
   pthread_mutex_lock(&proxy_mutex);
@@ -506,7 +581,7 @@ static int prepare_connection(gavf_io_t * io,
   else
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown protocol %s", protocol);
-      goto fail;
+      goto end;
     }
   
   for(i = 0; i < no_proxy.num_entries; i++)
@@ -549,7 +624,6 @@ static int prepare_connection(gavf_io_t * io,
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using http proxy %s", proxy);
       }
     
-    /* TODO: Proxy user and password */
     if(!gavl_url_split(proxy,
                        NULL,
                        &proxy_user,
@@ -557,7 +631,7 @@ static int prepare_connection(gavf_io_t * io,
                        &c->proxy_host,
                        &c->proxy_port,
                        NULL))
-      goto fail;
+      goto end;
 
     if(proxy_user && proxy_password)
       c->proxy_auth = gavl_make_basic_auth(proxy_user, proxy_password);
@@ -565,60 +639,25 @@ static int prepare_connection(gavf_io_t * io,
     }
   
   pthread_mutex_unlock(&proxy_mutex);
-
   
   /* */
   
-  if(gavf_io_got_error(io))
-    {
-    do_close = 1;
-    gavf_io_clear_error(io);
-    }
-  else if(!(c->flags & FLAG_KEEPALIVE))
-    do_close = 1;
-  
-  if(!do_close && c->io_int && c->host && c->protocol && !(c->flags & FLAG_USE_PROXY))
-    {
-    if(strcmp(host, c->host) || strcmp(protocol, c->protocol) || (c->port != port))
-      {
-      do_close = 1;
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (adress or protocol changed)");
-      }
-    }
-  
-  if(c->io_int && do_close)
-    {
-    close_connection(c);
-    //    gavf_io_destroy(c->io_int);
-    //    c->io_int = NULL;
-    }
-
   c->host     = gavl_strrep(c->host, host);
   c->protocol = gavl_strrep(c->protocol, protocol);
   c->port     = port;
   
-
-  if(!c->io_int)
+  if(port <= 0)
     {
-    if(port <= 0)
-      {
-      if(c->flags & FLAG_USE_TLS)
-        port = 443;
-      else
-        port = 80;
-      c->port     = port;
-      }
+    if(c->flags & FLAG_USE_TLS)
+      port = 443;
+    else
+      port = 80;
+    c->port     = port;
     }
-
-  if(c->redirect_uri)
-    {
-    free(c->redirect_uri);
-    c->redirect_uri = NULL;
-    }
-  
+    
   ret = 1;
   
-  fail:
+  end:
 
   if(!proxy_user)
     free(proxy_user);
