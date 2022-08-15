@@ -24,7 +24,7 @@
 #define FLAG_GOT_REDIRECTION   (1<<5)
 #define FLAG_HAS_RESPONSE_BODY (1<<6)
 
-// #define DUMP_HEADERS
+#define DUMP_HEADERS
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -176,6 +176,31 @@ static void close_connection(gavl_http_client_t * c)
 
   }
 
+static void check_keepalive(gavl_http_client_t * c)
+  {
+  const char * protocol;
+  const char * var;
+
+  c->flags &= ~FLAG_KEEPALIVE;
+
+  
+  protocol = gavl_http_response_get_protocol(&c->resp);
+
+  /* Under HTTP/1.1, connections are keep-alive by default */
+  if(!strcmp(protocol, "HTTP/1.1"))
+    {
+    if(!(var = gavl_dictionary_get_string(&c->resp, "Connection")) ||
+       !strcasecmp(var, "keep-alive"))
+      c->flags |= FLAG_KEEPALIVE;
+    }
+  else
+    {
+    if((var = gavl_dictionary_get_string(&c->resp, "Connection")) &&
+       !strcasecmp(var, "keep-alive"))
+      c->flags |= FLAG_KEEPALIVE;
+    }
+  }
+
 
 static void init_proxies()
   {
@@ -215,6 +240,70 @@ static void init_proxies()
       idx++;
       }
     }
+  }
+
+static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
+  {
+  const char * pos;
+  int result, rest;
+
+  c->pos = 0;
+  
+  while(1)
+    {
+    if(!gavf_io_can_read(c->io_int, timeout))
+      return 0;
+    
+    gavl_buffer_alloc(&c->chunk_header_buffer, c->chunk_header_buffer.len + CHUNK_HEADER_BYTES + 1);
+    
+    result = gavf_io_read_data_nonblock(c->io_int, c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
+                                        CHUNK_HEADER_BYTES);
+      
+    if(result <= 0)
+      return result;
+
+    c->chunk_header_buffer.len += result;
+
+    c->chunk_header_buffer.buf[c->chunk_header_buffer.len] = '\0';
+      
+    if((pos = strchr((char*)c->chunk_header_buffer.buf, '\n')))
+      break;
+    }
+
+  /* Parse chunk length */
+  if(sscanf((char*)c->chunk_header_buffer.buf, "%x", &c->chunk_length) < 1)
+    return -1;
+
+  pos++;
+
+  rest = c->res_body->len - (int)(pos - (char*)c->chunk_header_buffer.buf);
+  if(rest > 0)
+    gavf_io_unread_data(c->io_int, (uint8_t*)pos, rest);
+  return 1;
+  }
+
+static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
+  {
+  int result;
+
+  if(!gavf_io_can_read(c->io_int, timeout))
+    return 0;
+
+  result = gavf_io_read_data_nonblock(c->io_int,
+                                      c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
+                                      2 - c->chunk_header_buffer.len);
+  
+  if(result <= 0)
+    return result;
+
+  if(c->chunk_header_buffer.len < 2)
+    return 0;
+
+  if((c->chunk_header_buffer.buf[0] != '\r')  ||
+     (c->chunk_header_buffer.buf[1] != '\n'))
+    return -1;
+  
+  return 1;
   }
 
 static int read_chunk_length(gavl_http_client_t * c)
@@ -258,61 +347,134 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
   int bytes_to_read = 0;
   int result;
   gavl_http_client_t * c = priv;
+  int timeout;
+
+  if(block)
+    timeout = 3000;
+  else
+    timeout = 0;
   
   while(bytes_read < len)
     {
-    if(c->pos == c->chunk_length)
+    switch(c->state)
       {
-      if(c->chunk_length)
-        {
-        if(!block && !gavf_io_can_read(c->io_int, 0))
-          return bytes_read;
-        
-        if(!read_chunk_tail(c))
-          return bytes_read;
-        }
-      
-      /* Read chunk_len */
+      case STATE_READ_CHUNK_HEADER:
+        result = read_chunk_header_async(c, timeout);
+        if(result <= 0)
+          return result;
 
+        if(!c->chunk_length)
+          {
+          c->state = STATE_READ_CHUNK_TAIL;
+          continue;
+          }
+        else
+          {
+          c->state = STATE_READ_CHUNK;
+          c->pos   = 0;
+          }
+        break;
+      case STATE_READ_CHUNK_TAIL:
+        result = read_chunk_tail_async(c, timeout);
+        if(result <= 0)
+          return result;
+        
+        if(!c->chunk_length)
+          {
+          /* End of body */
+          c->state = STATE_COMPLETE;
+          check_keepalive(c);
+          return bytes_read;
+          }
+        else
+          {
+          gavl_buffer_reset(&c->chunk_header_buffer);
+          c->state = STATE_READ_CHUNK_HEADER;
+          }
+        break;
+      case STATE_READ_CHUNK:
+        bytes_to_read = len - bytes_read;
+        if(bytes_to_read > c->chunk_length - c->pos)
+          bytes_to_read = c->chunk_length - c->pos;
+        
+        if(!block)
+          {
+          result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
+          if(result < 0)
+            return -1;
+          }
+        else
+          {
+          result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
+          if(result < bytes_to_read)
+            return -1;
+          }
+        
+        c->pos += result;
+        bytes_read += result;
+
+        if(c->pos == c->chunk_length)
+          c->state = STATE_READ_CHUNK_TAIL;
+        
+        break;
+      }
+    }
+  return bytes_read;
+  
+#if 0
+  if(c->pos == c->chunk_length)
+    {
+    if(c->chunk_length)
+      {
       if(!block && !gavf_io_can_read(c->io_int, 0))
         return bytes_read;
+        
+      if(!read_chunk_tail(c))
+        return bytes_read;
+      }
       
-      if(!read_chunk_length(c))
-        {
-        goto fail;
-        }
-      c->pos = 0;
-      }
+    /* Read chunk_len */
 
-    bytes_to_read = len - bytes_read;
-
-    if(c->pos + bytes_to_read >= c->chunk_length)
-      bytes_to_read = c->chunk_length - c->pos;
-
-    if(!block)
+    if(!block && !gavf_io_can_read(c->io_int, 0))
+      return bytes_read;
+      
+    if(!read_chunk_length(c))
       {
-      result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
-      if(result < 0)
-        goto fail;
+      goto fail;
       }
-    else
-      {
-      result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
-      if(result < bytes_to_read)
-        goto fail;
-      }
-    bytes_read += result;
-    c->pos += result;
-
-    if(!block)
-      break;
+    c->pos = 0;
     }
+
+  bytes_to_read = len - bytes_read;
+
+  if(c->pos + bytes_to_read >= c->chunk_length)
+    bytes_to_read = c->chunk_length - c->pos;
+
+  if(!block)
+    {
+    result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
+    if(result < 0)
+      goto fail;
+    }
+  else
+    {
+    result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
+    if(result < bytes_to_read)
+      goto fail;
+    }
+  bytes_read += result;
+  c->pos += result;
+
+  if(!block)
+    break;
+  }
 
   return bytes_read;
   
   fail:
 
   return -1;
+#endif
   }
 
 static int read_normal(void * priv, uint8_t * data, int len, int block)
@@ -329,8 +491,11 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
   if(!block && !gavf_io_can_read(c->io_int, 0))
     return 0;
 
-  result = gavf_io_read_data(c->io_int, data, len);
-
+  if(block)
+    result = gavf_io_read_data(c->io_int, data, len);
+  else
+    result = gavf_io_read_data_nonblock(c->io_int, data, len);
+  
   if(result < 0)
     goto fail;
   
@@ -339,6 +504,8 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
   
   c->pos += result;
   c->position += result;
+
+  
   
   return result;
 
@@ -684,32 +851,6 @@ static void setup_connect_header(gavf_io_t * io, gavl_dictionary_t * ret)
   }
 
 
-static int check_keepalive(gavl_dictionary_t * res)
-  {
-  const char * protocol;
-  const char * var;
-  
-  protocol = gavl_http_response_get_protocol(res);
-
-  /* Under HTTP/1.1, connections are keep-alive by default */
-  if(!strcmp(protocol, "HTTP/1.1"))
-    {
-    if((var = gavl_dictionary_get_string(res, "Connection")) &&
-       !strcasecmp(var, "close"))
-      return 0;
-    else
-      return 1;
-    }
-  else
-    {
-    if((var = gavl_dictionary_get_string(res, "Connection")) &&
-       !strcasecmp(var, "keep-alive"))
-      return 1;
-    else
-      return 0;
-    }
-  return 0;
-  }
 
 static void append_header_var(gavl_dictionary_t * header, const char * name, const char * val)
   {
@@ -864,10 +1005,10 @@ static int handle_response(gavf_io_t * io)
         }
       else // PUT?
         flags = GAVF_IO_CAN_WRITE;
-      
-      if(check_keepalive(&c->resp))
-        c->flags |= FLAG_KEEPALIVE;
 
+      if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
+        check_keepalive(c);
+      
       gavf_io_set_info(io, c->total_bytes, c->uri,
                        gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
                        flags);
@@ -1230,7 +1371,6 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     char * path = NULL;
     int port = -1;
     
-    
     if(!gavl_url_split(c->real_uri,
                        &protocol,
                        NULL,
@@ -1239,7 +1379,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
                        &port,
                        &path))
       {
-      goto fail;
+      return -1;
       }
     
     prepare_connection(io, host, port, protocol);
@@ -1256,19 +1396,13 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
         gavl_socket_address_set_async(c->addr, c->host, c->port, SOCK_STREAM);
     
       c->state = STATE_RESOLVE;
+      return 0;
       }
     else
       {
       c->state = STATE_SEND_REQUEST;
       gavl_buffer_reset(&c->header_buffer);
       }
-    
-    return 0;
-    
-    fail:
-
-    return -1;
-    
     }
 
   if(c->state == STATE_RESOLVE)
@@ -1316,22 +1450,27 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       }
     else
       {
-      c->state = STATE_SEND_REQUEST;
       gavl_buffer_reset(&c->header_buffer);
 
       if(c->flags & FLAG_USE_TLS)
-        c->io_int = gavf_io_create_tls_client(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+        {
+        c->io_int = gavf_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+        c->state = STATE_TLS_HANDSHAKE;
+        }
       else
+        {
         c->io_int = gavf_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE);
-      
+        c->state = STATE_SEND_REQUEST;
+        }
       c->fd = -1;
-      
 
+      if(!c->io_int)
+        {
+        return -1;
+        }
       }
-    
-    return 0;
     }
-
+  
   if(c->state == STATE_SEND_CONNECT_REQUEST)
     {
     int result = send_buffer_async(c->io_proxy, &c->header_buffer, timeout);
@@ -1341,10 +1480,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
 
     c->state = STATE_READ_CONNECT_RESPONSE;
     gavl_buffer_reset(&c->header_buffer);
-    
-    return 0;
     }
-
+  
   if(c->state == STATE_READ_CONNECT_RESPONSE)
     {
     int result = gavl_http_response_read_async(c->io_proxy,
@@ -1373,16 +1510,25 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       return -1;
       }
     
-    c->io_int = gavf_io_create_tls_client(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+    c->io_int = gavf_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+    c->state = STATE_TLS_HANDSHAKE;
+    
     c->fd = -1;
     
-    c->state = STATE_SEND_REQUEST;
     gavl_buffer_reset(&c->header_buffer);
     gavl_dictionary_reset(&c->resp);
-    
-    return 0;
     }
-
+  
+  if(c->state == STATE_TLS_HANDSHAKE)
+    {
+    int result;
+    result = gavf_io_create_tls_client_async_done(c->io_int, timeout);
+    if(result <= 0)
+      return result;
+    
+    c->state = STATE_SEND_REQUEST;
+    }
+  
   if(c->state == STATE_SEND_REQUEST)
     {
     int result;
@@ -1409,7 +1555,6 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     
     c->state = STATE_READ_RESPONSE;
     gavl_buffer_reset(&c->header_buffer);
-    return 0;
     }
 
   if(c->state == STATE_READ_RESPONSE)
@@ -1443,8 +1588,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       
       if(c->flags & FLAG_CHUNKED)
         {
-        c->state = STATE_READ_CHUNK_HEADER;
         gavl_buffer_reset(&c->chunk_header_buffer);
+        c->state = STATE_READ_CHUNK_HEADER;
         }
       else if(c->total_bytes <= 0)
         {
@@ -1460,6 +1605,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     else
       {
       c->state = STATE_COMPLETE;
+      check_keepalive(c);
       return 1;
       }
     
@@ -1484,72 +1630,42 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     c->res_body->len += result;
 
     if(c->res_body->len == c->total_bytes)
+      {
       c->state = STATE_COMPLETE;
+      check_keepalive(c);
+      }
     }
   
   if(c->state == STATE_READ_CHUNK_HEADER)
     {
-    const char * pos;
-    int result, rest;
+    int result = read_chunk_header_async(c, timeout);
 
-    c->pos = 0;
+    if(result <= 0)
+      return result;
     
-    if(!gavf_io_can_read(c->io_int, timeout))
-      return 0;
-    
-    while(1)
-      {
-      gavl_buffer_alloc(&c->chunk_header_buffer, c->chunk_header_buffer.len + CHUNK_HEADER_BYTES + 1);
-
-      result = gavf_io_read_data_nonblock(c->io_int, c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
-                                          CHUNK_HEADER_BYTES);
-      
-      if(result <= 0)
-        return result;
-
-      c->chunk_header_buffer.len += result;
-
-      c->chunk_header_buffer.buf[c->chunk_header_buffer.len] = '\0';
-      
-      if((pos = strchr((char*)c->chunk_header_buffer.buf, '\n')))
-        break;
-      }
-
-    /* Parse chunk length */
-    if(sscanf((char*)c->chunk_header_buffer.buf, "%x", &c->chunk_length) < 1)
-      return -1;
-
-    gavl_buffer_alloc(c->res_body, c->res_body->len + c->chunk_length + 1);
-
-    
-    pos++;
-
-    rest = c->res_body->len - (int)(pos - (char*)c->chunk_header_buffer.buf);
-    if(rest > 0)
-      gavf_io_unread_data(c->io_int, (uint8_t*)pos, rest);
-
     if(!c->chunk_length)
       {
+      c->state = STATE_READ_CHUNK_TAIL;
       gavl_buffer_reset(&c->chunk_header_buffer);
       gavl_buffer_alloc(&c->chunk_header_buffer, 2);
-      c->state = STATE_READ_CHUNK_TAIL;
       }
     else
       {
       c->state = STATE_READ_CHUNK;
       c->pos   = 0;
+      gavl_buffer_alloc(c->res_body, c->res_body->len + c->chunk_length);
       }
     }
 
   if(c->state == STATE_READ_CHUNK)
     {
     int result;
-
+    
     if(!gavf_io_can_read(c->io_int, timeout))
       return 0;
-
+    
     result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
-                                        c->chunk_length);
+                                        c->chunk_length - c->pos);
 
     if(result <= 0)
       return result;
@@ -1567,29 +1683,15 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_CHUNK_TAIL)
     {
-    int result;
-
-    if(!gavf_io_can_read(c->io_int, timeout))
-      return 0;
-
-    result = gavf_io_read_data_nonblock(c->io_int,
-                                        c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
-                                        2 - c->chunk_header_buffer.len);
-
+    int result = read_chunk_tail_async(c, timeout);
 
     if(result <= 0)
       return result;
-
-    if(c->chunk_header_buffer.len < 2)
-      return 0;
-
-    if((c->chunk_header_buffer.buf[0] != '\r')  ||
-       (c->chunk_header_buffer.buf[1] != '\n'))
-      return -1;
-
+    
     if(!c->chunk_length) /* Tail after a zero length chunk: body finished */
       {
       c->state = STATE_COMPLETE;
+      check_keepalive(c);
       return 1;
       }
     else
@@ -1598,7 +1700,6 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       c->state = STATE_READ_CHUNK_HEADER;
       return 0;
       }
-    
     }
   
   if(c->state == STATE_COMPLETE)

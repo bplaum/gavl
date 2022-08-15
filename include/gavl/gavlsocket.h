@@ -93,6 +93,9 @@ int gavl_socket_connect_unix(const char *);
 GAVL_PUBLIC
 void gavl_socket_disconnect(int);
 
+GAVL_PUBLIC
+int gavl_socket_set_block(int fd, int block);
+
 /* Server socket (stream oriented) */
 
 // #define GAVL_SOCKET_IPV6     (1<<0)

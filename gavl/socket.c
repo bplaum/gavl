@@ -79,6 +79,26 @@ gavl_socket_address_t * gavl_socket_address_create()
   return ret;
   }
 
+int gavl_socket_set_block(int fd, int block)
+  {
+  int flags;
+
+  if(!block)
+    flags = O_NONBLOCK;
+  else
+    flags = 0;
+
+  if(fcntl(fd, F_SETFL, flags) < 0)
+    {
+    if(block)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set blocking mode: %s", strerror(errno));
+    else
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set non-blocking mode: %s", strerror(errno));
+    return 0;
+    }
+  return 1;
+  }
+
 void gavl_socket_address_copy(gavl_socket_address_t * dst,
                             const gavl_socket_address_t * src)
   {
@@ -466,11 +486,9 @@ static int finalize_connection(int ret)
   
   /* Set back to blocking mode */
   
-  if(fcntl(ret, F_SETFL, 0) < 0)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set blocking mode");
+  if(!gavl_socket_set_block(ret, 1))
     return -1;
-    }
+  
   return 1;
   }
 
@@ -484,11 +502,11 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create TCP socket");
     return -1;
     }
-  
+
   /* Set nonblocking mode */
-  if(fcntl(ret, F_SETFL, O_NONBLOCK) < 0)
+  if(!gavl_socket_set_block(ret, 0))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set nonblocking mode");
+    gavl_socket_close(ret);
     return -1;
     }
   

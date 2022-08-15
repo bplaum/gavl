@@ -307,6 +307,13 @@ GAVL_PUBLIC
 gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flags);
 
 GAVL_PUBLIC
+gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, int socket_flags);
+
+GAVL_PUBLIC
+int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout);
+
+
+GAVL_PUBLIC
 gavf_io_t * gavf_io_create_cipher_read(gavf_io_t * base,
                                        gavl_cipher_algo_t algo,
                                        gavl_cipher_mode_t mode,

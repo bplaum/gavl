@@ -25,7 +25,7 @@ static gnutls_certificate_credentials_t xcred;
 
 #define LOG_DOMAIN "tls"
 
-#define BUFFER_SIZE 10240
+// #define BUFFER_SIZE 10240
 
 static void tls_global_init()
   {
@@ -81,6 +81,9 @@ static void cleanup_tls()
 
 #endif
 
+#define WAIT_STATE_NONE   0
+#define WAIT_STATE_READ   1
+#define WAIT_STATE_WRITE  2
 
 typedef struct
   {
@@ -93,8 +96,32 @@ typedef struct
   char * server_name;
   
   int flags;
+
+  int wait_state;
+  int buffer_size;
   
   } tls_t;
+
+static int do_wait(tls_t * p, int timeout)
+  {
+  if(timeout > 0)
+    {
+    switch(p->wait_state)
+      {
+      case WAIT_STATE_NONE:
+        break;
+      case WAIT_STATE_READ:
+        if(!gavl_socket_can_read(p->fd, timeout))
+          return 0;
+        break;
+      case WAIT_STATE_WRITE:
+        if(!gavl_socket_can_write(p->fd, timeout))
+          return 0;
+        break;
+      }
+    }
+  return 1;
+  }
 
 static int do_flush(void * priv, int block)
   {
@@ -103,19 +130,26 @@ static int do_flush(void * priv, int block)
   //  fprintf(stderr, "flush_tls\n");
   //  gavl_hexdump(p->write_buffer.buf, p->write_buffer.len, 16);
 
-  if(!p->write_buffer.len)
-    return 1;
+  //  if(!p->write_buffer.len)
+  //    return 1;
   
-  if(p->write_buffer.len)
+  while(p->write_buffer.pos < p->write_buffer.len)
     {
     ssize_t result;
 
     do
       {
-      result = gnutls_record_send(p->session, p->write_buffer.buf, p->write_buffer.len);
-
-      if((result == GNUTLS_E_AGAIN) && !block)
-        break;
+      result = gnutls_record_send(p->session,
+                                  p->write_buffer.buf + p->write_buffer.pos,
+                                  p->write_buffer.len - p->write_buffer.pos);
+      
+      if((result == GNUTLS_E_AGAIN))
+        {
+        p->wait_state = 1 + gnutls_record_get_direction(p->session);
+        
+        if(!block || !do_wait(p, 3000))
+          break;
+        }
       
       } while((result == GNUTLS_E_AGAIN) || (result == GNUTLS_E_INTERRUPTED));
         
@@ -123,7 +157,10 @@ static int do_flush(void * priv, int block)
       return 0;
 
     if(result > 0)
-      gavl_buffer_flush(&p->write_buffer, result);
+      {
+      p->write_buffer.pos += result;
+      p->wait_state = WAIT_STATE_NONE;
+      }
     }
 
   //  p->write_buffer.len = 0;
@@ -131,6 +168,7 @@ static int do_flush(void * priv, int block)
   
   return 1;
   }
+
 
 static int flush_tls(void * priv)
   {
@@ -142,46 +180,34 @@ static int read_record(tls_t * p, int block)
   ssize_t result;
 
   int bytes_to_read;
-  int bytes_in_buffer;
   
   if(!do_flush(p, block))
     return 0;
 
-  bytes_to_read = BUFFER_SIZE;
-
-  if(!block)
-    {
-    bytes_in_buffer = gnutls_record_check_pending(p->session);
-
-    if(bytes_in_buffer > 0)
-      {
-      if(bytes_to_read > bytes_in_buffer)
-        bytes_to_read = bytes_in_buffer;
-      }
-        
-    if(!bytes_in_buffer && (!gavl_socket_can_read(p->fd, 0)))
-      return 0;
-    
-    }
+  bytes_to_read = p->buffer_size;
   
   do
     {
     result = gnutls_record_recv(p->session, p->read_buffer.buf, bytes_to_read);
-    
-    if((result == GNUTLS_E_AGAIN) && !block)
-      break;
+
+    if((result == GNUTLS_E_AGAIN))
+      {
+      p->wait_state = 1 + gnutls_record_get_direction(p->session);
+      
+      if(!block || !do_wait(p, 3000))
+        break;
+      }
     
     } while((result == GNUTLS_E_AGAIN) || (result == GNUTLS_E_INTERRUPTED));
 
-  if(result < 0)
-    {
+  if((result < 0) && gnutls_error_is_fatal(result))
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading TLS record failed: %s", gnutls_strerror(result));
-    }
   
   if(result > 0)
     {
     p->read_buffer.len = result;
     p->read_buffer.pos = 0;
+    p->wait_state = WAIT_STATE_NONE;
     return 1;
     }
   return 0;
@@ -238,19 +264,19 @@ static int do_write(void * priv, const uint8_t * data, int len, int block)
 
   while(bytes_sent < len)
     {
-    if(p->write_buffer.len == BUFFER_SIZE)
+    if(p->write_buffer.len == p->buffer_size)
       {
       do_flush(priv, block);
       
-      if(p->write_buffer.len == BUFFER_SIZE)
+      if(p->write_buffer.len == p->buffer_size)
         return bytes_sent;
       }
     
     bytes_to_copy = len - bytes_sent;
 
-    if(bytes_to_copy > BUFFER_SIZE - p->write_buffer.len)
+    if(bytes_to_copy > p->buffer_size - p->write_buffer.len)
       {
-      bytes_to_copy = BUFFER_SIZE - p->write_buffer.len;
+      bytes_to_copy = p->buffer_size - p->write_buffer.len;
       }
 
     memcpy(p->write_buffer.buf + p->write_buffer.len, data + bytes_sent, bytes_to_copy);
@@ -299,14 +325,14 @@ static int poll_tls(void * priv, int timeout, int wr)
     {
     do_flush(p, 0);
 
-    if(p->write_buffer.len < BUFFER_SIZE)
+    if(p->write_buffer.len < p->buffer_size)
       return 1;
     
     if((timeout > 0) && gavl_socket_can_write(p->fd, timeout))
       {
       do_flush(p, 0);
       
-      if(p->write_buffer.len < BUFFER_SIZE)
+      if(p->write_buffer.len < p->buffer_size)
         return 1;
       }
     return 0;
@@ -329,8 +355,187 @@ static int poll_tls(void * priv, int timeout, int wr)
   
   }
 
+gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, int socket_flags)
+  {
+  tls_t * p;
+  //  int result;
+  gavf_io_t * io;
+  int flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
+
+  tls_global_init();
+  
+  p = calloc(1, sizeof(*p));
+
+  p->flags = socket_flags;
+  p->fd = fd;
+
+  gavl_socket_set_block(p->fd, 0);
+  
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Establishing TLS connection with %s", server_name);
+  
+  p->server_name = gavl_strdup(server_name);
+  
+  gnutls_init(&p->session, GNUTLS_CLIENT | GNUTLS_NONBLOCK);
+
+  gnutls_server_name_set(p->session, GNUTLS_NAME_DNS, server_name,
+                         strlen(server_name));
+
+  gnutls_set_default_priority(p->session);
+
+  gnutls_credentials_set(p->session, GNUTLS_CRD_CERTIFICATE, xcred);
+
+  //  gnutls_session_set_verify_cert(p->session, server_name, 0);
+
+  gnutls_transport_set_int(p->session, fd);
+  //  gnutls_handshake_set_timeout(p->session,
+  //                               GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+
+  io = gavf_io_create(read_tls,
+                      write_tls,
+                      NULL,
+                      close_tls,
+                      flush_tls,
+                      flags,
+                      p);
+  
+  gavf_io_set_nonblock_read(io, read_nonblock_tls);
+  gavf_io_set_nonblock_write(io, write_nonblock_tls);
+  gavf_io_set_poll_func(io, poll_tls);
+
+  return io;
+  
+#if 0  
+  /* Perform the TLS handshake
+   */
+
+  do{
+    result = gnutls_handshake(p->session);
+    }
+  while(result < 0 && gnutls_error_is_fatal(result) == 0);
+
+  if(result < 0)
+    {
+    if(result == GNUTLS_E_CERTIFICATE_VERIFICATION_ERROR)
+      {
+      gnutls_datum_t out;
+      unsigned status;
+      /* check certificate verification status */
+      int type = gnutls_certificate_type_get(p->session);
+      status = gnutls_session_get_verify_cert_status(p->session);
+
+      gnutls_certificate_verification_status_print(status, type, &out, 0);
+
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Server certificate verification failed: %s", out.data);
+      
+      gnutls_free(out.data);
+      }
+
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "TLS Handshake failed: %s", gnutls_strerror(result));
+    goto fail;
+    }
+  else
+    {
+    char * desc = gnutls_session_get_desc(p->session);
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Established TLS connection: %s", desc);
+    gnutls_free(desc);
+    }
+  
+  gavl_buffer_alloc(&p->read_buffer, BUFFER_SIZE);
+  gavl_buffer_alloc(&p->write_buffer, BUFFER_SIZE);
+  
+  io = gavf_io_create(read_tls,
+                      write_tls,
+                      NULL,
+                      close_tls,
+                      flush_tls,
+                      flags,
+                      p);
+  
+  gavf_io_set_nonblock_read(io, read_nonblock_tls);
+  gavf_io_set_nonblock_write(io, write_nonblock_tls);
+  gavf_io_set_poll_func(io, poll_tls);
+  return io;
+  
+  fail:
+
+  close_tls(p);
+  return NULL;
+
+#endif
+  
+  }
+
+int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout)
+  {
+  int result;
+  
+  tls_t * p = io->priv;
+
+  while(1)
+    {
+    if(!do_wait(p, timeout))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavf_io_create_tls_client_async: Got timeout");
+      return 0;
+      }
+    result = gnutls_handshake(p->session);
+    
+    //   while(result < 0 && gnutls_error_is_fatal(result) == 0);
+
+    if(result < 0)
+      {
+      if(gnutls_error_is_fatal(result))
+        {
+        if(result == GNUTLS_E_CERTIFICATE_VERIFICATION_ERROR)
+          {
+          gnutls_datum_t out;
+          unsigned status;
+          /* check certificate verification status */
+          int type = gnutls_certificate_type_get(p->session);
+          status = gnutls_session_get_verify_cert_status(p->session);
+
+          gnutls_certificate_verification_status_print(status, type, &out, 0);
+
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Server certificate verification failed: %s", out.data);
+      
+          gnutls_free(out.data);
+          }
+
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "TLS Handshake failed: %s", gnutls_strerror(result));
+        return -1;
+        }
+      else
+        {
+        /* Non-fatal: Try again */
+
+        if(result == GNUTLS_E_AGAIN)
+          {
+          p->wait_state = 1 + gnutls_record_get_direction(p->session);
+          if(timeout <= 0)
+            return 0;
+          }
+        /* Try again with waiting */
+        }
+      }
+    else
+      {
+      char * desc = gnutls_session_get_desc(p->session);
+      gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Established TLS connection: %s", desc);
+      gnutls_free(desc);
+
+      p->buffer_size = gnutls_record_get_max_size(p->session);
+
+      gavl_buffer_alloc(&p->read_buffer, p->buffer_size);
+      gavl_buffer_alloc(&p->write_buffer, p->buffer_size);
+      p->wait_state = WAIT_STATE_NONE;
+      return 1;
+      }
+    }
+  }
+
 gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int socket_flags)
   {
+#if 0
   tls_t * p;
   int result;
   gavf_io_t * io;
@@ -398,8 +603,10 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
     gnutls_free(desc);
     }
 
-  gavl_buffer_alloc(&p->read_buffer, BUFFER_SIZE);
-  gavl_buffer_alloc(&p->write_buffer, BUFFER_SIZE);
+  p->buffer_size = gnutls_record_get_max_size(p->session);
+  
+  gavl_buffer_alloc(&p->read_buffer, p->buffer_size);
+  gavl_buffer_alloc(&p->write_buffer, p->buffer_size);
   
   io = gavf_io_create(read_tls,
                       write_tls,
@@ -412,13 +619,42 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
   gavf_io_set_nonblock_read(io, read_nonblock_tls);
   gavf_io_set_nonblock_write(io, write_nonblock_tls);
   gavf_io_set_poll_func(io, poll_tls);
-  
-  
   return io;
   
   fail:
 
   close_tls(p);
   return NULL;
-  }
+#else
+  gavf_io_t * io;
+  int ret = 0;
+  int result;
+  
+  io = gavf_io_create_tls_client_async(fd, server_name, socket_flags);
 
+  while(1)
+    {
+    result = gavf_io_create_tls_client_async_done(io, 3000);
+
+    if(result == 1)
+      break;
+    else if(result < 0)
+      goto fail;
+    else
+      {
+      fprintf(stderr, "gavf_io_create_tls_client_async_done failed %d\n", result);
+      goto fail;
+      }
+    }
+  
+  ret = 1;
+  fail:
+  if(!ret)
+    {
+    gavf_io_destroy(io);
+    return NULL;
+    }
+  else
+    return io;
+#endif
+  }
