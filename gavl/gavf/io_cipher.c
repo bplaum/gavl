@@ -212,16 +212,13 @@ static void close_cipher(void * priv)
   free(c);
   }
 
-gavf_io_t * gavf_io_create_cipher(gavf_io_t * src,
-                                  gavl_cipher_algo_t algo,
+gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
                                   gavl_cipher_mode_t mode,
                                   gavl_cipher_padding_t padding, int wr)
   {
   gavf_io_t * ret;
   cipher_t * priv = calloc(1, sizeof(*priv));
 
-  priv->src = src;
-  
   switch(algo)
     {
     case GAVL_CIPHER_AES128:
@@ -262,7 +259,8 @@ gavf_io_t * gavf_io_create_cipher(gavf_io_t * src,
   return ret;
   }
 
-void gavf_io_cipher_init(gavf_io_t * io,
+void gavf_io_cipher_init(gavf_io_t * src,
+                         gavf_io_t * io,
                          const uint8_t * key,
                          const uint8_t * iv)
   {
@@ -274,6 +272,7 @@ void gavf_io_cipher_init(gavf_io_t * io,
   c->block_size = 0;
   c->in_bufs = 0;
   c->last_block = 0;
+  c->src = src;
   
   gavf_io_clear_error(io);
   gavf_io_clear_eof(io);

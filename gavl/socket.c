@@ -323,6 +323,8 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   {
   int result;
 
+  //  fprintf(stderr, "gavl_socket_address_set_async_done\n");
+  
   if(timeout >= 0)
     {
     struct timespec to;
@@ -333,18 +335,26 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   else
     result = gai_suspend((const struct gaicb**)a->gai_arr, 1, NULL);
 
+  //  fprintf(stderr, "gavl_socket_address_set_async_done 2 %d\n", result);
+  
   switch(result)
     {
     case 0:
-      {
-      }
+      break;
+    case EAI_SYSTEM:
+      if(errno == EAGAIN)
+        return 0;
+      else
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %s",
+                 a->gai_ar_name, strerror(errno));
       break;
     case EAI_AGAIN:
     case EAI_INTR:
       return 0;
       break;
     default:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %s", a->gai_ar_name, gai_strerror(result));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %d %s",
+               a->gai_ar_name, result, gai_strerror(result));
       return -1;
       break;
     }
@@ -381,8 +391,8 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
       return -1;
       break;
     default:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: %s",
-               a->gai_ar_name, gai_strerror(result));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: %d %s",
+               a->gai_ar_name, result, gai_strerror(result));
       return -1;
     }
   

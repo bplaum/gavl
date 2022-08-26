@@ -272,20 +272,37 @@ static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
 
   /* Parse chunk length */
   if(sscanf((char*)c->chunk_header_buffer.buf, "%x", &c->chunk_length) < 1)
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Parsing chunk length failed: %s", (char*)c->chunk_header_buffer.buf);
     return -1;
+    }
 
+  //  if(!c->chunk_length)
+  //    fprintf(stderr, "Got chunk length: %d\n%s\n", c->chunk_length, (char*)c->chunk_header_buffer.buf);
+  
   pos++;
 
-  rest = c->res_body->len - (int)(pos - (char*)c->chunk_header_buffer.buf);
+  rest = c->chunk_header_buffer.len - (int)(pos - (char*)c->chunk_header_buffer.buf);
+
+  //  gavl_hexdump((uint8_t*)c->chunk_header_buffer.buf, c->chunk_header_buffer.len, 16);
+  // fprintf(stderr, "Rest: %d\n", rest);
+
   if(rest > 0)
+    {
+    //    fprintf(stderr, "Unreading data\n");
+    //    gavl_hexdump((uint8_t*)pos, rest, 16);
     gavf_io_unread_data(c->io_int, (uint8_t*)pos, rest);
+    }
+  gavl_buffer_reset(&c->chunk_header_buffer);
+  
+  
   return 1;
   }
 
 static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
   {
   int result;
-
+  
   if(!gavf_io_can_read(c->io_int, timeout))
     return 0;
 
@@ -293,16 +310,23 @@ static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
                                       c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
                                       2 - c->chunk_header_buffer.len);
   
+  //  fprintf(stderr, "read_chunk_tail_async %d\n", result);
+  
   if(result <= 0)
     return result;
 
+  c->chunk_header_buffer.len += result;
+  
   if(c->chunk_header_buffer.len < 2)
     return 0;
 
   if((c->chunk_header_buffer.buf[0] != '\r')  ||
      (c->chunk_header_buffer.buf[1] != '\n'))
+    {
+    //    fprintf(stderr, "read_chunk_tail_async failed %d %d\n", result, c->chunk_header_buffer.len);
+    //    gavl_hexdump(c->chunk_header_buffer.buf, 2, 2);
     return -1;
-  
+    }
   return 1;
   }
 
@@ -1345,6 +1369,9 @@ int gavl_http_client_run_async(gavf_io_t * io,
 
   c->state = STATE_START;
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s method: %s", uri, method);
+
+  
   gavl_dictionary_reset(&c->vars_from_uri);
   gavl_dictionary_reset(&c->req);
   gavl_dictionary_reset(&c->resp);
@@ -1362,6 +1389,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
+  fprintf(stderr, "gavl_http_client_run_async_done %d %d\n", c->state, c->chunk_header_buffer.len);
+  
   /* Initialize */
   
   if(c->state == STATE_START)
@@ -1379,8 +1408,12 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
                        &port,
                        &path))
       {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid URI: %s", c->real_uri);
       return -1;
       }
+
+    if(!path)
+      path = gavl_strdup("/");
     
     prepare_connection(io, host, port, protocol);
     
@@ -1394,7 +1427,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
         gavl_socket_address_set_async(c->addr, c->proxy_host, c->proxy_port, SOCK_STREAM);
       else
         gavl_socket_address_set_async(c->addr, c->host, c->port, SOCK_STREAM);
-    
+      
       c->state = STATE_RESOLVE;
       return 0;
       }
@@ -1410,10 +1443,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     int result =
       gavl_socket_address_set_async_done(c->addr, timeout);
 
-    if(result < 0)
+    if(result <= 0)
       return result;
-    else if(!result)
-      return 0;
     else
       {
       c->state = STATE_CONNECT;
@@ -1426,7 +1457,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
   if(c->state == STATE_CONNECT)
     {
     if(!gavl_socket_connect_inet_complete(c->fd, timeout))
-      return 0;
+       return 0;
 
     if(c->flags & FLAG_USE_PROXY_TUNNEL)
       {
@@ -1466,6 +1497,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
 
       if(!c->io_int)
         {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not create internal I/O handle");
         return -1;
         }
       }
@@ -1495,8 +1527,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     c->io_proxy = NULL;
 
 #ifdef DUMP_HEADERS
-      fprintf(stderr, "Got connect response\n");
-      gavl_dictionary_dump(&c->resp, 2);
+    fprintf(stderr, "Got connect response\n");
+    gavl_dictionary_dump(&c->resp, 2);
 #endif // DUMP_HEADERS
       
     /* Check response status */
@@ -1539,13 +1571,15 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       gavl_http_request_to_buffer(&c->req, &c->header_buffer);
 
 #ifdef DUMP_HEADERS
-      gavl_dprintf("Sending request\n");
+      gavl_dprintf("Sending request %d\n", c->header_buffer.len);
       gavl_dictionary_dump(&c->req, 2);
 #endif
       }
     
     result = send_buffer_async(c->io_int, &c->header_buffer, timeout);
 
+    fprintf(stderr, "Got result: %d %d\n", result, c->header_buffer.len);
+    
     if(result <= 0)
       return result;
 
@@ -1581,33 +1615,40 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       c->state = STATE_START;
       return 0;
       }
-    
-    if(c->res_body)
-      {
-      gavl_buffer_reset(c->res_body);
-      
-      if(c->flags & FLAG_CHUNKED)
-        {
-        gavl_buffer_reset(&c->chunk_header_buffer);
-        c->state = STATE_READ_CHUNK_HEADER;
-        }
-      else if(c->total_bytes <= 0)
-        {
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read body: No Content-Length given and no chunked encoding.");
-        return -1;
-        }
-      else
-        {
-        c->state = STATE_READ_BODY_NORMAL;
-        gavl_buffer_alloc(c->res_body, c->total_bytes);
-        }
-      }
-    else
+
+    if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
       {
       c->state = STATE_COMPLETE;
       check_keepalive(c);
       return 1;
       }
+
+    if(c->res_body)
+      gavl_buffer_reset(c->res_body);
+    
+    if(c->flags & FLAG_CHUNKED)
+      {
+      gavl_buffer_reset(&c->chunk_header_buffer);
+      c->state = STATE_READ_CHUNK_HEADER;
+      }
+    else
+      {
+      c->state = STATE_READ_BODY_NORMAL;
+      
+      if(c->res_body)
+        {
+        gavl_buffer_alloc(c->res_body, c->total_bytes);
+
+        if(c->total_bytes <= 0)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read body: No Content-Length given and no chunked encoding.");
+          return -1;
+          }
+        }
+      }
+    
+    if(!c->res_body)
+      return 1;
     
     //    return 0;
     }
@@ -1625,8 +1666,10 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
                                         c->total_bytes - c->res_body->len);
 
     if(result < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading data failed");
       return -1;
-
+      }
     c->res_body->len += result;
 
     if(c->res_body->len == c->total_bytes)
@@ -1663,21 +1706,27 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     
     if(!gavf_io_can_read(c->io_int, timeout))
       return 0;
-    
-    result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
-                                        c->chunk_length - c->pos);
 
-    if(result <= 0)
-      return result;
-
-    c->res_body->len += result;
-    c->pos += result;
-
-    if(c->pos == c->chunk_length)
+    while(1)
       {
-      c->state = STATE_READ_CHUNK_TAIL;
-      gavl_buffer_reset(&c->chunk_header_buffer);
-      gavl_buffer_alloc(&c->chunk_header_buffer, 2);
+      result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
+                                          c->chunk_length - c->pos);
+
+      //      fprintf(stderr, "Read chunk %d %"PRId64" %"PRId64" %d\n",
+      //              c->chunk_length, c->pos, c->chunk_length - c->pos, result);
+    
+      if(result <= 0)
+        return result;
+
+      c->res_body->len += result;
+      c->pos += result;
+
+      if(c->pos == c->chunk_length)
+        {
+        c->state = STATE_READ_CHUNK_TAIL;
+        gavl_buffer_reset(&c->chunk_header_buffer);
+        gavl_buffer_alloc(&c->chunk_header_buffer, 2);
+        }
       }
     }
 
@@ -1686,7 +1735,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     int result = read_chunk_tail_async(c, timeout);
 
     if(result <= 0)
+      {
       return result;
+      }
     
     if(!c->chunk_length) /* Tail after a zero length chunk: body finished */
       {
@@ -1707,6 +1758,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     return 1;
     }
 
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown state %d", c->state);
   /* Unknown state */
   return -1;
   }

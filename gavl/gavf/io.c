@@ -52,6 +52,9 @@ int gavf_io_can_seek(gavf_io_t * io)
 
 int gavf_io_can_read(gavf_io_t * io, int timeout)
   {
+  if(io->get_buf.len > 0)
+    return 1;
+  
   if(io->poll_func)
     return io->poll_func(io->priv, timeout, 0);
   else

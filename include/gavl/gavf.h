@@ -273,13 +273,13 @@ GAVL_PUBLIC
 int gavf_io_get_socket(gavf_io_t * io);
 
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_cipher(gavf_io_t * src,
-                                  gavl_cipher_algo_t algo,
+gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
                                   gavl_cipher_mode_t mode,
                                   gavl_cipher_padding_t padding, int wr);
                                
 GAVL_PUBLIC
 void gavf_io_cipher_init(gavf_io_t * io,
+                         gavf_io_t * src,
                          const uint8_t * key,
                          const uint8_t * iv);
 
@@ -312,19 +312,18 @@ gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, in
 GAVL_PUBLIC
 int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout);
 
-
+#if 0
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_cipher_read(gavf_io_t * base,
-                                       gavl_cipher_algo_t algo,
+gavf_io_t * gavf_io_create_cipher_read(gavl_cipher_algo_t algo,
                                        gavl_cipher_mode_t mode,
                                        gavl_cipher_padding_t padding);
 GAVL_PUBLIC
 void gavf_io_create_cipher_init(gavf_io_t * io,
+                                gavf_io_t * src,
                                 const uint8_t * key,
                                 const uint8_t * iv);
 
 
-#if 0
 GAVL_PUBLIC
 gavf_io_t * gavf_io_create_cipher_write(gavf_io_t * base,
                                        gavl_cipher_algo_t algo,
