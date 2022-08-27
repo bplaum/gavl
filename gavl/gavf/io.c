@@ -247,11 +247,12 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
       io->position += result;
       ret += result;
       }
-
+    
     if(((io->total_bytes > 0) && (io->position == io->total_bytes)) ||
        (!result && block))
       gavf_io_set_eof(io);
     }
+  
   return ret;
   }
 

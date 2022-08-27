@@ -340,13 +340,17 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   switch(result)
     {
     case 0:
+    case EAI_ALLDONE:
       break;
     case EAI_SYSTEM:
+      return 0;
+#if 0
       if(errno == EAGAIN)
         return 0;
       else
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %s",
                  a->gai_ar_name, strerror(errno));
+#endif
       break;
     case EAI_AGAIN:
     case EAI_INTR:
@@ -364,6 +368,7 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   switch(result)
     {
     case 0:
+    case EAI_ALLDONE:
       {
       char str[GAVL_SOCKET_ADDR_STR_LEN];
 
@@ -384,6 +389,9 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
       gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up host %s succeeded: %s", a->gai_ar_name, str);
       return 1;
       }
+      break;
+    case EAI_INPROGRESS:
+      return 0;
       break;
     case EAI_CANCELED:
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: Canceled",

@@ -24,7 +24,9 @@
 #define FLAG_GOT_REDIRECTION   (1<<5)
 #define FLAG_HAS_RESPONSE_BODY (1<<6)
 
-#define DUMP_HEADERS
+#define FLAG_WAIT       (1<<8)
+
+// #define DUMP_HEADERS
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -104,6 +106,7 @@ typedef struct
   char * redirect_uri;
 
   const char * real_uri;
+  gavl_timer_t * timer;
   
   } gavl_http_client_t;
 
@@ -506,30 +509,47 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
   int result;
   gavl_http_client_t * c = priv;
 
+#if 0
+  if(c->pos % 2)
+    fprintf(stderr, "Oops 2\n");
+
+  if(len % 2)
+    fprintf(stderr, "Oops 1 %d\n", len);
+#endif
+  
+  //  fprintf(stderr, "Read normal: %d %"PRId64" %"PRId64"\n", len, c->pos, c->total_bytes);
+  
   if(c->total_bytes)
     {
     if(c->pos + len > c->total_bytes)
       len = c->total_bytes - c->pos;
     }
+  
+  if(len)
+    {
+    if(!block && !gavf_io_can_read(c->io_int, 0))
+      return 0;
 
-  if(!block && !gavf_io_can_read(c->io_int, 0))
-    return 0;
+    if(block)
+      result = gavf_io_read_data(c->io_int, data, len);
+    else
+      result = gavf_io_read_data_nonblock(c->io_int, data, len);
+  
+    if(result < 0)
+      goto fail;
+  
+    if(block && (result < len))
+      goto fail;
+  
+    c->pos += result;
+    c->position += result;
+    }
 
-  if(block)
-    result = gavf_io_read_data(c->io_int, data, len);
-  else
-    result = gavf_io_read_data_nonblock(c->io_int, data, len);
-  
-  if(result < 0)
-    goto fail;
-  
-  if(block && (result < len))
-    goto fail;
-  
-  c->pos += result;
-  c->position += result;
-
-  
+  if(c->pos == c->total_bytes)
+    {
+    fprintf(stderr, "httpclient: Detected EOF %"PRId64" %d %"PRId64"\n", c->pos, len, c->total_bytes);
+    check_keepalive(c);
+    }
   
   return result;
 
@@ -540,11 +560,17 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
 static int read_func(void * priv, uint8_t * data, int len)
   {
   gavl_http_client_t * c = priv;
+  
+  if(!c->io_int)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Input not ready: %d", c->state);
+    return -1;
+    }
+  
   if(c->flags & FLAG_CHUNKED)
     return read_chunked(priv, data, len, 1);
   else
     return read_normal(priv, data, len, 1);
-  
   }
 
 static int read_nonblock_func(void * priv, uint8_t * data, int len)
@@ -701,9 +727,11 @@ static int prepare_connection(gavf_io_t * io,
     do_close = 1;
     gavf_io_clear_error(io);
     }
-  else if(!(c->flags & FLAG_KEEPALIVE))
+  else if(c->io_int && !(c->flags & FLAG_KEEPALIVE))
+    {
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing connection (keepalive wasn't specified)");
     do_close = 1;
-  
+    }
   if(!do_close && c->io_int && c->host && c->protocol && !(c->flags & FLAG_USE_PROXY))
     {
     if(strcmp(host, c->host))
@@ -1360,7 +1388,6 @@ static int send_buffer_async(gavf_io_t * io,
   return 0;
   }
 
-#if 1
 int gavl_http_client_run_async(gavf_io_t * io,
                                const char * method,
                                const char * uri)
@@ -1385,11 +1412,13 @@ int gavl_http_client_run_async(gavf_io_t * io,
   }
 
 
-int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
+static int async_iteration(gavf_io_t * io, int timeout)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  fprintf(stderr, "gavl_http_client_run_async_done %d %d\n", c->state, c->chunk_header_buffer.len);
+  c->flags &= ~FLAG_WAIT;
+  
+  //  fprintf(stderr, "gavl_http_client_run_async_done %d %d\n", c->state, c->chunk_header_buffer.len);
   
   /* Initialize */
   
@@ -1427,6 +1456,8 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
         gavl_socket_address_set_async(c->addr, c->proxy_host, c->proxy_port, SOCK_STREAM);
       else
         gavl_socket_address_set_async(c->addr, c->host, c->port, SOCK_STREAM);
+
+      c->flags |= FLAG_WAIT;
       
       c->state = STATE_RESOLVE;
       return 0;
@@ -1443,6 +1474,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     int result =
       gavl_socket_address_set_async_done(c->addr, timeout);
 
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
     if(result <= 0)
       return result;
     else
@@ -1451,14 +1485,17 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
       c->fd = gavl_socket_connect_inet(c->addr, 0);
       }
 
+    c->flags |= FLAG_WAIT;
     return 0;
     }
 
   if(c->state == STATE_CONNECT)
     {
     if(!gavl_socket_connect_inet_complete(c->fd, timeout))
-       return 0;
-
+      {
+      c->flags |= FLAG_WAIT;
+      return 0;
+      }
     if(c->flags & FLAG_USE_PROXY_TUNNEL)
       {
       gavl_dictionary_t req;
@@ -1507,6 +1544,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     {
     int result = send_buffer_async(c->io_proxy, &c->header_buffer, timeout);
 
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
     if(result <= 0)
       return result;
 
@@ -1520,6 +1560,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
                                                &c->header_buffer,
                                                &c->resp, timeout);
 
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
     if(result <= 0)
       return result;
 
@@ -1555,6 +1598,10 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     {
     int result;
     result = gavf_io_create_tls_client_async_done(c->io_int, timeout);
+
+    if(!result)
+      c->flags |= FLAG_WAIT;
+
     if(result <= 0)
       return result;
     
@@ -1578,7 +1625,10 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     
     result = send_buffer_async(c->io_int, &c->header_buffer, timeout);
 
-    fprintf(stderr, "Got result: %d %d\n", result, c->header_buffer.len);
+    //    fprintf(stderr, "Got result: %d %d\n", result, c->header_buffer.len);
+
+    if(!result)
+      c->flags |= FLAG_WAIT;
     
     if(result <= 0)
       return result;
@@ -1596,6 +1646,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     int result = gavl_http_response_read_async(c->io_int,
                                                &c->header_buffer,
                                                &c->resp, timeout);
+
+    if(!result)
+      c->flags |= FLAG_WAIT;
 
     if(result <= 0)
       return result;
@@ -1659,7 +1712,11 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     if(timeout >= 0)
       {
       if(!gavf_io_can_read(c->io_int, timeout))
+        {
+        if(!timeout)
+          c->flags |= FLAG_WAIT;
         return 0;
+        }
       }
     
     result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
@@ -1683,6 +1740,9 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     {
     int result = read_chunk_header_async(c, timeout);
 
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
     if(result <= 0)
       return result;
     
@@ -1705,8 +1765,11 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     int result;
     
     if(!gavf_io_can_read(c->io_int, timeout))
+      {
+      c->flags |= FLAG_WAIT;
       return 0;
-
+      }
+    
     while(1)
       {
       result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
@@ -1714,7 +1777,10 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
 
       //      fprintf(stderr, "Read chunk %d %"PRId64" %"PRId64" %d\n",
       //              c->chunk_length, c->pos, c->chunk_length - c->pos, result);
-    
+
+      if(!result)
+        c->flags |= FLAG_WAIT;
+      
       if(result <= 0)
         return result;
 
@@ -1734,10 +1800,11 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     {
     int result = read_chunk_tail_async(c, timeout);
 
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
     if(result <= 0)
-      {
       return result;
-      }
     
     if(!c->chunk_length) /* Tail after a zero length chunk: body finished */
       {
@@ -1762,7 +1829,54 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
   /* Unknown state */
   return -1;
   }
-#endif
+
+int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
+  {
+  int result;
+  gavl_time_t timeout_remaining = 0;
+  gavl_time_t time_cur;
+  
+  gavl_http_client_t * c = gavf_io_get_priv(io);
+
+  //  fprintf(stderr, "gavl_http_client_run_async_done %d\n", c->state);
+  
+  if(timeout > 0)
+    {
+    if(!c->timer)
+      c->timer = gavl_timer_create();
+    
+    timeout_remaining = (int64_t)timeout * 1000;
+
+    gavl_timer_start(c->timer);
+
+    }
+  
+  while(1)
+    {
+    result = async_iteration(io, timeout_remaining / 1000);
+    
+    if(!result)
+      {
+      /* Waiting for socket */
+      if(c->flags & FLAG_WAIT)
+        return 0;
+
+      if(timeout > 0)
+        {
+        time_cur = gavl_timer_get(c->timer);
+        timeout_remaining = (int64_t)timeout * 1000 - time_cur;
+
+        if(timeout_remaining <= 0)
+          return 0;
+        }
+      
+      }
+    else
+      return result;
+    }
+  return 0;
+  }
+
 
 #if defined(__GNUC__) && defined(__ELF__)
 static void cleanup_proxies() __attribute__ ((destructor));
