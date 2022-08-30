@@ -2405,7 +2405,7 @@ static int sort_src_func(const void * v1, const void * v2, void * data)
 
 
 int
-gavl_track_sort_source(gavl_dictionary_t * dict,
+gavl_metadata_sort_source(gavl_dictionary_t * dict,
                        const char * member,
                        const char * attribute,
                        int ascend)
@@ -2416,10 +2416,9 @@ gavl_track_sort_source(gavl_dictionary_t * dict,
   const gavl_dictionary_t * src;
   gavl_array_t * arr;
   
-  if(!(dict = gavl_dictionary_get_dictionary_nc(dict, GAVL_META_METADATA)) ||
-     !(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)))
+  if(!(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)))
     return 0;
-
+  
   for(i = 0; i < arr->num_entries; i++)
     {
     if(!(src = gavl_value_get_dictionary(&arr->entries[i])) ||

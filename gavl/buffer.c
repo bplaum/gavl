@@ -87,18 +87,24 @@ void gavl_buffer_copy(gavl_buffer_t * dst, const gavl_buffer_t * src)
   dst->pos = 0;
   }
 
+void gavl_buffer_append_data_pad(gavl_buffer_t * dst, const uint8_t * data, int len, int padding)
+  {
+  gavl_buffer_alloc(dst, dst->len + len + padding);
+  memcpy(dst->buf + dst->len, data, len);
+  dst->len += len;
+  if(padding)
+    memset(dst + len, 0, padding);
+  }
+
+
 void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src)
   {
-  gavl_buffer_alloc(dst, dst->len + src->len);
-  memcpy(dst->buf + dst->len, src->buf, src->len);
-  dst->len += src->len;
+  gavl_buffer_append_data_pad(dst, src->buf, src->len, 0);
   }
 
 void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len)
   {
-  gavl_buffer_alloc(dst, dst->len + len);
-  memcpy(dst->buf + dst->len, data, len);
-  dst->len += len;
+  gavl_buffer_append_data_pad(dst, data, len, 0);
   }
 
 void gavl_buffer_prepend_data(gavl_buffer_t * dst, const uint8_t * data, int len)

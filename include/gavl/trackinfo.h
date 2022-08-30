@@ -482,10 +482,10 @@ void gavl_track_get_page_children_end(const gavl_dictionary_t * parent_orig,
                                       gavl_array_t * ret);
 
 GAVL_PUBLIC int
-gavl_track_sort_source(gavl_dictionary_t * s,
-                       const char * member,
-                       const char * attribute,
-                       int ascend);
+gavl_metadata_sort_source(gavl_dictionary_t * s,
+                          const char * member,
+                          const char * attribute,
+                          int ascend);
 
 
 /* */

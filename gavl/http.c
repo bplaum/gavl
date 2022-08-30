@@ -689,7 +689,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
       //      fprintf(stderr, "Chunk length: %d", chunk_len);
       if(chunk_len > 0)
         {
-        if((buf->len) + chunk_len > 10 * 1024 * 1024) // Never download more then 10 MB
+        if((buf->len) + chunk_len > 64 * 1024 * 1024) // Never download more then 64 MB
           {
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length %d outside allowed range", (buf->len) + chunk_len);
           goto fail;
@@ -724,7 +724,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
     }
   else
     {
-    if((buf->len <= 0) || (buf->len > 10 * 1024 * 1024)) // Never download more then 10 MB
+    if((buf->len <= 0) || (buf->len > 64 * 1024 * 1024)) // Never download more then 64 MB
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Length %d outside allowed range", buf->len);
       goto fail;
