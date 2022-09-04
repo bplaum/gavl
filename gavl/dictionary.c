@@ -332,6 +332,14 @@ int gavl_dictionary_get_long(const gavl_dictionary_t * d, const char * name, int
   return gavl_value_get_long(val, ret);
   }
 
+int gavl_dictionary_get_long_i(const gavl_dictionary_t * d, const char * name, int64_t * ret)
+  {
+  const gavl_value_t * val;
+  if(!(val = gavl_dictionary_get_i(d, name)))
+    return 0;
+  return gavl_value_get_long(val, ret);
+  }
+
 int gavl_dictionary_get_float(const gavl_dictionary_t * d, const char * name, double * ret)
   {
   const gavl_value_t * val;

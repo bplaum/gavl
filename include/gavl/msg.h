@@ -79,14 +79,21 @@
  *  GAVL_MSG_NS_SRC
  */
 
-/** \brief Global metadata changed
- *
- *  header field GAVL_META_MSG_TIMESTAMP: timestamp (in us)
- *
- *  arg0: Metadata
+/** \brief Tell the client to restart playback
+ *  arg0: reason (int)
  */
 
-// #define GAVL_MSG_SRC_METADATA_CHANGED  1
+// Some error, restart with same parameters
+#define GAVL_MSG_SRC_RESTART_ERROR         1 
+
+// Discontinuity (e.g. format change)
+#define GAVL_MSG_SRC_RESTART_DISCONT       2 
+
+// Poor performance (network or hardware) restart with lower bitrate
+#define GAVL_MSG_SRC_RESTART_PERFORMANCE   3 
+
+#define GAVL_MSG_SRC_RESTART               1
+
 
 /** \brief Pixel aspect ratio changed
  *

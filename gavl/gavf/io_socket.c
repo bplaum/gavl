@@ -23,6 +23,8 @@ typedef struct
   int flags;
 
   gavl_buffer_t buf;
+
+  gavf_io_t * io; // Parent
   } socket_t;
 
 static void do_buffer(socket_t * s)
@@ -47,6 +49,7 @@ static void do_buffer(socket_t * s)
 
 static int do_read_socket(void * priv, uint8_t * data, int len, int block)
   {
+  int err;
   int result;
   int bytes_to_read;
   int bytes_read = 0;
@@ -83,7 +86,15 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
     }
 
   if(block)
+    {
     result = gavl_socket_read_data(s->fd, data + bytes_read, len, s->timeout);
+    
+    if((result < len) && (err = gavl_socket_get_errno(s->fd)))
+      {
+      gavf_io_set_error(s->io);
+      fprintf(stderr, "Got socket error: %d [%s]\n", err, strerror(err));
+      }
+    }
   else
     result = gavl_socket_read_data_noblock(s->fd, data + bytes_read, len);
   
@@ -181,6 +192,7 @@ gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)
   gavf_io_set_nonblock_read(ret, read_socket_nonblock);
   gavf_io_set_nonblock_write(ret, write_socket_nonblock);
   
+  s->io = ret;
   return ret;
   }
 

@@ -259,8 +259,8 @@ gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
   return ret;
   }
 
-void gavf_io_cipher_init(gavf_io_t * src,
-                         gavf_io_t * io,
+void gavf_io_cipher_init(gavf_io_t * io,
+                         gavf_io_t * src,
                          const uint8_t * key,
                          const uint8_t * iv)
   {

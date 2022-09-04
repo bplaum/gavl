@@ -236,6 +236,9 @@ GAVL_PUBLIC
 int gavl_dictionary_get_long(const gavl_dictionary_t * d, const char * name, int64_t * ret);
 
 GAVL_PUBLIC
+int gavl_dictionary_get_long_i(const gavl_dictionary_t * d, const char * name, int64_t * ret);
+
+GAVL_PUBLIC
 int gavl_dictionary_get_float(const gavl_dictionary_t * d, const char * name, double * ret);
 
 GAVL_PUBLIC

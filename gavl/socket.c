@@ -485,20 +485,33 @@ int gavl_socket_get_address(int sock, gavl_socket_address_t * local,
   return 1;
   }
 
+int gavl_socket_get_errno(int fd)
+  {
+  int err = 0;
+  socklen_t err_len;
+
+  err_len = sizeof(err);
+  if(getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &err_len))
+    {
+    err = errno;
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "getsockopt failed: %s",
+             strerror(err));
+    }
+  return err;
+  }
+
 /* Client connection (stream oriented) */
 
 static int finalize_connection(int ret)
   {
   int err;
-  socklen_t err_len;
 
-  err_len = sizeof(err);
-  getsockopt(ret, SOL_SOCKET, SO_ERROR, &err, &err_len);
-
+  err = gavl_socket_get_errno(ret);
+  
   if(err)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connecting failed: %s",
-           strerror(err));
+             strerror(err));
     return -1;
     }
   
@@ -513,6 +526,10 @@ static int finalize_connection(int ret)
 int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
   {
   int ret = -1;
+  char str[GAVL_SOCKET_ADDR_STR_LEN];
+
+  gavl_socket_address_to_string(a, str);
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Connecting to %s", str);
   
   /* Create the socket */
   if((ret = create_socket(a->addr.ss_family, SOCK_STREAM, 0)) < 0)
@@ -566,6 +583,9 @@ int gavl_socket_connect_inet_complete(int fd, int milliseconds)
     {
     return 0;
     }
+
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Connected");
+
   return finalize_connection(fd);
   }
 

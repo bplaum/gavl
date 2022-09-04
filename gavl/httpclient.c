@@ -14,6 +14,8 @@
 #include <gavfprivate.h>
 #include <gavl/metatags.h>
 
+// #define DUMP_HEADERS
+
 #define LOG_DOMAIN "httpclient"
 
 #define FLAG_USE_PROXY         (1<<0)
@@ -23,10 +25,9 @@
 #define FLAG_USE_TLS           (1<<4)
 #define FLAG_GOT_REDIRECTION   (1<<5)
 #define FLAG_HAS_RESPONSE_BODY (1<<6)
+#define FLAG_USE_KEEPALIVE     (1<<7)
 
 #define FLAG_WAIT       (1<<8)
-
-// #define DUMP_HEADERS
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -547,7 +548,8 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
 
   if(c->pos == c->total_bytes)
     {
-    fprintf(stderr, "httpclient: Detected EOF %"PRId64" %d %"PRId64"\n", c->pos, len, c->total_bytes);
+    //    fprintf(stderr, "httpclient: Detected EOF %"PRId64" %d %"PRId64"\n",
+    //            c->pos, len, c->total_bytes);
     check_keepalive(c);
     }
   
@@ -559,6 +561,8 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
 
 static int read_func(void * priv, uint8_t * data, int len)
   {
+  int result;
+
   gavl_http_client_t * c = priv;
   
   if(!c->io_int)
@@ -568,9 +572,16 @@ static int read_func(void * priv, uint8_t * data, int len)
     }
   
   if(c->flags & FLAG_CHUNKED)
-    return read_chunked(priv, data, len, 1);
+    result = read_chunked(priv, data, len, 1);
   else
-    return read_normal(priv, data, len, 1);
+    result = read_normal(priv, data, len, 1);
+
+  if((result < len) && (gavf_io_got_error(c->io_int)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read error");
+    gavf_io_set_error(c->io);
+    }
+  return result;
   }
 
 static int read_nonblock_func(void * priv, uint8_t * data, int len)
@@ -780,6 +791,7 @@ static int prepare_connection(gavf_io_t * io,
     {
     ret = 1;
     gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-using keepalive connection");
+    c->flags |= FLAG_USE_KEEPALIVE;
     goto end;
     }
   
@@ -1041,7 +1053,7 @@ static int handle_response(gavf_io_t * io)
             {
             if((status == 200) || (c->range_end > 0))
               {
-              gavl_dictionary_get_long(&c->resp, "Content-Length", &c->total_bytes);
+              gavl_dictionary_get_long_i(&c->resp, "Content-Length", &c->total_bytes);
               c->flags |= FLAG_HAS_RESPONSE_BODY;
               }
             else
@@ -1493,6 +1505,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     {
     if(!gavl_socket_connect_inet_complete(c->fd, timeout))
       {
+      //      fprintf(stderr, "Waiting for connection %d\n", timeout);
       c->flags |= FLAG_WAIT;
       return 0;
       }
@@ -1631,8 +1644,21 @@ static int async_iteration(gavf_io_t * io, int timeout)
       c->flags |= FLAG_WAIT;
     
     if(result <= 0)
+      {
+      if(result < 0)
+        {
+        if(c->flags & FLAG_USE_KEEPALIVE)
+          {
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Keep-alive connection closed, reopening");
+          close_connection(c);
+          c->state = STATE_START;
+          return 0;
+          }
+        else
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Sending request failed");
+        }
       return result;
-
+      }
 #ifdef DUMP_HEADERS
     gavl_dprintf("Sent request\n");
 #endif
@@ -1695,6 +1721,8 @@ static int async_iteration(gavf_io_t * io, int timeout)
         if(c->total_bytes <= 0)
           {
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read body: No Content-Length given and no chunked encoding.");
+          gavl_dictionary_dump(&c->resp, 2);
+          
           return -1;
           }
         }
@@ -1733,7 +1761,10 @@ static int async_iteration(gavf_io_t * io, int timeout)
       {
       c->state = STATE_COMPLETE;
       check_keepalive(c);
+      return 1;
       }
+    /* Not yet enough */
+    return 0;
     }
   
   if(c->state == STATE_READ_CHUNK_HEADER)
