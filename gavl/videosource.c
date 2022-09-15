@@ -83,6 +83,8 @@ struct gavl_video_source_s
   pthread_mutex_t eof_mutex;
   int eof;
   int have_lock;
+  
+  int64_t pts_offset;
   };
 
 void
@@ -119,6 +121,12 @@ gavl_video_source_create(gavl_video_source_func_t func,
 
   pthread_mutex_init(&ret->eof_mutex, NULL);
   return ret;
+  }
+
+void gavl_video_source_set_pts_offset(gavl_video_source_t * src, int64_t offset)
+  {
+  src->pts_offset = offset;
+
   }
 
 
@@ -230,10 +238,10 @@ static void scale_pts(gavl_video_source_t * s,
     next_pts = gavl_time_rescale(s->src_format.timescale,
                                  s->dst_format.timescale,
                                  f->timestamp + f->duration);
-    f->timestamp = s->next_pts;
     f->duration = next_pts - f->timestamp;
     s->next_pts = next_pts;            
     }
+  f->timestamp += s->pts_offset;
   }
 
 static gavl_source_status_t read_frame(gavl_video_source_t * s,
@@ -444,7 +452,7 @@ read_video_fps(gavl_video_source_t * s,
       //      fprintf(stderr, "FPS frame: %ld %ld\n",
       //              (*frame)->timestamp,
       //              (*frame)->duration);
-      
+      (*frame)->timestamp += s->pts_offset;
       return GAVL_SOURCE_OK;
       }
     else
@@ -460,7 +468,7 @@ read_video_fps(gavl_video_source_t * s,
       }
     }
 
-  s->fps_frame->timestamp = out_pts;
+  s->fps_frame->timestamp = out_pts + s->pts_offset;
   s->fps_frame->duration  = s->dst_format.frame_duration;
 
       //  fprintf(stderr, "FPS frame: %ld %ld\n",
@@ -537,7 +545,7 @@ read_video_still(gavl_video_source_t * s,
     s->next_still_frame = NULL;
     }
 
-  s->fps_frame->timestamp = s->next_pts;
+  s->fps_frame->timestamp = s->next_pts + s->pts_offset;
   s->fps_frame->duration = s->dst_format.frame_duration;
   s->next_pts += s->dst_format.frame_duration;
   

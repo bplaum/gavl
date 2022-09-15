@@ -665,9 +665,6 @@ static void release_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count, 
     {
     for(j = 0; j < bufs[i].num_planes; j++)
       {
-      if(bufs[i].planes[j].dma_fd > 0)
-        close(bufs[i].planes[j].dma_fd);
-
       munmap(bufs[i].planes[j].buf, bufs[i].planes[j].size);
       }
     }
@@ -1926,34 +1923,3 @@ gavl_v4l2_device_t * gavl_hw_ctx_v4l2_get_device(gavl_hw_context_t * ctx)
   return ctx->native;
   }
 
-int gavl_v4l2_export_dmabuf_video(gavl_video_frame_t * frame)
-  {
-  int i;
-  gavl_v4l2_device_t * dev = frame->hwctx->native;
-
-  gavl_v4l2_buffer_t * buf = frame->storage;
-  
-  if(buf->flags & GAVL_V4L2_BUFFER_FLAG_DMA)
-    return 1;
-  
-  for(i = 0; i < buf->num_planes; i++)
-    {
-    struct v4l2_exportbuffer expbuf;
-    
-    memset(&expbuf, 0, sizeof(expbuf));
-    expbuf.type = buf->type;
-    expbuf.index = buf->index;
-    expbuf.plane = i;
-    
-    if(my_ioctl(dev->fd, VIDIOC_EXPBUF, &expbuf) == -1)
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Exporting buffer failed: %s", strerror(errno));
-      return 0;
-      }
-    
-    buf->planes[i].dma_fd = expbuf.fd;
-    }
-  
-  buf->flags |= GAVL_V4L2_BUFFER_FLAG_DMA;
-  return 1;
-  }

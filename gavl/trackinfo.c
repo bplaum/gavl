@@ -2432,3 +2432,70 @@ gavl_metadata_sort_source(gavl_dictionary_t * dict,
   gavl_array_sort(arr, sort_src_func, &d);
   return 1;
   }
+
+void
+gavl_track_set_multivariant(gavl_dictionary_t * dict)
+  {
+  gavl_array_t * arr;
+  
+  if(!(dict = gavl_track_get_metadata_nc(dict)) ||
+     !(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)) ||
+     (arr->num_entries <= 1))
+    return;
+
+  if(!gavl_metadata_sort_source(dict, GAVL_META_SRC, GAVL_META_BITRATE, 0) &&
+     !gavl_metadata_sort_source(dict, GAVL_META_SRC, GAVL_META_WIDTH, 0))
+    return;
+  
+  gavl_dictionary_set_int(dict, GAVL_META_MULTIVARIANT, 1);
+  }
+
+void
+gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale)
+  {
+  gavl_dictionary_t * m = gavl_dictionary_get_dictionary_nc(s, GAVL_META_METADATA);
+  gavl_dictionary_set_long(m, GAVL_META_STREAM_FIRST_PTS, pts);
+  gavl_dictionary_set_int(m, GAVL_META_STREAM_FIRST_PTS_SCALE, scale);
+  }
+
+void
+gavl_stream_get_start_pts(const gavl_dictionary_t * s, int64_t * pts, int * scale)
+  {
+  const gavl_dictionary_t * m = gavl_dictionary_get_dictionary(s, GAVL_META_METADATA);
+
+  *pts = 0;
+  gavl_dictionary_get_long(m, GAVL_META_STREAM_FIRST_PTS, pts);
+  
+  *scale = GAVL_TIME_SCALE;
+  gavl_dictionary_get_int(m, GAVL_META_STREAM_FIRST_PTS_SCALE, scale);
+  }
+
+gavl_time_t gavl_stream_get_start_time(const gavl_dictionary_t * s)
+  {
+  int timescale = 0;
+  gavl_stream_stats_t stats;
+  const gavl_dictionary_t * m = NULL;
+
+  //  fprintf(stderr, "Get start time:\n");
+  //  gavl_dictionary_dump(s->s, 2);
+  
+  gavl_stream_stats_init(&stats);
+  if((gavl_stream_get_stats(s, &stats)) &&
+     (m = gavl_stream_get_metadata(s)) &&
+     gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &timescale))
+    return gavl_time_unscale(timescale, stats.pts_start);
+  else
+    return 0;
+  }
+
+
+gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict)
+  {
+  const gavl_dictionary_t * s;
+
+  if((s = gavl_track_get_video_stream(dict, 0)) ||
+     (s = gavl_track_get_audio_stream(dict, 0)))
+    return gavl_stream_get_start_time(s);
+  else
+    return 0;
+  }

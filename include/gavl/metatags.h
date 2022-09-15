@@ -397,8 +397,9 @@
 #define GAVL_META_STREAM_PACKET_TIMESCALE "pscale"
 #define GAVL_META_STREAM_SAMPLE_TIMESCALE "sscale"
 #define GAVL_META_STREAM_ENABLED          "enabled"
-// #define GAVL_META_STREAM_FIRST_PACKET_PTS "pstart"
 
+#define GAVL_META_STREAM_FIRST_PTS       "pts_start"
+#define GAVL_META_STREAM_FIRST_PTS_SCALE "pts_pstart_scale"
 
 /* Set to the absolute stream index offset by one by default
    but can be changed to anything */

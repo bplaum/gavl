@@ -31,8 +31,8 @@ typedef struct
   size_t size;   // For munmap
 
   /* Dma buffer */
-  int dma_fd;
-  int64_t dma_offset;
+  //  int dma_fd;
+  //  int64_t dma_offset;
   
   } gavl_v4l2_plane_t;
 

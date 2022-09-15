@@ -63,10 +63,10 @@
 
 #define GAVL_STATE_CTX_SRC "src"
 #define GAVL_STATE_SRC_METADATA      GAVL_META_METADATA
-#define GAVL_STATE_SRC_SEEK_WINDOW         "seekwindow"
-#define GAVL_STATE_SRC_SEEK_WINDOW_START   "start"
-#define GAVL_STATE_SRC_SEEK_WINDOW_END     "end"
-#define GAVL_STATE_SRC_START_TIME_ABSOLUTE "st"
+#define GAVL_STATE_SRC_SEEK_WINDOW                "seek_window"
+#define GAVL_STATE_SRC_SEEK_WINDOW_START          "seek_window_start"
+#define GAVL_STATE_SRC_SEEK_WINDOW_END            "seek_window_end"
+#define GAVL_STATE_SRC_SEEK_WINDOW_ABSOLUTE       "seek_window_abs"
 
 GAVL_PUBLIC
 void gavl_msg_set_state(gavl_msg_t * msg,

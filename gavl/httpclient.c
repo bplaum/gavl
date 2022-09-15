@@ -1247,8 +1247,6 @@ gavl_http_client_open(gavf_io_t * io,
   {
   int result;
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s", uri1);
-  
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
 

@@ -165,6 +165,9 @@ gavl_video_source_create(gavl_video_source_func_t func,
                          const gavl_video_format_t * src_format);
 
 GAVL_PUBLIC
+void gavl_video_source_set_pts_offset(gavl_video_source_t * src, int64_t offset);
+  
+GAVL_PUBLIC
 void gavl_video_source_set_eof(gavl_video_source_t * src, int eof);
 
 GAVL_PUBLIC
@@ -341,6 +344,10 @@ void gavl_audio_source_drain(gavl_audio_source_t * s);
 
 GAVL_PUBLIC
 void gavl_audio_source_drain_nolock(gavl_audio_source_t * s);
+
+GAVL_PUBLIC
+void gavl_audio_source_set_pts_offset(gavl_audio_source_t * src, int64_t offset);
+
   
 /** \brief Create an audio source from another source
  *  \param func Function to get the frames from
@@ -527,6 +534,9 @@ GAVL_PUBLIC
 gavl_packet_source_t *
 gavl_packet_source_create(gavl_packet_source_func_t func,
                           void * priv, int src_flags);
+
+GAVL_PUBLIC
+void gavl_packet_source_set_pts_offset(gavl_packet_source_t * src, int64_t offset);
 
 GAVL_PUBLIC
 void gavl_packet_source_set_eof(gavl_packet_source_t * src, int eof);

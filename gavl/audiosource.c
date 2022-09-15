@@ -80,6 +80,8 @@ struct gavl_audio_source_s
   int eof;
   
   int have_lock;
+  
+  int64_t pts_offset;
   };
 
 gavl_audio_source_t *
@@ -101,6 +103,13 @@ gavl_audio_source_create(gavl_audio_source_func_t func,
   
   return ret;
   }
+
+void gavl_audio_source_set_pts_offset(gavl_audio_source_t * src, int64_t offset)
+  {
+  src->pts_offset = offset;
+  }
+
+
 
 gavl_audio_source_t *
 gavl_audio_source_create_source(gavl_audio_source_func_t func,
@@ -305,7 +314,7 @@ static void process_output(gavl_audio_source_t * s,
                            gavl_audio_frame_t * f)
   {
   //  fprintf(stderr, "Process output %ld %ld\n", s->next_pts, f->valid_samples);
-  f->timestamp = s->next_pts;
+  f->timestamp = s->next_pts + s->pts_offset;
   s->next_pts += f->valid_samples;
   }
 

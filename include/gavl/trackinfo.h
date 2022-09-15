@@ -60,6 +60,17 @@ gavl_track_get_stream_all_nc(gavl_dictionary_t * d, int idx);
 GAVL_PUBLIC gavl_stream_type_t
 gavl_stream_get_type(const gavl_dictionary_t * s);
 
+/* Set/get first stream PTS (from MPEG-type timestamps) */
+GAVL_PUBLIC void
+gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale);
+
+GAVL_PUBLIC void
+gavl_stream_get_start_pts(const gavl_dictionary_t * s, int64_t * pts, int * scale);
+
+/* Get the start time of the stream */
+GAVL_PUBLIC 
+gavl_time_t gavl_stream_get_start_time(const gavl_dictionary_t * s);
+
 GAVL_PUBLIC
 int gavl_stream_get_sample_timescale(const gavl_dictionary_t * s);
 
@@ -363,6 +374,9 @@ GAVL_PUBLIC
 gavl_time_t gavl_track_get_duration(const gavl_dictionary_t * dict);
 
 GAVL_PUBLIC
+gavl_time_t gavl_track_get_display_offset(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
 void gavl_track_set_duration(gavl_dictionary_t * dict, gavl_time_t dur);
 
 GAVL_PUBLIC
@@ -487,6 +501,14 @@ gavl_metadata_sort_source(gavl_dictionary_t * s,
                           const char * attribute,
                           int ascend);
 
+/* If the track has more than 1 URIs, set GAVL_META_MULTIVARIANT
+   and sort URIs for descreasing quality (best first) */
+   
+GAVL_PUBLIC
+void gavl_track_set_multivariant(gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict);
 
 /* */
 

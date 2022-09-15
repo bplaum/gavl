@@ -1,5 +1,7 @@
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h> // close()
 
 #include <config.h>
 
@@ -66,12 +68,14 @@ gavl_pixelformat_t gavl_drm_fourcc_to_gavl(uint32_t drm_fourcc)
   return 0;
   }
 
+#if 0
 typedef struct
   {
   int frames_alloc;
   gavl_video_frame_t ** frames;
   
   } dma_native_t;
+#endif
 
 static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx,
                                                          gavl_video_format_t * fmt)
@@ -86,7 +90,21 @@ static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx
 
 static void video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f)
   {
+  int i;
+  gavl_dmabuf_video_frame_t * info;
+
   
+  if(f->storage)
+    {
+    info = f->storage;
+
+    for(i = 0; i < info->num_buffers; i++)
+      close(info->buffers[i].fd);
+
+    free(info);
+    }
+  f->hwctx = NULL;
+  gavl_video_frame_destroy(f);
   }
 
 typedef struct
@@ -190,7 +208,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_dma()
   {
   int support_flags = GAVL_HW_SUPPORTS_VIDEO;
 
-  return  gavl_hw_context_create_internal(NULL, &funcs, GAVL_HW_DMABUFFER, support_flags);
+  return gavl_hw_context_create_internal(NULL, &funcs, GAVL_HW_DMABUFFER, support_flags);
   }
 #else // No DRM
 gavl_hw_context_t * gavl_hw_ctx_create_dma()

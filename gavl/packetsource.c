@@ -53,6 +53,7 @@ struct gavl_packet_source_s
   pthread_mutex_t eof_mutex;
   int eof;
   int have_lock;
+  int64_t pts_offset;
   };
 
 gavl_packet_source_t *
@@ -67,6 +68,12 @@ gavl_packet_source_create(gavl_packet_source_func_t func,
   pthread_mutex_init(&ret->eof_mutex, NULL);
   return ret;
   }
+
+void gavl_packet_source_set_pts_offset(gavl_packet_source_t * src, int64_t offset)
+  {
+  src->pts_offset = offset;
+  }
+
 
 gavl_packet_source_t *
 gavl_packet_source_create_audio(gavl_packet_source_func_t func,
