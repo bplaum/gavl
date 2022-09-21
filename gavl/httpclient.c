@@ -507,7 +507,7 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
 
 static int read_normal(void * priv, uint8_t * data, int len, int block)
   {
-  int result;
+  int result = 0;
   gavl_http_client_t * c = priv;
 
 #if 0

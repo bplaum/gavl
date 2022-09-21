@@ -487,6 +487,7 @@
 #define GAVL_META_MEDIA_CLASS_PHOTOALBUM          "container.photoalbum" 
 #define GAVL_META_MEDIA_CLASS_PLAYLIST            "container.playlist"
 #define GAVL_META_MEDIA_CLASS_PODCAST             "container.podcast"
+#define GAVL_META_MEDIA_CLASS_CONTAINER_CATEGORY  "container.category"
 #define GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR     "container.category.actor" 
 #define GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR  "container.category.director" 
 #define GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST    "container.category.artist" 
@@ -495,6 +496,8 @@
 #define GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE  "container.category.language"
 #define GAVL_META_MEDIA_CLASS_CONTAINER_TAG       "container.category.tag"
 #define GAVL_META_MEDIA_CLASS_CONTAINER_YEAR      "container.category.year"
+#define GAVL_META_MEDIA_CLASS_CONTAINER_TV        "container.tv"
+#define GAVL_META_MEDIA_CLASS_CONTAINER_RADIO     "container.radio"
 #define GAVL_META_MEDIA_CLASS_TV_SEASON           "container.season"
 #define GAVL_META_MEDIA_CLASS_TV_SHOW             "container.tvshow"
 #define GAVL_META_MEDIA_CLASS_DIRECTORY           "container.directory" // On filesystem

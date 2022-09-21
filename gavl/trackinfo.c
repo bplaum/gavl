@@ -1480,17 +1480,22 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
       if(num_audio_streams > 0)
         finalize_audio(dict);
       
-      if((num_video_streams == 1) && gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
+      if((num_video_streams == 1))
         {
-        /* Check for episode */
+        if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
+          {
+          /* Check for episode */
 
-        if(basename && detect_episode(basename, m))
-          media_class = GAVL_META_MEDIA_CLASS_TV_EPISODE;
-        /* Check for movie */
-        else if(basename && detect_movie_multifile(basename, m))
-          media_class = GAVL_META_MEDIA_CLASS_MOVIE_PART;
-        else if(basename && detect_movie_singlefile(basename, m))
-          media_class = GAVL_META_MEDIA_CLASS_MOVIE;
+          if(basename && detect_episode(basename, m))
+            media_class = GAVL_META_MEDIA_CLASS_TV_EPISODE;
+          /* Check for movie */
+          else if(basename && detect_movie_multifile(basename, m))
+            media_class = GAVL_META_MEDIA_CLASS_MOVIE_PART;
+          else if(basename && detect_movie_singlefile(basename, m))
+            media_class = GAVL_META_MEDIA_CLASS_MOVIE;
+          }
+        else if(gavl_dictionary_get(m, GAVL_META_STATION))
+          media_class = GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST;
         }
       }
     }
