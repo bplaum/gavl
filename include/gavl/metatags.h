@@ -512,7 +512,6 @@
 
 #define GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS   "container.root.musicalbums"
 #define GAVL_META_MEDIA_CLASS_ROOT_SONGS         "container.root.songs" 
-#define GAVL_META_MEDIA_CLASS_ROOT_PLAYLISTS     "container.root.playlists" 
 #define GAVL_META_MEDIA_CLASS_ROOT_MOVIES        "container.root.movies"
 #define GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS      "container.root.tvshows"
 #define GAVL_META_MEDIA_CLASS_ROOT_STREAMS       "container.root.streams"
@@ -521,11 +520,9 @@
 #define GAVL_META_MEDIA_CLASS_ROOT_PODCASTS      "container.root.podcasts"
 #define GAVL_META_MEDIA_CLASS_ROOT_RECORDERS     "container.root.recorders"
 
-#define GAVL_META_MEDIA_CLASS_ROOT_INCOMING      "container.root.incoming" 
 #define GAVL_META_MEDIA_CLASS_ROOT_FAVORITES     "container.root.favorites" 
 #define GAVL_META_MEDIA_CLASS_ROOT_BOOKMARKS     "container.root.bookmarks" 
 #define GAVL_META_MEDIA_CLASS_ROOT_LIBRARY       "container.root.library"
-#define GAVL_META_MEDIA_CLASS_ROOT_NETWORK       "container.root.network"
 
 #define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE            "container.root.removable"
 #define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD    "container.root.removable.cd.audio"
