@@ -129,7 +129,7 @@ static int video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
   dma_payload_t * pl;
   const gavl_dmabuf_video_frame_t *info = frame->storage;
   gavl_packet_alloc(p, sizeof(dma_payload_t));
-  pl = (dma_payload_t*)p->data;
+  pl = (dma_payload_t*)p->buf.buf;
 
   pl->num_planes = info->num_planes;
   pl->fourcc = info->fourcc;
@@ -154,7 +154,7 @@ static int video_frame_from_packet_dmabuf(gavl_hw_context_t * ctx,
   {
   int i;
 
-  const dma_payload_t * pl = (const dma_payload_t *)p->data;
+  const dma_payload_t * pl = (const dma_payload_t *)p->buf.buf;
   gavl_dmabuf_video_frame_t *info = frame->storage;
 
   info->num_planes = pl->num_planes;

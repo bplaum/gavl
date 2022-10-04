@@ -21,22 +21,22 @@ void gavf_shrink_audio_frame(gavl_audio_frame_t * f,
       break;
     case GAVL_INTERLEAVE_NONE:
       for(i = 1; i < format->num_channels; i++)
-        memmove(p->data+bytes_per_sample*i*f->valid_samples, 
-                p->data+bytes_per_sample*i*format->samples_per_frame,
+        memmove(p->buf.buf+bytes_per_sample*i*f->valid_samples, 
+                p->buf.buf+bytes_per_sample*i*format->samples_per_frame,
                 bytes_per_sample * f->valid_samples);
       break;
     case GAVL_INTERLEAVE_2:
       for(i = 2; i < format->num_channels; i += 2)
-        memmove(p->data+bytes_per_sample*i*f->valid_samples,
-                p->data+bytes_per_sample*i*format->samples_per_frame,
+        memmove(p->buf.buf+bytes_per_sample*i*f->valid_samples,
+                p->buf.buf+bytes_per_sample*i*format->samples_per_frame,
                 2 * bytes_per_sample * f->valid_samples);
       if(format->num_channels % 2)
-        memmove(p->data+bytes_per_sample*(format->num_channels-1)*f->valid_samples,    
-                p->data+bytes_per_sample*(format->num_channels-1)*format->samples_per_frame,
+        memmove(p->buf.buf+bytes_per_sample*(format->num_channels-1)*f->valid_samples,    
+                p->buf.buf+bytes_per_sample*(format->num_channels-1)*format->samples_per_frame,
                 bytes_per_sample * f->valid_samples);
       break;
     }
-  p->data_len = f->valid_samples * format->num_channels * bytes_per_sample;
+  p->buf.len = f->valid_samples * format->num_channels * bytes_per_sample;
   }
 
 
@@ -165,7 +165,7 @@ get_audio_func(void * priv)
   s->aframe->valid_samples = s->afmt->samples_per_frame;
   
   gavl_audio_frame_set_channels(s->aframe,
-                                s->afmt, s->p->data);
+                                s->afmt, s->p->buf.buf);
   s->aframe->valid_samples = 0;
   return s->aframe;
   }
@@ -177,7 +177,7 @@ put_audio_func(void * priv, gavl_audio_frame_t * frame)
   gavf_stream_t * s = priv;
   
   gavf_audio_frame_to_packet_metadata(s->aframe, s->p);
-  s->p->data_len = s->ci.max_packet_size;
+  s->p->buf.len = s->ci.max_packet_size;
   
   gavf_shrink_audio_frame(s->aframe, s->p, s->afmt);
 
@@ -224,7 +224,7 @@ get_video_func(void * priv)
     s->vframe = gavl_video_frame_create(NULL);
   s->vframe->strides[0] = 0;
   gavl_video_frame_set_planes(s->vframe,
-                              s->vfmt, s->p->data);
+                              s->vfmt, s->p->buf.buf);
   return s->vframe;
   }
 
@@ -234,7 +234,7 @@ put_video_func(void * priv, gavl_video_frame_t * frame)
   gavl_sink_status_t st;
   gavf_stream_t * s = priv;
   gavl_video_frame_to_packet_metadata(frame, s->p);
-  s->p->data_len = s->ci.max_packet_size;
+  s->p->buf.len = s->ci.max_packet_size;
   st = gavl_packet_sink_put_packet(s->psink, s->p);
   s->p = NULL;
   return st;

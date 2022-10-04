@@ -560,10 +560,10 @@ int gavf_write_gavl_packet(gavf_io_t * io,
     
     }
 
-  if(!gavf_io_write_uint32v(io, p->data_len))
+  if(!gavf_io_write_uint32v(io, p->buf.len))
     goto fail;
 
-  if(p->data_len && (gavf_io_write_data(io, p->data, p->data_len) < p->data_len))
+  if(p->buf.len && (gavf_io_write_data(io, p->buf.buf, p->buf.len) < p->buf.len))
     goto fail;
 
   if(p->num_fds)    
@@ -727,7 +727,7 @@ int gavf_read_gavl_packet_header(gavf_io_t * io,
       }
     }
 
-  if(!gavf_io_read_uint32v(io, (uint32_t*)&p->data_len))
+  if(!gavf_io_read_uint32v(io, (uint32_t*)&p->buf.len))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Could not read packet data_len");
     goto fail;
@@ -744,8 +744,8 @@ int gavf_read_gavl_packet(gavf_io_t * io,
                           gavl_packet_t * p)
   {
   /* Payload */
-  gavl_packet_alloc(p, p->data_len);
-  if(gavf_io_read_data(io, p->data, p->data_len) < p->data_len)
+  gavl_packet_alloc(p, p->buf.len);
+  if(gavf_io_read_data(io, p->buf.buf, p->buf.len) < p->buf.len)
     goto fail;
 
   if(p->num_fds)
@@ -778,7 +778,7 @@ int gavf_skip_gavl_packet(gavf_io_t * io,
                           gavl_packet_t * p)
   {
   int i;
-  gavf_io_skip(io, p->data_len);
+  gavf_io_skip(io, p->buf.len);
 
   if(p->num_fds)
     {

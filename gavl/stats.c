@@ -80,7 +80,7 @@ void gavl_stream_stats_init(gavl_stream_stats_t * f)
   
 void gavl_stream_stats_update(gavl_stream_stats_t * f, const gavl_packet_t * p)
   {
-  gavl_stream_stats_update_params(f, p->pts, p->duration, p->data_len,
+  gavl_stream_stats_update_params(f, p->pts, p->duration, p->buf.len,
                                   p->flags);
   }
 

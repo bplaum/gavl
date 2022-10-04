@@ -1424,7 +1424,7 @@ void gavf_packet_to_video_frame(gavl_packet_t * p, gavl_video_frame_t * frame,
   {
   gavl_packet_to_video_frame_metadata(p, frame);
   frame->strides[0] = 0;
-  gavl_video_frame_set_planes(frame, format, p->data);
+  gavl_video_frame_set_planes(frame, format, p->buf.buf);
 
   if(gavl_metadata_do_swap_endian(m))
     {
@@ -1456,7 +1456,7 @@ void gavf_packet_to_overlay(gavl_packet_t * p, gavl_video_frame_t * frame,
   memset(&tmp_frame_src, 0, sizeof(tmp_frame_src));
 
   get_overlay_format(format, &copy_format, &p->src_rect);
-  gavl_video_frame_set_planes(&tmp_frame_src, &copy_format, p->data);
+  gavl_video_frame_set_planes(&tmp_frame_src, &copy_format, p->buf.buf);
   
   gavl_video_frame_copy(&copy_format, frame, &tmp_frame_src);
 
@@ -1501,13 +1501,13 @@ void gavf_overlay_to_packet(gavl_video_frame_t * frame,
                                 &rect);
 
   /* p->data is assumed to have the proper allocation already!! */
-  gavl_video_frame_set_planes(&tmp_frame_dst, &copy_format, p->data);
+  gavl_video_frame_set_planes(&tmp_frame_dst, &copy_format, p->buf.buf);
 
   gavl_video_frame_copy(&copy_format, &tmp_frame_dst, &tmp_frame_src);
   
   p->dst_x = frame->dst_x;
   p->dst_y = frame->dst_y;
-  p->data_len = gavl_video_format_get_image_size(&copy_format);
+  p->buf.len = gavl_video_format_get_image_size(&copy_format);
   }
 
 void gavf_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
@@ -1550,7 +1550,7 @@ void gavf_packet_to_audio_frame(gavl_packet_t * p,
   {
   frame->valid_samples = p->duration;
   frame->timestamp = p->pts;
-  gavl_audio_frame_set_channels(frame, format, p->data);
+  gavl_audio_frame_set_channels(frame, format, p->buf.buf);
 
   if(gavl_metadata_do_swap_endian(m))
     {

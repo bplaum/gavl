@@ -353,10 +353,14 @@ gavl_codec_id_t gavl_get_compression(int index);
   
 typedef struct
   {
+  gavl_buffer_t buf; //!< Data
+
+#if 0
   uint8_t * data; //!< Data
   int data_len;   //!< Length of data
   int data_alloc; //!< How many bytes got allocated
-
+#endif
+  
   uint32_t flags; //!< ORed combination of GAVL_PACKET_* flags
 
   int64_t pts;      //!< Presentation time

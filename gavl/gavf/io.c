@@ -1297,7 +1297,7 @@ int gavf_msg_to_packet(const gavl_msg_t * msg,
   dst->pts = GAVL_TIME_UNDEFINED;  
   gavl_dictionary_get_long(&msg->header, GAVL_MSG_HEADER_TIMESTAMP, &dst->pts);
   gavl_packet_free(dst);
-  dst->data = gavl_msg_to_buffer(&dst->data_len, msg);
+  dst->buf.buf = gavl_msg_to_buffer(&dst->buf.len, msg);
   return 1;
   }
 
@@ -1305,7 +1305,7 @@ int gavf_packet_to_msg(const gavl_packet_t * src,
                        gavl_msg_t * msg)
   {
   gavl_dictionary_set_long(&msg->header, GAVL_MSG_HEADER_TIMESTAMP, src->pts);
-  return gavl_msg_from_buffer(src->data, src->data_len, msg);
+  return gavl_msg_from_buffer(src->buf.buf, src->buf.len, msg);
   }
 
 #if 0

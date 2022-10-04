@@ -60,12 +60,8 @@ void gavl_packet_pts_cache_push(gavl_packet_pts_cache_t *c, const gavl_packet_t 
     }
   memcpy(&c->packets[c->num_packets], pkt, sizeof(*pkt));
 
-  c->packets[c->num_packets].data = NULL;
-  c->packets[c->num_packets].data_len   = 0;
-  c->packets[c->num_packets].data_alloc = 0;
-  
+  memset(&c->packets[c->num_packets].buf, 0, sizeof(c->packets[c->num_packets].buf));
   c->num_packets++;
-  
   }
 
 static void remove_packet(gavl_packet_pts_cache_t *c, int idx)

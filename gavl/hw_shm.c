@@ -147,7 +147,7 @@ static int video_frame_to_packet_shm(gavl_hw_context_t * ctx,
   const gavl_shm_t *shm = frame->storage;
   
   gavl_packet_alloc(p, BG_SHM_NAME_MAX);
-  strncpy((char*)p->data, shm->name, BG_SHM_NAME_MAX);
+  strncpy((char*)p->buf.buf, shm->name, BG_SHM_NAME_MAX);
   
   p->buf_idx = frame->buf_idx;
   return 1;
@@ -158,7 +158,7 @@ static int video_frame_from_packet_shm(gavl_hw_context_t * ctx,
                                        gavl_video_frame_t * frame,
                                        const gavl_packet_t * p)
   {
-  gavl_shm_t *shm = gavl_shm_alloc_read((const char *)(p->data),
+  gavl_shm_t *shm = gavl_shm_alloc_read((const char *)p->buf.buf,
                                         gavl_video_format_get_image_size(fmt));
 
   frame->storage = shm;

@@ -457,9 +457,9 @@ static gavl_packet_t * gavl_v4l2_device_get_packet_write(gavl_v4l2_device_t * de
   if(!get_buffer_output(dev))
     return NULL;
   
-  dev->packet.data       = dev->out_buf->planes[0].buf;
-  dev->packet.data_alloc = dev->out_buf->planes[0].size;
-  dev->packet.data_len   = 0;
+  dev->packet.buf.buf       = dev->out_buf->planes[0].buf;
+  dev->packet.buf.alloc = dev->out_buf->planes[0].size;
+  dev->packet.buf.len   = 0;
   
   return &dev->packet;
   
@@ -486,12 +486,12 @@ static gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t *
     {
     memset(planes, 0, GAVL_MAX_PLANES*sizeof(planes[0]));
     buf.m.planes = planes;
-    buf.m.planes[0].bytesused = dev->packet.data_len;
+    buf.m.planes[0].bytesused = dev->packet.buf.len;
     buf.length = 1;
     }
   else
     {
-    buf.bytesused = dev->packet.data_len;
+    buf.bytesused = dev->packet.buf.len;
     }
   
   if(dev->packet.flags & GAVL_PACKET_KEYFRAME)
@@ -1249,8 +1249,8 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
 #endif
 
     p = gavl_v4l2_device_get_packet_write(dev);
-    memcpy(p->data, ci.global_header, ci.global_header_len);
-    p->data_len = ci.global_header_len;
+    memcpy(p->buf.buf, ci.global_header, ci.global_header_len);
+    p->buf.len = ci.global_header_len;
     
     if(gavl_v4l2_device_put_packet_write(dev) != GAVL_SINK_OK)
       goto fail;
