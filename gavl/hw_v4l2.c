@@ -528,13 +528,15 @@ static gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t *
 
 static int send_decoder_packet(gavl_v4l2_device_t * dev)
   {
+  gavl_source_status_t st;
   gavl_packet_t * p = gavl_v4l2_device_get_packet_write(dev);
 
   /* Send EOF */
   
-  if((gavl_packet_source_read_packet(dev->psrc, &p) != GAVL_SOURCE_OK))
+  if(((st = gavl_packet_source_read_packet(dev->psrc, &p)) != GAVL_SOURCE_OK))
     {
-
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "send_decoder_packet failed, got no packet (source status %d)", st);
+    
     if(!(dev->flags & DECODER_SENT_EOS))
       {
       /* Send EOS */
@@ -1249,6 +1251,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
 #endif
 
     p = gavl_v4l2_device_get_packet_write(dev);
+    gavl_packet_alloc(p, ci.global_header_len);
     memcpy(p->buf.buf, ci.global_header, ci.global_header_len);
     p->buf.len = ci.global_header_len;
     
@@ -1356,8 +1359,12 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     
     else if(pollev & POLLOUT)
       {
-      if(!send_decoder_packet(dev))
+      if(!send_decoder_packet(dev) || (dev->flags & DECODER_SENT_EOS))
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "EOF during decoder initialization (sent %d packets)", format_packets);
         goto fail;
+        }
+
 
       //      gavl_time_delay(&t);
       format_packets++;

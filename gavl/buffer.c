@@ -93,7 +93,7 @@ void gavl_buffer_append_data_pad(gavl_buffer_t * dst, const uint8_t * data, int 
   memcpy(dst->buf + dst->len, data, len);
   dst->len += len;
   if(padding)
-    memset(dst + len, 0, padding);
+    memset(dst->buf + dst->len, 0, padding);
   }
 
 

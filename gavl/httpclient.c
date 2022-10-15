@@ -967,7 +967,7 @@ static void prepare_header(gavl_http_client_t * c,
   gavl_dictionary_merge2(request, &c->vars);
   
   /* Send standard headers */
-  append_header_var(request, "Accept", "*");
+  append_header_var(request, "Accept", "*/*");
   append_header_var(request, "User-Agent", "gavl/"VERSION);
 
   if((c->range_start > 0) || (c->range_end > 0))
