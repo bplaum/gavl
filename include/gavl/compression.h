@@ -345,7 +345,7 @@ gavl_codec_id_t gavl_get_compression(int index);
  *  For audio streams, each packet must be the smallest unit, which
  *  can be decoded indepentently and for which a duration is known.
  *
- *  The typical usage of a packet is to memset() oit to zero in the
+ *  The typical usage of a packet is to memset() it to zero in the
  *  beginning. Then for each packet call \ref gavl_packet_alloc
  *  to ensure that enough data is allocated. At the very end call
  *  \ref gavl_packet_free to free all memory.
@@ -355,12 +355,6 @@ typedef struct
   {
   gavl_buffer_t buf; //!< Data
 
-#if 0
-  uint8_t * data; //!< Data
-  int data_len;   //!< Length of data
-  int data_alloc; //!< How many bytes got allocated
-#endif
-  
   uint32_t flags; //!< ORed combination of GAVL_PACKET_* flags
 
   int64_t pts;      //!< Presentation time

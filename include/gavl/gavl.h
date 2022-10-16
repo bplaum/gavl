@@ -465,6 +465,10 @@ gavl_interleave_mode_t gavl_short_string_to_interleave_mode(const char * mode);
 GAVL_PUBLIC
 void gavl_audio_format_dump(const gavl_audio_format_t * format);
 
+GAVL_PUBLIC
+int gavl_audio_format_buffer_size(const gavl_audio_format_t * format);
+
+  
 /*! 
   \ingroup audio_format
   \brief Dump an audio format to stderr
@@ -876,7 +880,21 @@ GAVL_PUBLIC
 void gavl_audio_frame_set_channels(gavl_audio_frame_t * f,
                                    const gavl_audio_format_t * format,
                                    uint8_t * data);
+/*!
+  \ingroup audio_frame
+  \brief Set the channel pointers of an audio frame
+  \param f Frame
+  \param format Format
+  \param data Address of the first sample of the first channel
+  \param len Total bytes
+*/
 
+GAVL_PUBLIC
+void gavl_audio_frame_from_data(gavl_audio_frame_t * f,
+                                const gavl_audio_format_t * format,
+                                uint8_t * data, int len);
+
+  
 /*!
   \ingroup audio_frame
   \brief Skip samples in am audio frame

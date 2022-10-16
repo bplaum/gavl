@@ -521,6 +521,11 @@ int gavl_bytes_per_sample(gavl_sample_format_t format)
   return 0;
   }
 
+int gavl_audio_format_buffer_size(const gavl_audio_format_t * format)
+  {
+  return gavl_bytes_per_sample(format->sample_format) * format->num_channels *
+    format->samples_per_frame;
+  }
 
 int gavl_audio_formats_equal(const gavl_audio_format_t * format_1,
                               const gavl_audio_format_t * format_2)

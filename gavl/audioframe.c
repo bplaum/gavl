@@ -620,3 +620,15 @@ void gavl_audio_frame_set_channels(gavl_audio_frame_t * f,
   for(i = 0; i < format->num_channels; i++)
     f->channels.u_8[i] = data + i * sample_size * f->valid_samples;
   }
+
+void gavl_audio_frame_from_data(gavl_audio_frame_t * f,
+                                const gavl_audio_format_t * format,
+                                uint8_t * data, int len)
+  {
+  int i;
+  int stride = len / format->num_channels;
+  
+  f->samples.u_8 = data;
+  for(i = 0; i < format->num_channels; i++)
+    f->channels.u_8[i] = data + i * stride;
+  }
