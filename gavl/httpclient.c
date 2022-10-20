@@ -153,7 +153,7 @@ static void do_reset_connection(gavl_http_client_t * c)
 
 static void reset_connection(gavl_http_client_t * c)
   {
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resetting keepalive connection to %s://%s:%d", c->protocol, c->host, c->port);
+  //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resetting keepalive connection to %s://%s:%d", c->protocol, c->host, c->port);
   do_reset_connection(c);
   }
 
@@ -790,7 +790,7 @@ static int prepare_connection(gavf_io_t * io,
   if(c->io_int)
     {
     ret = 1;
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-using keepalive connection");
+    //    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-using keepalive connection");
     c->flags |= FLAG_USE_KEEPALIVE;
     goto end;
     }

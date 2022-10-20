@@ -337,6 +337,44 @@ gavl_codec_id_t gavl_get_compression(int index);
 #define GAVL_PACKET_FLAG_PRIV (1<<16) //!< Private flag (defined outside of gavl)
   
 #define GAVL_PACKET_PADDING  32 //!< Packets are padded in memory with this many zero bytes
+
+/* Extra data which can carried within a packet */
+
+typedef enum
+  {
+    GAVL_PACKET_EXTRADATA_NONE = 0,
+    GAVL_PACKET_EXTRADATA_PALETTE,
+    GAVL_PACKET_EXTRADATA_FDS,
+  } gavl_packet_extradata_type_t;
+
+#define GAVL_PACKET_MAX_EXTRADATA 2
+  
+typedef struct
+  {
+  int fds[GAVL_MAX_PLANES];
+  int num_fds;
+  } gavl_packet_fds_t;
+
+typedef struct
+  {
+  uint16_t r;
+  uint16_t g;
+  uint16_t b;
+  uint16_t a;
+  }
+gavl_palette_entry_t;
+
+typedef struct
+  {
+  gavl_palette_entry_t * entries;
+  int num_colors;
+  } gavl_packet_palette_t;
+  
+typedef struct
+  {
+  gavl_packet_extradata_type_t type;
+  void * data;
+  } gavl_packet_extradata_t;
   
 /** \brief Packet structure
  *
@@ -350,6 +388,7 @@ gavl_codec_id_t gavl_get_compression(int index);
  *  to ensure that enough data is allocated. At the very end call
  *  \ref gavl_packet_free to free all memory.
  */
+
   
 typedef struct
   {
@@ -372,10 +411,12 @@ typedef struct
   int32_t dst_y;             //!< Y-coordinate in the destination frame (for overlays)
 
   int32_t id;    //!< ID of the gavf stream where this packet belongs
-  
-  int fds[GAVL_MAX_PLANES];
-  int num_fds;
   int buf_idx;
+
+  gavl_packet_extradata_t ext_data[GAVL_PACKET_MAX_EXTRADATA];
+  
+  //  int fds[GAVL_MAX_PLANES];
+  //  int num_fds;
   } gavl_packet_t;
 
 /** \brief Initialize a packet
@@ -386,6 +427,12 @@ typedef struct
 GAVL_PUBLIC
 void gavl_packet_init(gavl_packet_t * p);
 
+GAVL_PUBLIC
+gavl_packet_t * gavl_packet_create();
+
+GAVL_PUBLIC
+void gavl_packet_destroy(gavl_packet_t * p);
+  
   
 /** \brief Allocate memory for a packet
  *  \param p A packet
@@ -405,6 +452,13 @@ void gavl_packet_alloc(gavl_packet_t * p, int len);
 GAVL_PUBLIC
 void gavl_packet_free(gavl_packet_t * p);
 
+GAVL_PUBLIC
+void * gavl_packet_add_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t type);
+
+GAVL_PUBLIC
+void * gavl_packet_get_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t type);
+
+  
 /** \brief Copy a packet
  *  \param dst Destination
  *  \param src Source

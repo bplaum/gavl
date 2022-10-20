@@ -539,7 +539,7 @@ int gavf_write_gavl_packet(gavf_io_t * io,
                                buf.len, buf.buf))
         goto fail;
       }
-
+#if 0
     if(p->num_fds)
       {
       gavf_io_buf_reset(&bufio);
@@ -548,7 +548,7 @@ int gavf_write_gavl_packet(gavf_io_t * io,
                                buf.len, buf.buf))
         goto fail;
       }
-
+#endif
     if(p->buf_idx >= 0)
       {
       gavf_io_buf_reset(&bufio);
@@ -566,6 +566,7 @@ int gavf_write_gavl_packet(gavf_io_t * io,
   if(p->buf.len && (gavf_io_write_data(io, p->buf.buf, p->buf.len) < p->buf.len))
     goto fail;
 
+#if 0  
   if(p->num_fds)    
     {
     int sock;
@@ -581,7 +582,8 @@ int gavf_write_gavl_packet(gavf_io_t * io,
     if(!gavl_socket_send_fds(sock, p->fds, p->num_fds))
       goto fail;
     }
-    
+#endif
+  
   return 1;
 
   fail:
@@ -705,6 +707,7 @@ int gavf_read_gavl_packet_header(gavf_io_t * io,
             goto fail;
             }
             break;
+#if 0
         case GAVF_EXT_PK_FDS:
           if(!gavf_io_read_uint32v(io, (uint32_t*)&p->num_fds))
             {
@@ -712,6 +715,7 @@ int gavf_read_gavl_packet_header(gavf_io_t * io,
             goto fail;
             }
           break;
+#endif
         case GAVF_EXT_PK_BUF_IDX:
           if(!gavf_io_read_uint32v(io, (uint32_t*)&p->buf_idx))
             {
@@ -747,7 +751,7 @@ int gavf_read_gavl_packet(gavf_io_t * io,
   gavl_packet_alloc(p, p->buf.len);
   if(gavf_io_read_data(io, p->buf.buf, p->buf.len) < p->buf.len)
     goto fail;
-
+#if 0
   if(p->num_fds)
     {
     int sock;
@@ -764,7 +768,7 @@ int gavf_read_gavl_packet(gavf_io_t * io,
       goto fail;
     
     }
-  
+#endif
   return 1;
   
   fail:
@@ -777,9 +781,9 @@ int gavf_read_gavl_packet(gavf_io_t * io,
 int gavf_skip_gavl_packet(gavf_io_t * io,
                           gavl_packet_t * p)
   {
-  int i;
+  //  int i;
   gavf_io_skip(io, p->buf.len);
-
+#if 0
   if(p->num_fds)
     {
     int sock;
@@ -801,7 +805,7 @@ int gavf_skip_gavl_packet(gavf_io_t * io,
       p->fds[i] = -1;
       }
     }
-
+#endif
   return 1;
   
   }

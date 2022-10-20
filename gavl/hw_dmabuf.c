@@ -120,6 +120,7 @@ typedef struct
   
   } dma_payload_t;
 
+#if 0
 static int video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
                                         const gavl_video_format_t * fmt,
                                         const gavl_video_frame_t * frame,
@@ -176,6 +177,7 @@ static int video_frame_from_packet_dmabuf(gavl_hw_context_t * ctx,
   
   return 1;
   }
+#endif
 
 #if 0
 static void destroy_native_dmabuf(void * data)
@@ -192,8 +194,8 @@ static const gavl_hw_funcs_t funcs =
    .video_frame_create_hw  = video_frame_create_hw_dmabuf,
    .video_frame_destroy    = video_frame_destroy_hw_dmabuf,
 
-   .video_frame_to_packet = video_frame_to_packet_dmabuf,
-   .video_frame_from_packet = video_frame_from_packet_dmabuf,
+   //   .video_frame_to_packet = video_frame_to_packet_dmabuf,
+   //   .video_frame_from_packet = video_frame_from_packet_dmabuf,
    
    //    .video_frame_to_ram     = video_frame_to_ram_egl,
    //    .video_frame_to_hw      = video_frame_to_hw_egl,

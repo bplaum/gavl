@@ -81,8 +81,8 @@ void gavl_buffer_free(gavl_buffer_t * buf)
 
 void gavl_buffer_copy(gavl_buffer_t * dst, const gavl_buffer_t * src)
   {
-  gavl_buffer_alloc(dst, src->len);
-  memcpy(dst->buf, src->buf, src->len);
+  gavl_buffer_alloc(dst, src->alloc);
+  memcpy(dst->buf, src->buf, src->alloc);
   dst->len = src->len;
   dst->pos = 0;
   }

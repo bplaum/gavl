@@ -22,10 +22,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <config.h>
+
 #include <gavl/gavl.h>
 #include <gavl/compression.h>
 #include <gavl/utils.h>
-
+#include <gavl/log.h>
+#define LOG_DOMAIN "compression"
 
 
 void gavl_compression_info_free(gavl_compression_info_t * info)
@@ -332,126 +335,7 @@ void gavl_compression_info_append_global_header(gavl_compression_info_t * dst,
   memset(dst->global_header + dst->global_header_len, 0, GAVL_PACKET_PADDING);
   }
 
-void gavl_packet_alloc(gavl_packet_t * p, int len)
-  {
-  gavl_buffer_alloc(&p->buf, len + GAVL_PACKET_PADDING);
-  memset(p->buf.buf + len, 0, GAVL_PACKET_PADDING);
-  }
 
-void gavl_packet_free(gavl_packet_t * p)
-  {
-  gavl_buffer_free(&p->buf);
-  }
-
-void gavl_packet_reset(gavl_packet_t * p)
-  {
-  int data_alloc_save;
-  uint8_t * data_save;
-
-  data_alloc_save = p->buf.alloc;
-  data_save       = p->buf.buf;
-  
-  gavl_packet_init(p);
-  p->buf.alloc = data_alloc_save;
-  p->buf.buf   = data_save;
-  p->buf_idx = -1;
-  }
-
-void gavl_packet_copy(gavl_packet_t * dst,
-                      const gavl_packet_t * src)
-  {
-  int data_alloc_save;
-  uint8_t * data_save;
-
-  data_alloc_save = dst->buf.alloc;
-  data_save       = dst->buf.buf;
-
-  memcpy(dst, src, sizeof(*src));
-
-  dst->buf.alloc = data_alloc_save;
-  dst->buf.buf   = data_save;
-
-  gavl_packet_alloc(dst, src->buf.len);
-  memcpy(dst->buf.buf, src->buf.buf, src->buf.len);
-  }
-
-void gavl_packet_copy_metadata(gavl_packet_t * dst,
-                               const gavl_packet_t * src)
-  {
-  int i;
-  gavl_buffer_t buf_save;
-  int fds_save[GAVL_MAX_PLANES];
-
-  memcpy(&buf_save, &dst->buf, sizeof(buf_save));
-  
-  for(i = 0; i < GAVL_MAX_PLANES; i++)
-    fds_save[i] = dst->fds[i];
-  
-  memcpy(dst, src, sizeof(*src));
-
-  for(i = 0; i < GAVL_MAX_PLANES; i++)
-    dst->fds[i] = fds_save[i];
-
-  memcpy(&dst->buf, &buf_save, sizeof(buf_save));
-  }
-
-static const char * coding_type_strings[4] =
-  {
-  "?",
-  "I",
-  "P",
-  "B"
-  };
-
-void gavl_packet_dump(const gavl_packet_t * p)
-  {
-  fprintf(stderr, "sz: %d ", p->buf.len);
-
-  if(p->pts != GAVL_TIME_UNDEFINED)
-    fprintf(stderr, "pts: %"PRId64" ", p->pts);
-  else
-    fprintf(stderr, "pts: None ");
-
-  fprintf(stderr, "dur: %"PRId64, p->duration);
-
-  fprintf(stderr, " head: %d, f2: %d",
-          p->header_size, p->field2_offset);
-
-  fprintf(stderr, " type: %s ", coding_type_strings[p->flags & GAVL_PACKET_TYPE_MASK]);
-
-  if(p->flags & GAVL_PACKET_NOOUTPUT)
-    fprintf(stderr, " nooutput");
-
-  if(p->flags & GAVL_PACKET_REF)
-    fprintf(stderr, " ref");
-  
-  if(p->src_rect.w && p->src_rect.h)
-    {
-    fprintf(stderr, " src_rect: ");
-    gavl_rectangle_i_dump(&p->src_rect);
-    }
-  if(p->dst_x || p->dst_y)
-    fprintf(stderr, " dst: %d %d", p->dst_x, p->dst_y);
-
-  fprintf(stderr, "\n");
-  gavl_hexdump(p->buf.buf, p->buf.len < 16 ? p->buf.len : 16, 16);
-  
-  }
-
-void gavl_packet_save(const gavl_packet_t * p,
-                      const char * filename)
-  {
-  FILE * out = fopen(filename, "wb");
-  fwrite(p->buf.buf, 1, p->buf.len, out);
-  fclose(out);
-  }
-
-void gavl_packet_init(gavl_packet_t * p)
-  {
-  memset(p, 0, sizeof(*p));
-  p->timecode   = GAVL_TIMECODE_UNDEFINED;
-  p->buf_idx = -1;
-  }
 
 /* Xiph style lacing */
 

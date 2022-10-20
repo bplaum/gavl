@@ -170,6 +170,7 @@ metadata.c \
 mix.c \
 msg.c \
 numptr.c \
+packet.c \
 packetconnector.c \
 packetsink.c \
 packetsource.c \
