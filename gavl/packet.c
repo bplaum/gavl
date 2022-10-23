@@ -42,16 +42,12 @@ static void free_extradata(gavl_packet_t * p)
       switch(p->ext_data[i].type)
         {
         case GAVL_PACKET_EXTRADATA_PALETTE:
-          {
-          gavl_packet_palette_t * pal = p->ext_data[i].data;
-          if(pal->entries)
-            free(pal->entries);
-          }
+          gavl_palette_destroy(p->ext_data[i].data);
           break;
         default:
+          free(p->ext_data[i].data);
           break;
         }
-      free(p->ext_data[i].data);
       }
     }
   memset(p->ext_data, 0, sizeof(p->ext_data));
@@ -224,7 +220,7 @@ void * gavl_packet_add_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t
   switch(type)
     {
     case GAVL_PACKET_EXTRADATA_PALETTE:
-      d->data = calloc(1, sizeof(gavl_packet_palette_t));
+      d->data = gavl_palette_create();
       break;
     case GAVL_PACKET_EXTRADATA_FDS:
       d->data = calloc(1, sizeof(gavl_packet_fds_t));

@@ -171,9 +171,11 @@ mix.c \
 msg.c \
 numptr.c \
 packet.c \
+packetbuffer.c \
 packetconnector.c \
 packetsink.c \
 packetsource.c \
+palette.c \
 peakdetector.c \
 psnr.c \
 ptscache.c \

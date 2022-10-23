@@ -380,8 +380,11 @@ static void init_stream(gavl_dictionary_t * dict)
   gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
   }
 
+
+
 /* Initialize streams */
 
+  
 static void init_audio_stream(gavl_dictionary_t * dict)
   {
   gavl_value_t fmt_val;
@@ -422,24 +425,28 @@ static void init_overlay_stream(gavl_dictionary_t * dict)
 
 void gavl_init_audio_stream(gavl_dictionary_t * dict)
   {
+  gavl_dictionary_set_int(dict, GAVL_META_STREAM_TYPE, GAVL_STREAM_AUDIO);
   init_stream(dict);
   init_audio_stream(dict);
   }
 
 void gavl_init_video_stream(gavl_dictionary_t * dict)
   {
+  gavl_dictionary_set_int(dict, GAVL_META_STREAM_TYPE, GAVL_STREAM_VIDEO);
   init_stream(dict);
   init_video_stream(dict);
   }
 
 void gavl_init_text_stream(gavl_dictionary_t * dict)
   {
+  gavl_dictionary_set_int(dict, GAVL_META_STREAM_TYPE, GAVL_STREAM_TEXT);
   init_stream(dict);
   init_text_stream(dict);
   }
 
 void gavl_init_overlay_stream(gavl_dictionary_t * dict)
   {
+  gavl_dictionary_set_int(dict, GAVL_META_STREAM_TYPE, GAVL_STREAM_OVERLAY);
   init_stream(dict);
   init_overlay_stream(dict);
   }
@@ -987,7 +994,6 @@ const gavl_dictionary_t * gavl_track_get_metadata(const gavl_dictionary_t * dict
   else
     return NULL;
   }
-
 
 static void get_stream_duration(void * priv, 
                                 int idx,

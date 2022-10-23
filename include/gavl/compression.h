@@ -121,6 +121,8 @@ typedef struct
   {
   int flags; //!< ORed combination of GAVL_COMPRESSION_* flags
   gavl_codec_id_t id; //!< Codec ID
+
+  //  gavl_buffer_t codec_header;
   
   uint8_t * global_header; //!< Global header
   uint32_t global_header_len;  //!< Length of global header
@@ -367,8 +369,31 @@ gavl_palette_entry_t;
 typedef struct
   {
   gavl_palette_entry_t * entries;
-  int num_colors;
-  } gavl_packet_palette_t;
+  int num_entries;
+  } gavl_palette_t;
+
+GAVL_PUBLIC gavl_palette_t *
+gavl_palette_create(void);
+  
+GAVL_PUBLIC void
+gavl_palette_alloc(gavl_palette_t * pal, int num_colors);
+
+GAVL_PUBLIC void
+gavl_palette_init(gavl_palette_t * pal);
+  
+GAVL_PUBLIC void
+gavl_palette_free(gavl_palette_t * pal);
+  
+GAVL_PUBLIC void
+gavl_palette_destroy(gavl_palette_t * pal);
+
+GAVL_PUBLIC void
+gavl_palette_move(gavl_palette_t * dst, gavl_palette_t * src);
+
+
+
+
+
   
 typedef struct
   {

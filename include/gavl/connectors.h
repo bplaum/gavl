@@ -29,6 +29,7 @@
 
 #include <gavl/gavl.h>
 #include <gavl/compression.h>
+#include <gavl/trackinfo.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -533,7 +534,7 @@ void gavl_audio_source_destroy(gavl_audio_source_t * s);
 GAVL_PUBLIC
 gavl_packet_source_t *
 gavl_packet_source_create(gavl_packet_source_func_t func,
-                          void * priv, int src_flags);
+                          void * priv, int src_flags, const gavl_dictionary_t * s);
 
 GAVL_PUBLIC
 void gavl_packet_source_set_pts_offset(gavl_packet_source_t * src, int64_t offset);
@@ -578,7 +579,8 @@ gavl_packet_source_t *
 gavl_packet_source_create_video(gavl_packet_source_func_t func,
                                 void * priv, int src_flags,
                                 const gavl_compression_info_t * ci,
-                                const gavl_video_format_t * vfmt);
+                                const gavl_video_format_t * vfmt,
+                                gavl_stream_type_t type);
 
 /** \brief Create a text packet source
  *  \param func Callback for reading one frame
@@ -672,6 +674,11 @@ gavl_packet_source_get_timescale(gavl_packet_source_t * s);
 GAVL_PUBLIC gavl_source_status_t
 gavl_packet_source_read_packet(void*s, gavl_packet_t ** p);
 
+
+GAVL_PUBLIC gavl_source_status_t
+gavl_packet_source_peek_packet(void*sp, gavl_packet_t ** p);
+
+  
 /** \brief Destroy a packet source
  *  \param s A packet source
  */
@@ -1316,8 +1323,18 @@ gavl_packet_connector_process(gavl_packet_connector_t * c);
 GAVL_PUBLIC gavl_source_status_t 
 gavl_packet_connector_get_source_status(gavl_packet_connector_t * c);
 
+/* Packet buffer */
 
+typedef struct gavl_packet_buffer_s 
+gavl_packet_buffer_t;
+
+gavl_packet_buffer_t * gavl_packet_buffer_create();
+void gavl_packet_buffer_destroy(gavl_packet_buffer_t *);
+
+gavl_packet_sink_t * gavl_packet_buffer_get_sink(gavl_packet_buffer_t *);
+gavl_packet_source_t * gavl_packet_buffer_get_source(gavl_packet_buffer_t *);
   
+
 /**
  * @}
  */

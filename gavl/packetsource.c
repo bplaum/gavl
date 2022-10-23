@@ -24,16 +24,19 @@
 #include <pthread.h>
 
 #include <gavl/connectors.h>
+#include <gavl/trackinfo.h>
 
-#define FLAG_HAS_AFMT         (1<<0)
-#define FLAG_HAS_VFMT         (1<<1)
+// #define FLAG_HAS_AFMT         (1<<0)
+// #define FLAG_HAS_VFMT         (1<<1)
 #define FLAG_HAS_CI           (1<<2)
 #define FLAG_HAS_TIMESCALE    (1<<3)
 
 struct gavl_packet_source_s
   {
-  gavl_audio_format_t audio_format;
-  gavl_video_format_t video_format;
+  gavl_dictionary_t s;
+
+  //  gavl_audio_format_t audio_format;
+  //  gavl_video_format_t video_format;
   gavl_compression_info_t ci;
   int timescale;
   
@@ -54,17 +57,23 @@ struct gavl_packet_source_s
   int eof;
   int have_lock;
   int64_t pts_offset;
+  
+  int have_packet;
   };
 
 gavl_packet_source_t *
 gavl_packet_source_create(gavl_packet_source_func_t func,
-                          void * priv, int src_flags)
+                          void * priv, int src_flags, const gavl_dictionary_t * s)
   {
   gavl_packet_source_t * ret;
   ret = calloc(1, sizeof(*ret));
   ret->func = func;
   ret->priv = priv;
   ret->src_flags = src_flags;
+
+  if(s)
+    gavl_dictionary_copy(&ret->s, s);
+
   pthread_mutex_init(&ret->eof_mutex, NULL);
   return ret;
   }
@@ -81,13 +90,14 @@ gavl_packet_source_create_audio(gavl_packet_source_func_t func,
                                 const gavl_compression_info_t * ci,
                                 const gavl_audio_format_t * afmt)
   {
-  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags);
+  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags, NULL);
   
   gavl_compression_info_copy(&ret->ci, ci);
   ret->flags |= FLAG_HAS_CI;
+
+  gavl_init_audio_stream(&ret->s);
+  gavl_audio_format_copy(gavl_stream_get_audio_format_nc(&ret->s), afmt);
   
-  gavl_audio_format_copy(&ret->audio_format, afmt);
-  ret->flags |= FLAG_HAS_AFMT;
   return ret;
   }
 
@@ -95,15 +105,26 @@ gavl_packet_source_t *
 gavl_packet_source_create_video(gavl_packet_source_func_t func,
                                 void * priv, int src_flags,
                                 const gavl_compression_info_t * ci,
-                                const gavl_video_format_t * vfmt)
+                                const gavl_video_format_t * vfmt,
+                                gavl_stream_type_t type)
   {
-  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags);
+  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags, NULL);
+
+  if(type == GAVL_STREAM_VIDEO)
+    {
+    gavl_init_video_stream(&ret->s);
+
+    }
+  else if(type == GAVL_STREAM_OVERLAY)
+    {
+    gavl_init_overlay_stream(&ret->s);
+    }
   
   gavl_compression_info_copy(&ret->ci, ci);
   ret->flags |= FLAG_HAS_CI;
   
-  gavl_video_format_copy(&ret->video_format, vfmt);
-  ret->flags |= FLAG_HAS_VFMT;
+  gavl_video_format_copy(gavl_stream_get_video_format_nc(&ret->s), vfmt);
+
   return ret;
   }
 
@@ -112,7 +133,10 @@ gavl_packet_source_create_text(gavl_packet_source_func_t func,
                                void * priv, int src_flags,
                                int timescale)
   {
-  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags);
+  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags, NULL);
+
+  
+  
   ret->timescale = timescale;
   ret->flags |= FLAG_HAS_TIMESCALE;
   return ret;
@@ -123,12 +147,11 @@ gavl_packet_source_create_source(gavl_packet_source_func_t func,
                                  void * priv, int src_flags,
                                  gavl_packet_source_t * src)
   {
-  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags);
+  gavl_packet_source_t * ret = gavl_packet_source_create(func, priv, src_flags, &src->s);
   ret->timescale = src->timescale;
   ret->flags = src->flags;
   gavl_compression_info_copy(&ret->ci, &src->ci);
-  gavl_video_format_copy(&ret->video_format, &src->video_format);
-  gavl_audio_format_copy(&ret->audio_format, &src->audio_format);
+  
   return ret;
   }
 
@@ -147,37 +170,27 @@ gavl_packet_source_set_lock_funcs(gavl_packet_source_t * src,
 const gavl_compression_info_t *
 gavl_packet_source_get_ci(gavl_packet_source_t * s)
   {
-  if(s->flags & FLAG_HAS_CI)
-    return &s->ci;
-  else
+  if(!(s->flags & FLAG_HAS_CI) && !(gavl_stream_get_compression_info(&s->s, &s->ci)))
     return NULL;
+  else
+    return &s->ci;
   }
  
 const gavl_audio_format_t *
 gavl_packet_source_get_audio_format(gavl_packet_source_t * s)
   {
-  if(s->flags & FLAG_HAS_AFMT)
-    return &s->audio_format;
-  else
-    return NULL;
+  return gavl_stream_get_audio_format(&s->s);
   }
 
 const gavl_video_format_t *
 gavl_packet_source_get_video_format(gavl_packet_source_t * s)
   {
-  if(s->flags & FLAG_HAS_VFMT)
-    return &s->video_format;
-  else
-    return NULL;
+  return gavl_stream_get_video_format(&s->s);
   }
 
 GAVL_PUBLIC int
 gavl_packet_source_get_timescale(gavl_packet_source_t * s)
   {
-  if(s->flags & FLAG_HAS_VFMT)
-    return s->video_format.timescale;
-  else if(s->flags & FLAG_HAS_AFMT)
-    return s->audio_format.samplerate;
   return s->timescale;
   }
 
@@ -193,6 +206,17 @@ gavl_packet_source_read_packet(void*sp, gavl_packet_t ** p)
 
   if(gavl_packet_source_get_eof(s))
     return GAVL_SOURCE_EOF;
+
+  if(s->have_packet)
+    {
+    if(*p)
+      gavl_packet_copy(*p, &s->p);
+    else
+      *p = &s->p;
+    
+    s->have_packet = 0;
+    return GAVL_SOURCE_OK;
+    }
   
   gavl_packet_reset(&s->p);
 
@@ -231,6 +255,29 @@ gavl_packet_source_read_packet(void*sp, gavl_packet_t ** p)
   if(!*p)
     *p = p_dst;
 
+  
+  return GAVL_SOURCE_OK;
+  }
+
+gavl_source_status_t
+gavl_packet_source_peek_packet(void*sp, gavl_packet_t ** p)
+  {
+  gavl_source_status_t st;
+  gavl_packet_t * dummy = NULL;
+  gavl_packet_source_t * s = sp;
+
+  if(!s->have_packet)
+    {
+    if((st = gavl_packet_source_read_packet(sp, &dummy)) != GAVL_SOURCE_OK)
+      return st;
+    }
+  
+  if(*p)
+    gavl_packet_copy(*p, &s->p);
+  else
+    *p = &s->p;
+  
+  s->have_packet = 1;
   
   return GAVL_SOURCE_OK;
   }

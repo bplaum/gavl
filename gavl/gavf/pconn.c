@@ -188,14 +188,14 @@ void gavf_stream_create_packet_src(gavf_t * g, gavf_stream_t * s)
     case GAVL_STREAM_OVERLAY:
     case GAVL_STREAM_VIDEO:
       s->psrc = gavl_packet_source_create_video(func, s, flags,
-                                                &s->ci, s->vfmt);
+                                                &s->ci, s->vfmt, s->type);
       break;
     case GAVL_STREAM_TEXT:
       s->psrc = gavl_packet_source_create_text(func, s, flags,
                                                gavl_stream_get_sample_timescale(s->h));
       break;
     case GAVL_STREAM_MSG:
-      s->psrc = gavl_packet_source_create(func, s, flags);
+      s->psrc = gavl_packet_source_create(func, s, flags, NULL);
       break;
     case GAVL_STREAM_NONE:
       break;
