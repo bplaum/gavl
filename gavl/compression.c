@@ -27,14 +27,14 @@
 #include <gavl/gavl.h>
 #include <gavl/compression.h>
 #include <gavl/utils.h>
+#include <gavl/numptr.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "compression"
 
 
 void gavl_compression_info_free(gavl_compression_info_t * info)
   {
-  if(info->global_header)
-    free(info->global_header);
+  gavl_buffer_free(&info->codec_header);
   }
 
 void gavl_compression_info_init(gavl_compression_info_t * info)
@@ -285,12 +285,12 @@ void gavl_compression_info_dumpi(const gavl_compression_info_t * info, int inden
   fprintf(stderr, "\n");
   
   do_indent(indent+2);
-  fprintf(stderr, "Global header %d bytes", info->global_header_len);
-  if(info->global_header_len)
+  fprintf(stderr, "Global header %d bytes", info->codec_header.len);
+  if(info->codec_header.len)
     {
     fprintf(stderr, " (hexdump follows)\n");
-    gavl_hexdumpi(info->global_header,
-                 info->global_header_len, 16, indent+2);
+    gavl_hexdumpi(info->codec_header.buf,
+                 info->codec_header.len, 16, indent+2);
     }
   else
     fprintf(stderr, "\n");
@@ -306,11 +306,11 @@ void gavl_compression_info_copy(gavl_compression_info_t * dst,
     }
   
   memcpy(dst, src, sizeof(*dst));
-  if(src->global_header)
+  
+  if(src->codec_header.len)
     {
-    dst->global_header = malloc(src->global_header_len + GAVL_PACKET_PADDING);
-    memcpy(dst->global_header, src->global_header, src->global_header_len);
-    memset(dst->global_header + dst->global_header_len, 0, GAVL_PACKET_PADDING);
+    gavl_buffer_init(&dst->codec_header);
+    gavl_buffer_copy(&dst->codec_header, &src->codec_header);
     }
   }
 
@@ -318,27 +318,21 @@ void gavl_compression_info_copy(gavl_compression_info_t * dst,
 void gavl_compression_info_set_global_header(gavl_compression_info_t * dst,
                                              const uint8_t * data, int len)
   {
-  dst->global_header = malloc(len + GAVL_PACKET_PADDING);
-  memcpy(dst->global_header, data, len);
-
-  dst->global_header_len = len;
-  memset(dst->global_header + dst->global_header_len, 0, GAVL_PACKET_PADDING);
-  
+  gavl_buffer_reset(&dst->codec_header);
+  gavl_buffer_append_data_pad(&dst->codec_header, data, len, GAVL_PACKET_PADDING);
   }
 
 void gavl_compression_info_append_global_header(gavl_compression_info_t * dst,
                                                 const uint8_t * data, int len)
   {
-  dst->global_header = realloc(dst->global_header, dst->global_header_len + len + GAVL_PACKET_PADDING);
-  memcpy(dst->global_header + dst->global_header_len, data, len);
-  dst->global_header_len += len;
-  memset(dst->global_header + dst->global_header_len, 0, GAVL_PACKET_PADDING);
+  gavl_buffer_append_data_pad(&dst->codec_header, data, len, GAVL_PACKET_PADDING);
   }
 
 
 
 /* Xiph style lacing */
 
+#if 0
 // Format of xiph lacing:
 // <num_laces - 1>
 // 255 255 233
@@ -439,68 +433,59 @@ static uint8_t * xiph_buffer_put(xiph_buffer_t * buf, int num,
   memset(ptr, 0, GAVL_PACKET_PADDING);
   return ret;
   }
+#endif
 
-void gavl_append_xiph_header(uint8_t ** global_header,
-                             uint32_t * global_header_len,
+void gavl_append_xiph_header(gavl_buffer_t * codec_header,
                              uint8_t * header,
                              int header_len)
   {
-  if(!(*global_header_len))
-    {
-    xiph_buffer_t buf;
-    buf.ptr = header;
-    buf.len = header_len;
-    *global_header = xiph_buffer_put(&buf, 1, global_header_len);
-    }
-  else
-    {
-    uint8_t * ret;
-    int num_segments = (*global_header)[0] + 1;
-    xiph_buffer_t * buf;
-
-    buf = calloc(num_segments + 1, sizeof(*buf));
-
-    xiph_buffer_get(buf, *global_header, *global_header_len);
-    
-    buf[num_segments].ptr = header;
-    buf[num_segments].len = header_len;
-
-    ret = xiph_buffer_put(buf, num_segments+1, global_header_len);
-    free(*global_header);
-    free(buf);
-    *global_header = ret;
-    }
+  gavl_buffer_alloc(codec_header, codec_header->len + header_len + 4);
+  GAVL_32BE_2_PTR(header_len, codec_header->buf + codec_header->len);
+  memcpy(codec_header->buf + codec_header->len + 4, header, header_len);
+  codec_header->len += 4 + header_len;
   }
 
-uint8_t * gavl_extract_xiph_header(uint8_t * global_header,
-                                   int global_header_len,
+uint8_t * gavl_extract_xiph_header(gavl_buffer_t * codec_header,
                                    int idx,
                                    int * header_len)
   {
-  int num_segments;
-  uint8_t * ret;
-  xiph_buffer_t * buf;
-  
-  if(!global_header)
-    return NULL;
-  
-  num_segments = global_header[0] + 1;
-  
-  if((idx < 0) || (idx >= num_segments))
-    return NULL;
-  
-  buf = calloc(num_segments, sizeof(*buf));
-  if(!xiph_buffer_get(buf, global_header, global_header_len))
+  int i;
+  int len;
+  const uint8_t * ptr = codec_header->buf;
+  const uint8_t * end = codec_header->buf + codec_header->len;
+
+  if(codec_header->len < 4)
     {
-    free(buf);
+    /* Error */
     return NULL;
     }
 
-  ret = buf[idx].ptr;
-  *header_len = buf[idx].len;
+  len = GAVL_PTR_2_32BE(ptr);
+  ptr += 4;
   
-  free(buf);
-  return ret;
+  for(i = 0; i < idx; i++)
+    {
+    ptr += len;
+        
+    if(end - ptr < 4)
+      {
+      /* Error */
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot extract xiph header: Buffer too small");
+      return NULL;
+      }
+    
+    len = GAVL_PTR_2_32BE(ptr);
+    ptr += 4;
+    
+    if(end - ptr < len)
+      {
+      /* Error */
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot extract xiph header: Buffer too small");
+      return NULL;
+      }
+    }
+  *header_len = len;
+  return ptr;
   }
 
 void

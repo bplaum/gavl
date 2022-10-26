@@ -1241,19 +1241,19 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   if(!stream_on(dev, dev->buf_type_output))
     goto fail;
         
-  if(ci.global_header)
+  if(ci.codec_header.len)
     {
     gavl_packet_t * p;
 
 #ifdef DUMP_EXTRADATA
-    fprintf(stderr, "Sending global header %d bytes\n", ci.global_header_len);
-    gavl_hexdump(ci.global_header, ci.global_header_len, 16);
+    fprintf(stderr, "Sending global header %d bytes\n", ci.codec_header.len);
+    gavl_hexdump(ci.codec_header.buf, ci.codec_header.len, 16);
 #endif
 
     p = gavl_v4l2_device_get_packet_write(dev);
-    gavl_packet_alloc(p, ci.global_header_len);
-    memcpy(p->buf.buf, ci.global_header, ci.global_header_len);
-    p->buf.len = ci.global_header_len;
+
+    gavl_buffer_reset(&p->buf);
+    gavl_buffer_append(&p->buf, &ci.codec_header);
     
     if(gavl_v4l2_device_put_packet_write(dev) != GAVL_SINK_OK)
       goto fail;

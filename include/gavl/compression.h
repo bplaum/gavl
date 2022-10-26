@@ -122,10 +122,10 @@ typedef struct
   int flags; //!< ORed combination of GAVL_COMPRESSION_* flags
   gavl_codec_id_t id; //!< Codec ID
 
-  //  gavl_buffer_t codec_header;
+  gavl_buffer_t codec_header; //!< Global header
   
-  uint8_t * global_header; //!< Global header
-  uint32_t global_header_len;  //!< Length of global header
+  //  uint8_t * global_header; //!< Global header
+  //  uint32_t global_header_len;  //!< Length of global header
   
   int bitrate;             //!< Needed by some codecs, negative values mean VBR
   int palette_size;            //!< Size of the embedded palette for image codecs
@@ -203,8 +203,7 @@ void gavl_compression_info_append_global_header(gavl_compression_info_t * dst,
  */
 
 GAVL_PUBLIC
-void gavl_append_xiph_header(uint8_t ** global_header,
-                             uint32_t * global_header_len,
+void gavl_append_xiph_header(gavl_buffer_t * codec_header,
                              uint8_t * header,
                              int header_len);
 
@@ -217,8 +216,7 @@ void gavl_append_xiph_header(uint8_t ** global_header,
  */
   
 GAVL_PUBLIC
-uint8_t * gavl_extract_xiph_header(uint8_t * global_header,
-                                   int global_header_len,
+uint8_t * gavl_extract_xiph_header(gavl_buffer_t * codec_header,
                                    int idx,
                                    int * header_len);
   

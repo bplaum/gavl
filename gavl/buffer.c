@@ -96,10 +96,14 @@ void gavl_buffer_append_data_pad(gavl_buffer_t * dst, const uint8_t * data, int 
     memset(dst->buf + dst->len, 0, padding);
   }
 
-
 void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src)
   {
   gavl_buffer_append_data_pad(dst, src->buf, src->len, 0);
+  }
+
+void gavl_buffer_append_pad(gavl_buffer_t * dst, const gavl_buffer_t * src, int padding)
+  {
+  gavl_buffer_append_data_pad(dst, src->buf, src->len, padding);
   }
 
 void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len)

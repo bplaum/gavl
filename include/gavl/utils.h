@@ -286,6 +286,9 @@ GAVL_PUBLIC
 void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src);
 
 GAVL_PUBLIC
+void gavl_buffer_append_pad(gavl_buffer_t * dst, const gavl_buffer_t * src, int padding);
+
+GAVL_PUBLIC
 void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len);
 
 GAVL_PUBLIC
