@@ -20,6 +20,8 @@
  * *****************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
+
 #include <gavl/connectors.h>
 
 #define FLAG_GET_CALLED (1<<0)

@@ -139,7 +139,6 @@ static void do_reset_connection(gavl_http_client_t * c)
   c->total_bytes = 0;
   c->chunk_length = 0;
   c->pos = 0;
-  c->num_redirections = 0;
   c->state        = STATE_START;
   
   gavf_io_clear_eof(c->io);
@@ -147,7 +146,6 @@ static void do_reset_connection(gavl_http_client_t * c)
 
   c->flags &= ~(FLAG_KEEPALIVE|
                 FLAG_CHUNKED|
-                FLAG_GOT_REDIRECTION|
                 FLAG_HAS_RESPONSE_BODY);
   }
 
@@ -173,8 +171,8 @@ static void close_connection(gavl_http_client_t * c)
   c->protocol     = gavl_strrep(c->protocol, NULL);
   c->proxy_host   = gavl_strrep(c->proxy_host, NULL);
   c->proxy_auth   = gavl_strrep(c->proxy_auth, NULL);
-  c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
-  c->flags        = 0;
+  /* Clear all flags except redirection */
+  c->flags        &= FLAG_GOT_REDIRECTION;
   c->port         = -1;
   c->proxy_port   = -1;
 
@@ -786,6 +784,11 @@ static int prepare_connection(gavf_io_t * io,
     /* Keep alive */
     reset_connection(c);
     }
+
+  /* Handle redirect */
+  if((c->flags & FLAG_GOT_REDIRECTION) &&
+     c->redirect_uri)
+    c->real_uri = c->redirect_uri;
   
   if(c->io_int)
     {
@@ -981,8 +984,6 @@ static void prepare_header(gavl_http_client_t * c,
 
   }
 
-
-
 static int handle_response(gavf_io_t * io)
   {
   int ret = 0;
@@ -1110,13 +1111,17 @@ static int handle_response(gavf_io_t * io)
     if(c->redirect_uri)
       free(c->redirect_uri);
 
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got http redirection to %s", new_uri);
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got http redirection (%d) to %s", c->num_redirections, new_uri);
     
     c->redirect_uri = new_uri;
     c->real_uri = c->redirect_uri;
     c->flags |= FLAG_GOT_REDIRECTION;
     
     gavl_dictionary_set_string(gavf_io_info(c->io), GAVL_META_REAL_URI, c->real_uri);
+
+    if(!gavl_dictionary_get_string_i(&c->resp, "Content-Length") &&
+       !gavl_dictionary_get_string_i(&c->resp, "Transfer-encoding"))
+      check_keepalive(c);
     }
   else
     {
@@ -1175,7 +1180,6 @@ gavl_http_client_get_response(gavf_io_t * io)
 static int
 reopen(gavf_io_t * io)
   {
-#if 1
   int result;
 
   gavl_http_client_t * c = gavf_io_get_priv(io);
@@ -1192,51 +1196,6 @@ reopen(gavf_io_t * io)
       return 1;
     
     }
-#else
-      
-  int done;
-  int ret = 0;
-  //  char * uri;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
-
-  c->real_uri = c->uri;
-  if(c->redirect_uri)
-    {
-    free(c->redirect_uri);
-    c->redirect_uri = NULL;
-    }
-  c->num_redirections = 0;
-  
-  while(1)
-    {
-    if(!http_client_open(io))
-      goto fail;
-
-    if(c->redirect_uri)
-      {
-      c->real_uri = c->redirect_uri;
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got http redirection to %s", c->redirect_uri);
-      }
-    else
-      {
-      done = 1;
-      break;
-      }
-    }
-  
-  if(!done)
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections");
-    goto fail;
-    }
-
-  ret = 1;
-  
-  fail:
-  return ret;
-  
-#endif
-  
   }
 
 
@@ -1246,7 +1205,11 @@ gavl_http_client_open(gavf_io_t * io,
                       const char * uri1)
   {
   int result;
+  gavl_http_client_t * c = gavf_io_get_priv(io);
 
+  c->flags &= ~FLAG_GOT_REDIRECTION;
+  c->num_redirections = 0;
+  
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
 
@@ -1404,6 +1367,10 @@ int gavl_http_client_run_async(gavf_io_t * io,
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
+  /* Clear earlier redirections */
+  c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
+  c->flags &= ~FLAG_GOT_REDIRECTION;
+  
   c->state = STATE_START;
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s method: %s", uri, method);
@@ -1417,6 +1384,7 @@ int gavl_http_client_run_async(gavf_io_t * io,
   c->uri = gavl_strrep(c->uri, uri);
   c->uri = gavl_url_extract_http_vars(c->uri, &c->vars_from_uri);
   c->real_uri = c->uri;
+
   
   return 1;
   }
@@ -1438,7 +1406,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     char * host = NULL;
     char * path = NULL;
     int port = -1;
-    
+
     if(!gavl_url_split(c->real_uri,
                        &protocol,
                        NULL,
