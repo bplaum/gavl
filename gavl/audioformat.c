@@ -537,7 +537,7 @@ int gavl_nearest_samplerate(int in_rate, const int * supported)
   {
   int index = 0, min_index = 0, min_diff = 0, diff;
   
-  while(supported[index] >= 0)
+  while(supported[index] > 0)
     {
     if(in_rate == supported[index])
       return supported[index];
