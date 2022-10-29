@@ -286,7 +286,8 @@ void gavl_compression_info_dumpi(const gavl_compression_info_t * info, int inden
   
   do_indent(indent+2);
   fprintf(stderr, "Global header %d bytes", info->codec_header.len);
-  if(info->codec_header.len)
+
+  if(info->codec_header.len && (info->codec_header.len < 256))
     {
     fprintf(stderr, " (hexdump follows)\n");
     gavl_hexdumpi(info->codec_header.buf,
