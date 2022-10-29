@@ -387,11 +387,6 @@ gavl_palette_destroy(gavl_palette_t * pal);
 
 GAVL_PUBLIC void
 gavl_palette_move(gavl_palette_t * dst, gavl_palette_t * src);
-
-
-
-
-
   
 typedef struct
   {
@@ -420,6 +415,8 @@ typedef struct
   uint32_t flags; //!< ORed combination of GAVL_PACKET_* flags
 
   int64_t pts;      //!< Presentation time
+  int64_t dts;      //!< Decoding     time
+  
   int64_t duration; //!< Duration of the contained frame
 
   uint32_t field2_offset; //!< Offset of field 2 for field pictures
