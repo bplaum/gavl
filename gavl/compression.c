@@ -260,8 +260,6 @@ void gavl_compression_info_dumpi(const gavl_compression_info_t * info, int inden
     do_indent(indent+2);
     fprintf(stderr, "VBV size:        %d bytes\n",
             info->video_buffer_size);
-    do_indent(indent+2);
-    fprintf(stderr, "max ref frames:  %d\n", info->max_ref_frames);
 
     do_indent(indent+2);
     fprintf(stderr, "Frame types:     I");
@@ -278,11 +276,6 @@ void gavl_compression_info_dumpi(const gavl_compression_info_t * info, int inden
             (info->flags & GAVL_COMPRESSION_SBR ? "Yes" : "No"));
     }
 
-  do_indent(indent+2);
-  fprintf(stderr, "max_packet_size: %d", info->max_packet_size);
-  if(!info->max_packet_size)
-    fprintf(stderr, " (unknown)");
-  fprintf(stderr, "\n");
   
   do_indent(indent+2);
   fprintf(stderr, "Global header %d bytes", info->codec_header.len);
@@ -452,8 +445,8 @@ uint8_t * gavl_extract_xiph_header(gavl_buffer_t * codec_header,
   {
   int i;
   int len;
-  const uint8_t * ptr = codec_header->buf;
-  const uint8_t * end = codec_header->buf + codec_header->len;
+  uint8_t * ptr = codec_header->buf;
+  uint8_t * end = codec_header->buf + codec_header->len;
 
   if(codec_header->len < 4)
     {

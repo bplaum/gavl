@@ -1108,7 +1108,7 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev,
 #endif
 
 int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
-                                 gavl_packet_source_t * psrc)
+                                  gavl_packet_source_t * psrc)
   {
   int format_packets = 0;
   

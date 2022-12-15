@@ -67,14 +67,32 @@ void gavl_packet_free(gavl_packet_t * p)
 
 void gavl_packet_reset(gavl_packet_t * p)
   {
-  gavl_buffer_t buf_save;
 
   free_extradata(p);
   
-  memcpy(&buf_save, &p->buf, sizeof(p->buf));
-  gavl_packet_init(p);
-  memcpy(&p->buf, &buf_save, sizeof(p->buf));
   gavl_buffer_reset(&p->buf);
+
+  p->pts     = GAVL_TIME_UNDEFINED;
+  p->dts     = GAVL_TIME_UNDEFINED;
+  p->pes_pts = GAVL_TIME_UNDEFINED;
+  
+  p->timecode = GAVL_TIMECODE_UNDEFINED;
+  p->duration = -1;
+  p->position = -1;
+  p->flags = 0;
+
+  p->field2_offset = 0;    //!< Offset of field 2 for field pictures
+  p->header_size = 0;      //!< Size of a repeated global header (or 0)
+  p->sequence_end_pos = 0; //!< Position of sequence end code if any
+
+  p->interlace_mode = GAVL_INTERLACE_NONE; //!< Interlace mode for mixed interlacing
+  p->timecode = GAVL_TIMECODE_UNDEFINED; //!< Timecode
+
+  gavl_rectangle_i_init(&p->src_rect);
+  p->dst_x = 0;
+  p->dst_y = 0;
+  p->id = -1;
+  
   }
 
 void gavl_packet_copy(gavl_packet_t * dst,
@@ -120,6 +138,10 @@ static const char * coding_type_strings[4] =
 
 void gavl_packet_dump(const gavl_packet_t * p)
   {
+  gavl_dprintf("pos: %"PRId64" ", p->position);
+
+  gavl_dprintf("K: %d, ", !!(p->flags & GAVL_PACKET_KEYFRAME));
+  
   gavl_dprintf("sz: %d ", p->buf.len);
 
   if(p->pts != GAVL_TIME_UNDEFINED)
@@ -127,11 +149,27 @@ void gavl_packet_dump(const gavl_packet_t * p)
   else
     gavl_dprintf("pts: None ");
 
+  if(p->dts != GAVL_TIME_UNDEFINED)
+    gavl_dprintf("dts: %"PRId64" ", p->dts);
+  else
+    gavl_dprintf("dts: None ");
+
+  if(p->pes_pts != GAVL_TIME_UNDEFINED)
+    gavl_dprintf("pes_pts: %"PRId64" ", p->pes_pts);
+  else
+    gavl_dprintf("pes_pts: None ");
+  
   gavl_dprintf("dur: %"PRId64, p->duration);
 
-  gavl_dprintf(" head: %d, f2: %d",
-          p->header_size, p->field2_offset);
+  if(p->header_size)
+    gavl_dprintf(", head: %d", p->header_size);
 
+  if(p->sequence_end_pos)
+    gavl_dprintf(", end: %d", p->sequence_end_pos);
+
+  if(p->field2_offset)
+    gavl_dprintf(" f2: %d", p->field2_offset);
+  
   gavl_dprintf(" type: %s ", coding_type_strings[p->flags & GAVL_PACKET_TYPE_MASK]);
 
   if(p->flags & GAVL_PACKET_NOOUTPUT)
@@ -139,6 +177,14 @@ void gavl_packet_dump(const gavl_packet_t * p)
 
   if(p->flags & GAVL_PACKET_REF)
     gavl_dprintf(" ref");
+
+  if(p->flags & GAVL_PACKET_FIELD_PIC)
+    gavl_dprintf(", field-pic");
+
+  if(p->interlace_mode == GAVL_INTERLACE_TOP_FIRST)
+    gavl_dprintf(", il: t");
+  else if(p->interlace_mode == GAVL_INTERLACE_BOTTOM_FIRST)
+    gavl_dprintf(", il: b");
   
   if(p->src_rect.w && p->src_rect.h)
     {
@@ -164,10 +210,9 @@ void gavl_packet_save(const gavl_packet_t * p,
 void gavl_packet_init(gavl_packet_t * p)
   {
   memset(p, 0, sizeof(*p));
-  p->timecode   = GAVL_TIMECODE_UNDEFINED;
-  p->pts        = GAVL_TIMECODE_UNDEFINED;
-
   p->buf_idx = -1;
+  
+  gavl_packet_reset(p);
   }
 
 gavl_packet_t * gavl_packet_create()
@@ -240,4 +285,11 @@ void * gavl_packet_get_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t
       return p->ext_data[i].data;
     }
   return NULL;
+  }
+
+void gavl_packet_merge_field2(gavl_packet_t * p, const gavl_packet_t * field2)
+  {
+  p->field2_offset = p->buf.len;
+  gavl_buffer_append_pad(&p->buf, &field2->buf, GAVL_PACKET_PADDING);
+  p->flags &= ~GAVL_PACKET_FIELD_PIC;
   }

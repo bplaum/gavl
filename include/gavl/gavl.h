@@ -1496,6 +1496,13 @@ typedef struct
   double h; /*!< Height */
   } gavl_rectangle_f_t;
 
+GAVL_PUBLIC
+void gavl_rectangle_i_init(gavl_rectangle_i_t * r);
+
+GAVL_PUBLIC
+void gavl_rectangle_f_init(gavl_rectangle_f_t * r);
+
+  
 /*! \brief Crop an integer rectangle so it fits into the image size of a video format
  * \ingroup rectangle
  * \param r An integer rectangle

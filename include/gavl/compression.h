@@ -124,17 +124,11 @@ typedef struct
 
   gavl_buffer_t codec_header; //!< Global header
   
-  //  uint8_t * global_header; //!< Global header
-  //  uint32_t global_header_len;  //!< Length of global header
-  
   int bitrate;             //!< Needed by some codecs, negative values mean VBR
   int palette_size;            //!< Size of the embedded palette for image codecs
   int pre_skip;                //!< Samples to skip at the start
   
   int video_buffer_size;   //!< VBV buffer size for video (in BYTES)
-  int max_packet_size;     //!< Maximum packet size or 0 if unknown
-  int max_ref_frames;      //!< Maximum reference frames (if > 2)
-  
   } gavl_compression_info_t;
 
 /** \brief Initialize a compression info
@@ -334,6 +328,10 @@ gavl_codec_id_t gavl_get_compression(int index);
 
 #define GAVL_PACKET_HAS_FDS  (1<<7) //!< Packet contains file descriptors (can only be sent via UNIX-Sockets)
 
+#define GAVL_PACKET_FIELD_PIC (1<<8) //!< Packet is a field picture
+#define GAVL_PACKET_SKIP      (1<<9) //!< Undecodable packet (e.g. before first keyframe)
+
+  
 #define GAVL_PACKET_FLAG_PRIV (1<<16) //!< Private flag (defined outside of gavl)
   
 #define GAVL_PACKET_PADDING  32 //!< Packets are padded in memory with this many zero bytes
@@ -413,9 +411,12 @@ typedef struct
   gavl_buffer_t buf; //!< Data
 
   uint32_t flags; //!< ORed combination of GAVL_PACKET_* flags
-
+  
+  int64_t position;  //!< Position of the packet in the file. The exact meaning is format dependent
+  
   int64_t pts;      //!< Presentation time
   int64_t dts;      //!< Decoding     time
+  int64_t pes_pts;  //!< PTS from the PES stream (probably in another scale)
   
   int64_t duration; //!< Duration of the contained frame
 
@@ -450,6 +451,8 @@ void gavl_packet_init(gavl_packet_t * p);
 GAVL_PUBLIC
 gavl_packet_t * gavl_packet_create();
 
+
+  
 GAVL_PUBLIC
 void gavl_packet_destroy(gavl_packet_t * p);
   
@@ -478,6 +481,10 @@ void * gavl_packet_add_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t
 GAVL_PUBLIC
 void * gavl_packet_get_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t type);
 
+/* Merge two consecutive fields into one */  
+GAVL_PUBLIC
+void gavl_packet_merge_field2(gavl_packet_t * p, const gavl_packet_t * field2);
+ 
   
 /** \brief Copy a packet
  *  \param dst Destination
@@ -572,6 +579,9 @@ GAVL_PUBLIC
 void gavl_stream_stats_update(gavl_stream_stats_t*,const gavl_packet_t*p);
 
 GAVL_PUBLIC
+void gavl_stream_stats_update_end(gavl_stream_stats_t * f, const gavl_packet_t * p);
+  
+GAVL_PUBLIC
 void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
                                      int64_t pts, int64_t duration, int data_len,
                                      int flags);
@@ -635,9 +645,38 @@ void gavl_compression_info_to_dictionary(const gavl_compression_info_t * info, g
 
 GAVL_PUBLIC
 void gavl_compression_info_from_dictionary(gavl_compression_info_t * info, const gavl_dictionary_t * dict);
-
 #endif
+
+typedef struct
+  {
+  int num_entries;
+  int entries_alloc;
+
+  struct
+    {
+    int64_t position;
+    int64_t pts;
+    } * entries;
   
+  } gavl_seek_index_t;
+  
+GAVL_PUBLIC
+void gavl_seek_index_append(gavl_seek_index_t * idx,
+                            const gavl_packet_t * pkt, int compression_flags);
+
+GAVL_PUBLIC
+int gavl_seek_index_seek(const gavl_seek_index_t * idx,
+                         int64_t pts);
+
+GAVL_PUBLIC
+void gavl_seek_index_free(gavl_seek_index_t * idx);
+
+GAVL_PUBLIC
+void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf);
+
+GAVL_PUBLIC
+int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf);
+
 /**
  *  @}
  */

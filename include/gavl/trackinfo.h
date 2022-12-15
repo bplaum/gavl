@@ -49,7 +49,21 @@ int gavl_track_get_num_streams(const gavl_dictionary_t * d, gavl_stream_type_t t
 
 GAVL_PUBLIC int
 gavl_track_get_num_streams_all(const gavl_dictionary_t * d);
-  
+
+/* Support for external streams */
+GAVL_PUBLIC gavl_dictionary_t *
+gavl_track_append_external_stream(gavl_dictionary_t * track,
+                                  gavl_stream_type_t type,
+                                  const char * location);
+
+GAVL_PUBLIC const char *
+gavl_stream_get_external_uri(const gavl_dictionary_t * stream);
+
+GAVL_PUBLIC int
+gavl_track_get_num_external_streams(const gavl_dictionary_t * d);
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_track_get_external_stream(const gavl_dictionary_t * d, int i);
 
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_track_get_stream_all(const gavl_dictionary_t * d, int idx);
@@ -66,6 +80,25 @@ gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale);
 
 GAVL_PUBLIC void
 gavl_stream_get_start_pts(const gavl_dictionary_t * s, int64_t * pts, int * scale);
+
+/*
+    Timestamp generation modes (set by the demultiplexer and used by
+    the packetbuffer for the PTS generation)
+ */
+
+typedef enum
+  {
+    GAVL_TS_DEFAULT     = 0, // PTS and Duration are valid 
+    GAVL_TS_DTS_ONLY    = 1, // DTS is given instead of PTS
+    GAVL_TS_NO_DURATION = 2, // No packet durations
+  } gavl_ts_mode_t;
+
+GAVL_PUBLIC 
+gavl_ts_mode_t gavl_stream_get_ts_mode(const gavl_dictionary_t * s);
+
+GAVL_PUBLIC 
+void gavl_stream_set_ts_mode(gavl_dictionary_t * s, gavl_ts_mode_t mode);
+
 
 /* Get the start time of the stream */
 GAVL_PUBLIC 
@@ -509,6 +542,34 @@ void gavl_track_set_multivariant(gavl_dictionary_t * dict);
 
 GAVL_PUBLIC
 gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict);
+
+/* Compression tags (like AVI four character codes etc.) */
+
+GAVL_PUBLIC
+int gavl_stream_get_compression_tag(const gavl_dictionary_t * s);
+
+GAVL_PUBLIC
+void gavl_stream_set_compression_tag(gavl_dictionary_t * s, int tag);
+
+GAVL_PUBLIC
+void gavl_stream_set_default_packet_timescale(gavl_dictionary_t * s);
+
+GAVL_PUBLIC
+void gavl_stream_set_sample_timescale(gavl_dictionary_t * s);
+
+GAVL_PUBLIC
+void gavl_stream_set_audio_bits(gavl_dictionary_t * s, int bits);
+
+GAVL_PUBLIC
+int gavl_stream_get_audio_bits(const gavl_dictionary_t * s);
+
+GAVL_PUBLIC
+int gavl_stream_is_continuous(const gavl_dictionary_t * s);
+
+
+#define GAVL_MK_FOURCC(a, b, c, d) ((a<<24)|(b<<16)|(c<<8)|d)
+#define GAVL_WAVID_2_FOURCC(id)    GAVL_MK_FOURCC(0x00, 0x00, (id>>8), (id&0xff))
+#define GAVL_FOURCC_2_WAVID(f)     (f & 0xffff)
 
 /* */
 

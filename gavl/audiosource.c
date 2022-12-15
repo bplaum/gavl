@@ -76,9 +76,6 @@ struct gavl_audio_source_s
 
   gavl_connector_free_func_t free_func;
 
-  pthread_mutex_t eof_mutex;
-  int eof;
-  
   int have_lock;
   
   int64_t pts_offset;
@@ -97,7 +94,6 @@ gavl_audio_source_create(gavl_audio_source_func_t func,
   ret->src_flags = src_flags;
   gavl_audio_format_copy(&ret->src_format, src_format);
   ret->cnv = gavl_audio_converter_create();
-  pthread_mutex_init(&ret->eof_mutex, NULL);
 
   ret->skip_time = GAVL_TIME_UNDEFINED;
   
@@ -204,8 +200,6 @@ void gavl_audio_source_destroy(gavl_audio_source_t * s)
 
   if(s->priv && s->free_func)
     s->free_func(s->priv);
-
-  pthread_mutex_destroy(&s->eof_mutex);
 
   free(s);
   }
@@ -496,10 +490,7 @@ gavl_source_status_t
 gavl_audio_source_read_frame(void * sp, gavl_audio_frame_t ** frame)
   {
   gavl_audio_source_t * s = sp;
-
-  if(gavl_audio_source_get_eof(s))
-    return GAVL_SOURCE_EOF;
-
+  
   if(!(s->flags & FLAG_DST_SET))
     gavl_audio_source_set_dst(s, 0, NULL);
   return read_frame_internal(s, frame, s->dst_format.samples_per_frame);
@@ -552,6 +543,7 @@ gavl_audio_source_skip_to(gavl_audio_source_t * s,
   s->flags &= ~FLAG_PASSTHROUGH;
   }
 
+#if 0
 void gavl_audio_source_set_eof(gavl_audio_source_t * src, int eof)
   {
   pthread_mutex_lock(&src->eof_mutex);
@@ -567,3 +559,4 @@ int gavl_audio_source_get_eof(gavl_audio_source_t * src)
   pthread_mutex_unlock(&src->eof_mutex);
   return ret;
   }
+#endif

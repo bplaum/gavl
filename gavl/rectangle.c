@@ -34,6 +34,17 @@ void gavl_rectangle_f_dump(const gavl_rectangle_f_t * r)
   fprintf(stderr, "%fx%f+%f+%f", r->w, r->h, r->x, r->y);
   }
 
+void gavl_rectangle_i_init(gavl_rectangle_i_t * r)
+  {
+  memset(r, 0, sizeof(*r));
+  }
+
+void gavl_rectangle_f_init(gavl_rectangle_f_t * r)
+  {
+  memset(r, 0, sizeof(*r));
+  }
+
+
 void gavl_rectangle_i_crop_to_format(gavl_rectangle_i_t * r, const gavl_video_format_t * format)
   {
   if(r->x < 0)

@@ -77,7 +77,24 @@ void gavl_stream_stats_init(gavl_stream_stats_t * f)
   f->size_min     = -1;
   f->size_max     = -1;
   }
-  
+
+void gavl_stream_stats_update_end(gavl_stream_stats_t * f, const gavl_packet_t * p)
+  {
+  if((p->pts != GAVL_TIME_UNDEFINED) && !(p->flags & GAVL_PACKET_NOOUTPUT))
+    {
+    if(p->duration != GAVL_TIME_UNDEFINED)
+      {
+      if(f->pts_end < p->pts + p->duration)
+        f->pts_end = p->pts + p->duration;
+      }
+    else
+      {
+      if(f->pts_end < p->pts)
+        f->pts_end = p->pts;
+      }
+    }
+  }
+
 void gavl_stream_stats_update(gavl_stream_stats_t * f, const gavl_packet_t * p)
   {
   gavl_stream_stats_update_params(f, p->pts, p->duration, p->buf.len,
@@ -93,7 +110,7 @@ void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
 
   if((duration > 0) && !(flags & GAVL_PACKET_NOOUTPUT))
     {
-    if((f->pts_end == GAVL_TIME_UNDEFINED) || (f->pts_end < pts + duration))
+    if(f->pts_end < pts + duration)
       f->pts_end = pts + duration;
 
     if((f->duration_min == GAVL_TIME_UNDEFINED) ||
@@ -126,9 +143,6 @@ void gavl_stream_stats_apply_generic(gavl_stream_stats_t * f,
                                      gavl_compression_info_t * ci,
                                      gavl_dictionary_t * m)
   {
-  if(ci && (ci->max_packet_size <= 0))
-    ci->max_packet_size = f->size_max;
-
   if(f->pts_end > 0)
     {
     int64_t duration = f->pts_end;
@@ -152,7 +166,6 @@ static void calc_bitrate(gavl_stream_stats_t * f, int timescale,
     gavl_dictionary_set_float(m, GAVL_META_AVG_BITRATE, avg_rate);
     }
   }
-                         
 
 void gavl_stream_stats_apply_audio(gavl_stream_stats_t * f, 
                                    const gavl_audio_format_t * fmt,

@@ -131,20 +131,19 @@ static int get_audio_sample_size(const gavl_audio_format_t * fmt,
     return gavl_compression_get_sample_size(ci->id);
   }
 
+#if 0
 int gavf_get_max_audio_packet_size(const gavl_audio_format_t * fmt,
                                    const gavl_compression_info_t * ci)
   {
   int sample_size = 0;
 
-  if(ci && ci->max_packet_size)
-    return ci->max_packet_size;
 
   sample_size =
     get_audio_sample_size(fmt, ci);
   
   return fmt->samples_per_frame * fmt->num_channels * sample_size;
   }
-
+#endif
 
 static void set_implicit_stream_fields(gavf_stream_t * s)
   {
@@ -173,9 +172,6 @@ static void gavf_stream_init_audio(gavf_t * g, gavf_stream_t * s)
   
   s->timescale = s->afmt->samplerate;
   
-  s->ci.max_packet_size =
-    gavf_get_max_audio_packet_size(s->afmt, &s->ci);
-
   sample_size = get_audio_sample_size(s->afmt, &s->ci);
   
   /* Figure out the packet duration */
@@ -203,7 +199,7 @@ static void gavf_stream_init_audio(gavf_t * g, gavf_stream_t * s)
     }
   }
 
-GAVL_PUBLIC 
+#if 0
 int gavf_get_max_video_packet_size(const gavl_video_format_t * fmt,
                                    const gavl_compression_info_t * ci)
   {
@@ -213,7 +209,7 @@ int gavf_get_max_video_packet_size(const gavl_video_format_t * fmt,
     return gavl_video_format_get_image_size(fmt);
   return 0;
   }
-
+#endif
 
 static void gavf_stream_init_video(gavf_t * g, gavf_stream_t * s,
                                    int num_streams)
@@ -242,9 +238,6 @@ static void gavf_stream_init_video(gavf_t * g, gavf_stream_t * s,
        (s->type == GAVL_STREAM_OVERLAY))
       s->flags |= STREAM_FLAG_DISCONTINUOUS;
     }
-  
-  s->ci.max_packet_size =
-    gavf_get_max_video_packet_size(s->vfmt, &s->ci);
   
   if(GAVF_HAS_FLAG(g, GAVF_FLAG_WRITE))
     {

@@ -186,6 +186,7 @@ scale.c \
 scale_context.c \
 scale_kernels.c \
 scale_table.c \
+seekindex.c \
 shm.c \
 socket.c \
 ssim.c \

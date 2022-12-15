@@ -303,6 +303,16 @@ gavf_io_t * gavf_io_create_mem_read(const uint8_t * ptr, int len);
 GAVL_PUBLIC
 gavf_io_t * gavf_io_create_mem_write();
 
+/* Buffer I/O */
+
+GAVL_PUBLIC
+gavf_io_t * gavf_io_create_buffer_write(gavl_buffer_t * buf);
+
+GAVL_PUBLIC
+gavf_io_t * gavf_io_create_buffer_read(const gavl_buffer_t * buf);
+
+
+
 GAVL_PUBLIC
 gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int flags);
 
@@ -785,18 +795,6 @@ gavf_get_audio_source(gavf_t *, uint32_t id);
 
 GAVL_PUBLIC gavl_video_source_t *
 gavf_get_video_source(gavf_t *, uint32_t id);
-
-/* Utility functions */
-
-GAVL_PUBLIC 
-int gavf_get_max_audio_packet_size(const gavl_audio_format_t * fmt,
-                                   const gavl_compression_info_t * ci);
-
-GAVL_PUBLIC 
-int gavf_get_max_video_packet_size(const gavl_video_format_t * fmt,
-                                   const gavl_compression_info_t * ci);
-
-
 
 /* Ultra simple image format */
 

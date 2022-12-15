@@ -157,7 +157,7 @@ get_audio_func(void * priv)
   s->p = gavl_packet_sink_get_packet(s->psink);
   
   gavl_packet_reset(s->p);
-  gavl_packet_alloc(s->p, s->ci.max_packet_size);
+  gavl_packet_alloc(s->p, gavl_audio_format_buffer_size(s->afmt));
 
   if(!s->aframe)
     s->aframe = gavl_audio_frame_create(NULL);
@@ -177,7 +177,7 @@ put_audio_func(void * priv, gavl_audio_frame_t * frame)
   gavf_stream_t * s = priv;
   
   gavf_audio_frame_to_packet_metadata(s->aframe, s->p);
-  s->p->buf.len = s->ci.max_packet_size;
+  s->p->buf.len = gavl_audio_format_buffer_size(s->afmt);
   
   gavf_shrink_audio_frame(s->aframe, s->p, s->afmt);
 
@@ -218,8 +218,8 @@ get_video_func(void * priv)
 
   s->p = gavl_packet_sink_get_packet(s->psink);
   gavl_packet_reset(s->p);
-  gavl_packet_alloc(s->p, s->ci.max_packet_size);
-
+  gavl_packet_alloc(s->p, gavl_video_format_get_image_size(s->vfmt));
+  
   if(!s->vframe)
     s->vframe = gavl_video_frame_create(NULL);
   s->vframe->strides[0] = 0;
@@ -234,7 +234,8 @@ put_video_func(void * priv, gavl_video_frame_t * frame)
   gavl_sink_status_t st;
   gavf_stream_t * s = priv;
   gavl_video_frame_to_packet_metadata(frame, s->p);
-  s->p->buf.len = s->ci.max_packet_size;
+  s->p->buf.len = gavl_video_format_get_image_size(s->vfmt);
+  
   st = gavl_packet_sink_put_packet(s->psink, s->p);
   s->p = NULL;
   return st;
@@ -248,7 +249,7 @@ put_overlay_func(void * priv, gavl_video_frame_t * frame)
 
   s->p = gavl_packet_sink_get_packet(s->psink);
   gavl_packet_reset(s->p);
-  gavl_packet_alloc(s->p, s->ci.max_packet_size);
+  gavl_packet_alloc(s->p, gavl_video_format_get_image_size(s->vfmt));
   gavf_overlay_to_packet(frame, s->p, s->vfmt);
   st = gavl_packet_sink_put_packet(s->psink, s->p);
   s->p = NULL;

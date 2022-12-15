@@ -81,6 +81,8 @@ gavl_packet_sink_get_packet(gavl_packet_sink_t * s)
     
     if(s->unlock_func)
       s->unlock_func(s->lock_priv);
+    
+    gavl_packet_reset(ret);
     return ret;
     }
   else

@@ -168,11 +168,6 @@ gavl_video_source_create(gavl_video_source_func_t func,
 GAVL_PUBLIC
 void gavl_video_source_set_pts_offset(gavl_video_source_t * src, int64_t offset);
   
-GAVL_PUBLIC
-void gavl_video_source_set_eof(gavl_video_source_t * src, int eof);
-
-GAVL_PUBLIC
-int gavl_video_source_get_eof(gavl_video_source_t * src);
 
 GAVL_PUBLIC
 void gavl_video_source_drain(gavl_video_source_t * s);
@@ -334,11 +329,6 @@ gavl_audio_source_create(gavl_audio_source_func_t func,
                          void * priv, int src_flags,
                          const gavl_audio_format_t * src_format);
 
-GAVL_PUBLIC
-void gavl_audio_source_set_eof(gavl_audio_source_t * src, int eof);
-
-GAVL_PUBLIC
-int gavl_audio_source_get_eof(gavl_audio_source_t * src);
 
 GAVL_PUBLIC
 void gavl_audio_source_drain(gavl_audio_source_t * s);
@@ -539,18 +529,24 @@ gavl_packet_source_create(gavl_packet_source_func_t func,
 GAVL_PUBLIC
 void gavl_packet_source_set_pts_offset(gavl_packet_source_t * src, int64_t offset);
 
-GAVL_PUBLIC
-void gavl_packet_source_set_eof(gavl_packet_source_t * src, int eof);
-
-GAVL_PUBLIC
-int gavl_packet_source_get_eof(gavl_packet_source_t * src);
 
 GAVL_PUBLIC
 void gavl_packet_source_drain(gavl_packet_source_t * src);
 
+/* Call after seeking */
+GAVL_PUBLIC
+void gavl_packet_source_reset(gavl_packet_source_t * s);
+  
 GAVL_PUBLIC
 void gavl_packet_source_drain_nolock(gavl_packet_source_t * src);
-  
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_packet_source_get_stream(gavl_packet_source_t * s);
+
+GAVL_PUBLIC gavl_dictionary_t *
+gavl_packet_source_get_stream_nc(gavl_packet_source_t * s);
+
+#if 0
 /** \brief Create an audio packet source
  *  \param func Callback for reading one frame
  *  \param priv Client data to be passed to func
@@ -594,6 +590,8 @@ gavl_packet_source_t *
 gavl_packet_source_create_text(gavl_packet_source_func_t func,
                                void * priv, int src_flags, int timescale);
 
+#endif
+  
 /** \brief Create a packet source from another packet source
  *  \param func Callback for reading one frame
  *  \param priv Client data to be passed to func
@@ -639,8 +637,8 @@ gavl_packet_source_set_free_func(gavl_packet_source_t * src,
  *  \returns The compression info or NULL
  */
   
-GAVL_PUBLIC const gavl_compression_info_t *
-gavl_packet_source_get_ci(gavl_packet_source_t * s);
+// GAVL_PUBLIC const gavl_compression_info_t *
+// gavl_packet_source_get_ci(gavl_packet_source_t * s);
 
 /** \brief Get the audio format
  *  \param s A packet source
@@ -1328,13 +1326,40 @@ gavl_packet_connector_get_source_status(gavl_packet_connector_t * c);
 typedef struct gavl_packet_buffer_s 
 gavl_packet_buffer_t;
 
-gavl_packet_buffer_t * gavl_packet_buffer_create();
+GAVL_PUBLIC 
+gavl_packet_buffer_t * gavl_packet_buffer_create(const gavl_dictionary_t * stream_info);
+
+GAVL_PUBLIC 
 void gavl_packet_buffer_destroy(gavl_packet_buffer_t *);
 
-gavl_packet_sink_t * gavl_packet_buffer_get_sink(gavl_packet_buffer_t *);
-gavl_packet_source_t * gavl_packet_buffer_get_source(gavl_packet_buffer_t *);
-  
+GAVL_PUBLIC 
+void gavl_packet_buffer_flush(gavl_packet_buffer_t *);
 
+GAVL_PUBLIC 
+void gavl_packet_buffer_clear(gavl_packet_buffer_t *);
+  
+GAVL_PUBLIC 
+gavl_packet_sink_t * gavl_packet_buffer_get_sink(gavl_packet_buffer_t *);
+
+GAVL_PUBLIC 
+gavl_packet_source_t * gavl_packet_buffer_get_source(gavl_packet_buffer_t *);
+
+/* Set output PTS (called after seeking) */
+
+GAVL_PUBLIC 
+void gavl_packet_buffer_set_out_pts(gavl_packet_buffer_t * buf, int64_t pts);
+
+/*
+ *  Mark the last packet with GAVL_PACKET_LAST.
+ *  Introduces a delay of 1 for low-delay streams
+ */
+  
+GAVL_PUBLIC 
+void gavl_packet_buffer_set_mark_last(gavl_packet_buffer_t * buf, int mark);
+
+GAVL_PUBLIC 
+void gavl_packet_buffer_set_calc_frame_durations(gavl_packet_buffer_t * buf, int calc);
+  
 /**
  * @}
  */
