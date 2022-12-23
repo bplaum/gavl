@@ -291,10 +291,11 @@ static void add_stream_to_timeline(gavl_dictionary_t * edl_stream,
   gavl_edl_segment_set_url(seg, uri);
   }
 
-static void add_streams_to_timeline(gavl_dictionary_t * edl_track,
-                                    const gavl_dictionary_t * track,
-                                    gavl_stream_type_t type, int64_t edl_duration)
+static int add_streams_to_timeline(gavl_dictionary_t * edl_track,
+                                   const gavl_dictionary_t * track,
+                                   gavl_stream_type_t type, int64_t edl_duration)
   {
+  int ret = 0;
   int i, num;
   
   gavl_dictionary_t * s_edl;          // Stream (edl, dst)
@@ -305,11 +306,11 @@ static void add_streams_to_timeline(gavl_dictionary_t * edl_track,
   
   m = gavl_track_get_metadata(track);
   
-  if(!gavl_dictionary_get_src(m, GAVL_META_SRC, 0, NULL, &location))
-    return;
+  if(!gavl_metadata_get_src(m, GAVL_META_SRC, 0, NULL, &location))
+    return 0;
   
   if(!gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &track_duration))
-    return;
+    return 0;
 
   num = gavl_track_get_num_streams(edl_track, type);
   
@@ -321,6 +322,41 @@ static void add_streams_to_timeline(gavl_dictionary_t * edl_track,
       break;
     
     add_stream_to_timeline(s_edl, s_track, i, edl_duration, track_duration, location);
+    ret++;
+    }
+  return ret;
+  }
+
+static void add_external_streams_to_timeline(gavl_dictionary_t * edl_track,
+                                             const gavl_dictionary_t * track,
+                                             int64_t edl_duration, int start_idx)
+  {
+  int i, num;
+  
+  gavl_dictionary_t * s_edl;          // Stream (edl, dst)
+  const gavl_dictionary_t * s_track;  // Stream (track, src)
+  const char * location = NULL;
+  const gavl_dictionary_t * m;
+  const gavl_dictionary_t * sm;
+  gavl_time_t track_duration;
+  
+  m = gavl_track_get_metadata(track);
+  
+  if(!gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &track_duration))
+    return;
+
+  num = gavl_track_get_num_external_streams(track);
+  
+  for(i = 0; i < num; i++)
+    {
+    s_edl = gavl_track_get_stream_all_nc(edl_track, i + start_idx);
+
+    if(!(s_track = gavl_track_get_external_stream(track, i)) ||
+       !(sm = gavl_stream_get_metadata(s_track)) ||
+       !gavl_metadata_get_src(sm, GAVL_META_SRC, 0, NULL, &location))
+      return;
+    
+    add_stream_to_timeline(s_edl, s_track, 0, edl_duration, track_duration, location);
     }
   }
 
@@ -340,6 +376,7 @@ static const char * clear_stream_metadata_fields[] =
     GAVL_META_BITRATE,
     GAVL_META_AVG_BITRATE,
     GAVL_META_SOFTWARE,
+    GAVL_META_SRC,
     NULL
   };
 
@@ -358,50 +395,102 @@ static void stream_clear_foreach_func(void * priv, int idx, const gavl_value_t *
   
   }
 
+static void add_stream_func(void * priv, int idx, const gavl_value_t * val)
+  {
+  const gavl_dictionary_t * src;
+  gavl_stream_type_t type;
+  gavl_dictionary_t * track = priv;
+  
+  if((src = gavl_value_get_dictionary(val)))
+    {
+    gavl_dictionary_t * dst;
+
+    type = gavl_stream_get_type(src);
+    switch(type)
+      {
+      case GAVL_STREAM_AUDIO:
+      case GAVL_STREAM_VIDEO:
+      case GAVL_STREAM_TEXT:
+      case GAVL_STREAM_OVERLAY:
+        dst = gavl_track_append_stream(track, gavl_stream_get_type(src));
+        gavl_dictionary_reset(dst);
+        gavl_dictionary_copy(dst, src);
+        break;
+      case GAVL_STREAM_MSG:
+      case GAVL_STREAM_NONE:
+        break;
+      }
+    }
+  }
+
+
 void gavl_edl_append_track_to_timeline(gavl_dictionary_t * edl_track,
                                        const gavl_dictionary_t * track, int init)
   {
   gavl_time_t edl_duration;
   const gavl_dictionary_t * m;
+  gavl_dictionary_t * edl_m;
   const char * klass;
   finalize_t f;
+  int idx;
   memset(&f, 0, sizeof(f));
+
+  if(!(m = gavl_track_get_metadata(track)))
+    return;
   
   if(init)
     {
-    gavl_dictionary_t * edl_m;
-    gavl_array_t * arr;
-    
+    const gavl_array_t * track_streams;
+    gavl_array_t * edl_streams;
+    edl_duration = 0;
     gavl_dictionary_reset(edl_track);
-    gavl_dictionary_copy(edl_track, track);
-
-
+    //  gavl_dictionary_copy(edl_track, track);
+    
     /* Clear metadata (remove src, clear durations etc) */
-    edl_m = gavl_track_get_metadata_nc(edl_track);
-
+    edl_m = gavl_dictionary_get_dictionary_create(edl_track, GAVL_META_METADATA);
+    gavl_dictionary_copy(edl_m, m);
+    
     if((klass = gavl_dictionary_get_string(edl_m, GAVL_META_MEDIA_CLASS)))
       {
       if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
         gavl_dictionary_set_string(edl_m, GAVL_META_MEDIA_CLASS,
-                                   GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART);
+                                   GAVL_META_MEDIA_CLASS_MOVIE);
       }
     
     gavl_dictionary_delete_fields(edl_m, clear_metadata_fields);
     gavl_dictionary_set_long(edl_m, GAVL_META_APPROX_DURATION, 0);
+
+    /* Copy internal streams */
     
-    if((arr = gavl_dictionary_get_array_nc(edl_track, GAVL_META_STREAMS)))
-      gavl_array_foreach(arr, stream_clear_foreach_func, arr);
+    if((track_streams = gavl_dictionary_get_array(track, GAVL_META_STREAMS)))
+      {
+      gavl_array_foreach(track_streams, add_stream_func, edl_track);
+      }
+    
+    /* Copy external streams */
+
+    if((track_streams = gavl_dictionary_get_array(track, GAVL_META_STREAMS_EXT)))
+      {
+      //      gavl_dictionary_set_array(edl_track, GAVL_META_STREAMS, arr);
+      gavl_array_foreach(track_streams, add_stream_func, edl_track);
+      }
+    
+    edl_streams = gavl_dictionary_get_array_nc(edl_track, GAVL_META_STREAMS);
+    gavl_array_foreach(edl_streams, stream_clear_foreach_func, edl_streams);
     
     }
-
-  if(!(m = gavl_track_get_metadata(edl_track)) ||
-     !gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &edl_duration))
-    return;
+  else
+    {
+    edl_m = gavl_dictionary_get_dictionary_nc(edl_track, GAVL_META_METADATA);
+    gavl_dictionary_get_long(edl_m, GAVL_META_APPROX_DURATION, &edl_duration);
+    }
   
-  add_streams_to_timeline(edl_track, track, GAVL_STREAM_AUDIO,   edl_duration);
-  add_streams_to_timeline(edl_track, track, GAVL_STREAM_VIDEO,   edl_duration);
-  add_streams_to_timeline(edl_track, track, GAVL_STREAM_TEXT,    edl_duration);
-  add_streams_to_timeline(edl_track, track, GAVL_STREAM_OVERLAY, edl_duration);
+  idx = add_streams_to_timeline(edl_track, track, GAVL_STREAM_AUDIO,   edl_duration);
+  idx += add_streams_to_timeline(edl_track, track, GAVL_STREAM_VIDEO,   edl_duration);
+  idx += add_streams_to_timeline(edl_track, track, GAVL_STREAM_TEXT,    edl_duration);
+  idx += add_streams_to_timeline(edl_track, track, GAVL_STREAM_OVERLAY, edl_duration);
+
+  add_external_streams_to_timeline(edl_track, track, edl_duration, idx);
   
   finalize_track_internal(edl_track, &f);
   }

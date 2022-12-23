@@ -54,10 +54,8 @@ gavl_track_get_num_streams_all(const gavl_dictionary_t * d);
 GAVL_PUBLIC gavl_dictionary_t *
 gavl_track_append_external_stream(gavl_dictionary_t * track,
                                   gavl_stream_type_t type,
+                                  const char * mimetype,
                                   const char * location);
-
-GAVL_PUBLIC const char *
-gavl_stream_get_external_uri(const gavl_dictionary_t * stream);
 
 GAVL_PUBLIC int
 gavl_track_get_num_external_streams(const gavl_dictionary_t * d);
@@ -65,8 +63,33 @@ gavl_track_get_num_external_streams(const gavl_dictionary_t * d);
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_track_get_external_stream(const gavl_dictionary_t * d, int i);
 
+GAVL_PUBLIC gavl_dictionary_t *
+gavl_track_get_external_stream_nc(gavl_dictionary_t * d, int i);
+
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_track_get_stream_all(const gavl_dictionary_t * d, int idx);
+
+GAVL_PUBLIC
+gavl_dictionary_t *
+gavl_track_add_src(gavl_dictionary_t * dict, const char * key,
+                   const char * mimetype, const char * location);
+
+GAVL_PUBLIC
+const gavl_dictionary_t *
+gavl_track_get_src(const gavl_dictionary_t * dict, const char * key, int idx,
+                   const char ** mimetype, const char ** location);
+
+GAVL_PUBLIC 
+gavl_dictionary_t *
+gavl_track_get_src_nc(gavl_dictionary_t * m, const char * key, int idx);
+  
+GAVL_PUBLIC 
+int gavl_track_has_src(const gavl_dictionary_t * m, const char * key,
+                       const char * location);
+
+GAVL_PUBLIC
+void gavl_track_from_location(gavl_dictionary_t * ret, const char * location);
+
 
 GAVL_PUBLIC gavl_dictionary_t *
 gavl_track_get_stream_all_nc(gavl_dictionary_t * d, int idx);
@@ -416,6 +439,9 @@ GAVL_PUBLIC
 void gavl_set_current_track(gavl_dictionary_t * dict, int idx);
 
 GAVL_PUBLIC
+int gavl_get_current_track(gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
 void gavl_track_set_gui_state(gavl_dictionary_t * track, const char * state, int val);
 
 GAVL_PUBLIC
@@ -537,8 +563,34 @@ gavl_metadata_sort_source(gavl_dictionary_t * s,
 /* If the track has more than 1 URIs, set GAVL_META_MULTIVARIANT
    and sort URIs for descreasing quality (best first) */
    
+// GAVL_PUBLIC
+// void gavl_track_set_multivariant(gavl_dictionary_t * dict);
+
+// Multivariant support
 GAVL_PUBLIC
-void gavl_track_set_multivariant(gavl_dictionary_t * dict);
+int gavl_track_get_num_variants(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+const gavl_dictionary_t * gavl_track_get_variant(const gavl_dictionary_t * dict, int idx);
+
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const char * mimetype, const char * location);
+
+GAVL_PUBLIC
+void gavl_track_sort_variants(gavl_dictionary_t * dict);
+
+// Multipart support
+GAVL_PUBLIC
+int gavl_track_get_num_parts(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_track_append_part(gavl_dictionary_t * dict, const char * mimetype, const char * location);
+
+GAVL_PUBLIC
+const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, int i);
+
+
+//
 
 GAVL_PUBLIC
 gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict);

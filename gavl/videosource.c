@@ -244,7 +244,7 @@ void gavl_video_source_destroy(gavl_video_source_t * s)
     gavl_video_frame_destroy(s->next_in_frame);
 
   if(s->out_frame)
-    gavl_video_frame_destroy(s->next_in_frame);
+    gavl_video_frame_destroy(s->out_frame);
   
   gavl_video_converter_destroy(s->cnv);
 

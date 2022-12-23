@@ -624,7 +624,7 @@ gavl_metadata_add_src(gavl_dictionary_t * m, const char * key,
   }
 
 const gavl_dictionary_t *
-gavl_dictionary_get_src(const gavl_dictionary_t * m, const char * key, int idx,
+gavl_metadata_get_src(const gavl_dictionary_t * m, const char * key, int idx,
                         const char ** mimetype, const char ** location)
   {
   const gavl_value_t * val;
@@ -645,7 +645,7 @@ gavl_dictionary_get_src(const gavl_dictionary_t * m, const char * key, int idx,
   }
 
 gavl_dictionary_t *
-gavl_dictionary_get_src_nc(gavl_dictionary_t * m, const char * key, int idx)
+gavl_metadata_get_src_nc(gavl_dictionary_t * m, const char * key, int idx)
   {
   gavl_value_t * val;
   gavl_dictionary_t * dict;
@@ -664,7 +664,7 @@ int gavl_metadata_has_src(const gavl_dictionary_t * m, const char * key,
   int i = 0;
   const char * loc;
 
-  while(gavl_dictionary_get_src(m, key, i, NULL, &loc))
+  while(gavl_metadata_get_src(m, key, i, NULL, &loc))
     {
     if(!strcmp(loc, location))
       return 1;

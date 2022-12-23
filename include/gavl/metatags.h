@@ -242,8 +242,6 @@
 
 #define GAVL_META_SRC              "src"
 
-/* Which index is currently opened */
-#define GAVL_META_SRCIDX           "srcidx"
 
 /* Total tracks of the logical parent */
 #define GAVL_META_TOTAL_TRACKS     "TotalTracks"
@@ -335,13 +333,6 @@
 
 #define GAVL_META_AVG_BITRATE    "AVGBitrate"   // Float, kbps
 #define GAVL_META_AVG_FRAMERATE  "AVGFramerate" // Float
-
-/*
- *  If present and nonzero, different adresses in GAVL_META_SRC differ in quality, with
- *  the highest being the first
- */
-
-#define GAVL_META_MULTIVARIANT       "Multivariant"
 
 /* Purely informational entries for the global metadata or per Location */
 #define GAVL_META_AUDIO_CHANNELS     "Channels"
@@ -436,6 +427,8 @@
 
 #define GAVL_META_PARTS            "parts" // Parts of a multipart movie
 
+#define GAVL_META_VARIANTS         "variants" // Multiple variants of the same content (typically with different bitrates)
+
 // #define GAVL_META_DATA_FORMAT_MSG  "msg"
 // #define GAVL_META_DATA_ROLE_EVENTS "evt"
 
@@ -460,7 +453,6 @@
 #define GAVL_META_MEDIA_CLASS_SONG                "item.audio.song"
 #define GAVL_META_MEDIA_CLASS_MOVIE               "item.video.movie"
 #define GAVL_META_MEDIA_CLASS_MOVIE_PART          "item.video.movie.part"
-#define GAVL_META_MEDIA_CLASS_MOVIE_MULTIPART     "item.video.movie.multipart"
 
 #define GAVL_META_MEDIA_CLASS_AUDIO_PODCAST_EPISODE "item.audio.podcastepisode"
 #define GAVL_META_MEDIA_CLASS_VIDEO_PODCAST_EPISODE "item.video.podcastepisode"

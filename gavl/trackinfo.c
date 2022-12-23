@@ -400,11 +400,13 @@ static void init_video_stream(gavl_dictionary_t * dict)
 
 static void init_text_stream(gavl_dictionary_t * dict)
   {
+#if 0 // Text streams should have no video format
   gavl_value_t fmt_val;
 
   gavl_value_init(&fmt_val);
   gavl_value_set_video_format(&fmt_val);
   gavl_dictionary_set_nocopy(dict, GAVL_META_STREAM_FORMAT, &fmt_val);
+#endif
   }
 
 static void init_overlay_stream(gavl_dictionary_t * dict)
@@ -772,23 +774,29 @@ const gavl_array_t * gavl_get_tracks(const gavl_dictionary_t * dict)
   return gavl_dictionary_get_array(dict, GAVL_META_TRACKS);
   }
 
-gavl_dictionary_t * gavl_append_track(gavl_dictionary_t * dict, const gavl_dictionary_t * t)
+static gavl_dictionary_t * append_track(gavl_dictionary_t * dict, const char * arr_name)
   {
-  gavl_dictionary_t * new_track;
   gavl_value_t val;
-  gavl_array_t * arr = gavl_get_tracks_nc(dict);
+  gavl_dictionary_t * ret;
+  gavl_array_t * arr = gavl_dictionary_get_array_create(dict, arr_name);
   
   gavl_value_init(&val);
-  new_track = gavl_value_set_dictionary(&val);
+  ret = gavl_value_set_dictionary(&val);
+  track_init(ret);
+  gavl_array_push_nocopy(arr, &val);
+  return arr->entries[arr->num_entries-1].v.dictionary;
+  }
 
+
+gavl_dictionary_t * gavl_append_track(gavl_dictionary_t * dict, const gavl_dictionary_t * t)
+  {
+  gavl_dictionary_t * new_track = append_track(dict, GAVL_META_TRACKS);
+  
   if(t)
     gavl_dictionary_copy(new_track, t);
-  else
-    track_init(new_track);
   
-  gavl_array_push_nocopy(arr, &val);
   gavl_track_update_children(dict);
-  return arr->entries[arr->num_entries-1].v.dictionary;
+  return new_track;
   }
 
 gavl_dictionary_t * gavl_prepend_track(gavl_dictionary_t * dict, const gavl_dictionary_t * t)
@@ -812,19 +820,24 @@ gavl_dictionary_t * gavl_prepend_track(gavl_dictionary_t * dict, const gavl_dict
   return arr->entries[0].v.dictionary;
   }
 
+static const gavl_dictionary_t * get_track(const gavl_dictionary_t * dict, const char * array_name, int idx)
+  {
+  const gavl_value_t * val;
+  const gavl_array_t * arr;
+
+  if(!(arr = gavl_dictionary_get_array(dict, array_name)) ||
+     !(val = gavl_array_get(arr, idx)))
+    return NULL;
+  else
+    return gavl_value_get_dictionary(val);
+  }
 
 const gavl_dictionary_t * gavl_get_track(const gavl_dictionary_t * dict, int idx)
   {
-  const gavl_value_t * val;
-  const gavl_array_t * tracks;
-
   if((idx < 0) && !gavl_dictionary_get_int(dict, GAVL_META_CURIDX, &idx))
     idx = 0;
-  
-  if(!(tracks = gavl_get_tracks(dict)) ||
-     !(val = gavl_array_get(tracks, idx)))
-    return NULL;
-  return gavl_value_get_dictionary(val);
+
+  return get_track(dict, GAVL_META_TRACKS, idx);
   }
 
 gavl_dictionary_t * gavl_get_track_nc(gavl_dictionary_t * dict, int idx)
@@ -846,12 +859,24 @@ void gavl_set_current_track(gavl_dictionary_t * dict, int idx)
   gavl_dictionary_set_int(dict, GAVL_META_CURIDX, idx);
   }
 
-int gavl_get_num_tracks(const gavl_dictionary_t * dict)
+int gavl_get_current_track(gavl_dictionary_t * dict)
+  {
+  int ret = 0;
+  gavl_dictionary_get_int(dict, GAVL_META_CURIDX, &ret);
+  return ret;
+  }
+
+static int get_num_tracks(const gavl_dictionary_t * dict, const char * arr_name)
   {
   const gavl_array_t * tracks;
-  if(!(tracks = gavl_get_tracks(dict)))
+  if(!(tracks = gavl_dictionary_get_array(dict, arr_name)))
     return 0;
   return tracks->num_entries;
+  }
+
+int gavl_get_num_tracks(const gavl_dictionary_t * dict)
+  {
+  return get_num_tracks(dict, GAVL_META_TRACKS);
   }
 
 int gavl_get_num_tracks_loaded(const gavl_dictionary_t * dict,
@@ -1015,8 +1040,8 @@ static void get_stream_duration(void * priv,
     
   if(!(gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &timescale)))
     {
-    fprintf(stderr, "Got no sample timescale\n");
-    gavl_dictionary_dump(s, 2);
+    //    fprintf(stderr, "Got no sample timescale\n");
+    //    gavl_dictionary_dump(s, 2);
     return;
     }
   if((timescale <= 0))
@@ -1374,16 +1399,16 @@ static void add_country_flag(gavl_dictionary_t * m,
   free(uri);
   }
 
-void gavl_track_finalize(gavl_dictionary_t * dict)
+void gavl_track_finalize(gavl_dictionary_t * track)
   {
   gavl_time_t duration = GAVL_TIME_UNDEFINED;
   
   const char * media_class = NULL;
   const char * countrycode = NULL;
   gavl_dictionary_t * m;
+  //  gavl_dictionary_t * ;
 
   const char * var;
-  
   int num_audio_streams;
   int num_video_streams;
   char * basename = NULL;
@@ -1394,19 +1419,19 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
 
   const gavl_array_t * arr;
 
-  if((arr = gavl_dictionary_get_array(dict, GAVL_META_STREAMS)))
+  if((arr = gavl_dictionary_get_array(track, GAVL_META_STREAMS)))
     {
-    gavl_array_foreach(arr, finalize_stream, dict);
+    gavl_array_foreach(arr, finalize_stream, track);
     }
   
-  if(!(m = gavl_track_get_metadata_nc(dict)))
+  if(!(m = gavl_track_get_metadata_nc(track)))
     return;
   
   //  fprintf(stderr, "gavl_track_finalize %s\n",
   //          gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS));
 
-  num_audio_streams = gavl_track_get_num_audio_streams(dict);
-  num_video_streams = gavl_track_get_num_video_streams(dict);
+  num_audio_streams = gavl_track_get_num_audio_streams(track);
+  num_video_streams = gavl_track_get_num_video_streams(track);
 
 #if 0  
   if(!num_audio_streams && !num_video_streams && (location = gavl_dictionary_get_string(m, GAVL_META_REFURL)))
@@ -1418,7 +1443,7 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
     }
 #endif
   
-  gavl_dictionary_get_src(m, GAVL_META_SRC, 0,
+  gavl_metadata_get_src(m, GAVL_META_SRC, 0,
                           NULL, &location);
   
   if(location && (pos1 = strrchr(location, '/')) &&
@@ -1440,7 +1465,7 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
 
     if(!num_audio_streams &&
        (num_video_streams == 1) &&
-       (fmt = gavl_track_get_video_format(dict, 0)) && 
+       (fmt = gavl_track_get_video_format(track, 0)) && 
        (fmt->framerate_mode == GAVL_FRAMERATE_STILL))
       {
       /* Photo */
@@ -1453,13 +1478,13 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
       }
     }
 
-  gavl_track_compute_duration(dict);
+  gavl_track_compute_duration(track);
   
   if(media_class)
     {
     if(!strcmp(media_class, GAVL_META_MEDIA_CLASS_AUDIO_FILE))
       {
-      finalize_audio(dict);
+      finalize_audio(track);
       
       /* Check for audio broadcast */
       if(gavl_dictionary_get(m, GAVL_META_STATION))
@@ -1479,9 +1504,9 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
       }
     else if(!strcmp(media_class, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
       {
-      finalize_video(dict);
+      finalize_video(track);
       if(num_audio_streams > 0)
-        finalize_audio(dict);
+        finalize_audio(track);
       
       if((num_video_streams == 1))
         {
@@ -1537,6 +1562,21 @@ void gavl_track_finalize(gavl_dictionary_t * dict)
     
     }
 
+  /* Simplify one-variant streams and one-part movies */
+
+  if(gavl_track_get_num_variants(track) == 1)
+    {
+    const gavl_dictionary_t * vm = gavl_track_get_metadata(gavl_track_get_variant(track, 0));
+    gavl_dictionary_set(m, GAVL_META_SRC, gavl_dictionary_get(vm, GAVL_META_SRC));
+    gavl_dictionary_set(track, GAVL_META_VARIANTS, NULL);
+    }
+  else if(gavl_track_get_num_parts(track) == 1)
+    {
+    const gavl_dictionary_t * pm = gavl_track_get_metadata(gavl_track_get_part(track, 0));
+    gavl_dictionary_set(m, GAVL_META_SRC, gavl_dictionary_get(pm, GAVL_META_SRC));
+    gavl_dictionary_set(track, GAVL_META_PARTS, NULL);
+    }
+  
   }
 
 gavl_time_t gavl_track_get_duration(const gavl_dictionary_t * dict)
@@ -2429,6 +2469,7 @@ gavl_metadata_sort_source(gavl_dictionary_t * dict,
   return 1;
   }
 
+#if 0
 void
 gavl_track_set_multivariant(gavl_dictionary_t * dict)
   {
@@ -2445,6 +2486,7 @@ gavl_track_set_multivariant(gavl_dictionary_t * dict)
   
   gavl_dictionary_set_int(dict, GAVL_META_MULTIVARIANT, 1);
   }
+#endif
 
 void
 gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale)
@@ -2644,21 +2686,47 @@ int gavl_stream_is_continuous(const gavl_dictionary_t * s)
   return 0;
   }
 
+static int has_external_stream(gavl_dictionary_t * track,
+                               const char * location)
+  {
+  int i;
+  const char * loc = NULL;
+  const gavl_dictionary_t * dict;
+  const gavl_array_t * arr = gavl_dictionary_get_array(track, GAVL_META_STREAMS_EXT);
+
+  if(!arr)
+    return 0;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (gavl_track_get_src(dict, GAVL_META_SRC, 0, NULL, &loc)) &&
+       !strcmp(loc, location))
+      return 1;
+    }
+  return 0;
+  }
+
 gavl_dictionary_t *
 gavl_track_append_external_stream(gavl_dictionary_t * track,
                                   gavl_stream_type_t type,
+                                  const char * mimetype,
                                   const char * location)
   {
-  gavl_dictionary_t * ret = track_append_stream(track, type, GAVL_META_STREAMS_EXT);
-  gavl_dictionary_set_string(ret, GAVL_META_URI, location);
+  gavl_dictionary_t * m;
+  gavl_dictionary_t * ret;
+
+  if(has_external_stream(track, location))
+    return NULL;
+  
+  ret = track_append_stream(track, type, GAVL_META_STREAMS_EXT);
+    
+  m = gavl_stream_get_metadata_nc(ret);
+  
+  gavl_metadata_add_src(m, GAVL_META_SRC, mimetype, location);
   return ret;
   }
 
-const char *
-gavl_stream_get_external_uri(const gavl_dictionary_t * stream)
-  {
-  return gavl_dictionary_get_string(stream, GAVL_META_URI);
-  }
 
 int
 gavl_track_get_num_external_streams(const gavl_dictionary_t * d)
@@ -2686,4 +2754,114 @@ gavl_track_get_external_stream(const gavl_dictionary_t * d, int i)
     return dict;
   else
     return NULL; 
+  }
+
+gavl_dictionary_t *
+gavl_track_get_external_stream_nc(gavl_dictionary_t * d, int i)
+  {
+  gavl_array_t * arr;
+  gavl_value_t * val;
+  gavl_dictionary_t * dict;
+  
+  if(!(arr = gavl_dictionary_get_array_nc(d, GAVL_META_STREAMS_EXT)))
+    return NULL;
+
+  if((val = gavl_array_get_nc(arr, i)) &&
+     (dict = gavl_value_get_dictionary_nc(val)))
+    return dict;
+  else
+    return NULL; 
+  }
+
+// Multivariant support
+int gavl_track_get_num_variants(const gavl_dictionary_t * dict)
+  {
+  return get_num_tracks(dict, GAVL_META_VARIANTS);
+  }
+
+const gavl_dictionary_t * gavl_track_get_variant(const gavl_dictionary_t * dict, int idx)
+  {
+  return get_track(dict, GAVL_META_VARIANTS, idx);
+  }
+
+gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const char * mimetype, const char * location)
+  {
+  gavl_dictionary_t * new_track = append_track(dict, GAVL_META_VARIANTS);
+  gavl_track_add_src(new_track, GAVL_META_SRC, mimetype, location);
+  return new_track;
+  }
+
+void gavl_track_sort_variants(gavl_dictionary_t * dict)
+  {
+  
+  }
+
+// Multipart support
+int gavl_track_get_num_parts(const gavl_dictionary_t * dict)
+  {
+  return get_num_tracks(dict, GAVL_META_PARTS);
+  }
+
+gavl_dictionary_t * gavl_track_append_part(gavl_dictionary_t * dict, const char * mimetype, const char * location)
+  {
+  gavl_dictionary_t * new_track = append_track(dict, GAVL_META_PARTS);
+  gavl_track_add_src(new_track, GAVL_META_SRC, mimetype, location);
+  return new_track;
+  }
+
+const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, int idx)
+  {
+  return get_track(dict, GAVL_META_PARTS, idx);
+  
+  }
+
+/* SRC */
+
+GAVL_PUBLIC
+gavl_dictionary_t *
+gavl_track_add_src(gavl_dictionary_t * dict, const char * key,
+                   const char * mimetype, const char * location)
+  {
+  if((dict = gavl_track_get_metadata_nc(dict)))
+    return gavl_metadata_add_src(dict, key, mimetype, location);
+  else
+    return NULL;
+  }
+
+GAVL_PUBLIC
+const gavl_dictionary_t *
+gavl_track_get_src(const gavl_dictionary_t * dict, const char * key, int idx,
+                   const char ** mimetype, const char ** location)
+  {
+  if((dict = gavl_track_get_metadata(dict)))
+    return gavl_metadata_get_src(dict, key, idx, mimetype, location);
+  else
+    return NULL;
+  }
+
+gavl_dictionary_t *
+gavl_track_get_src_nc(gavl_dictionary_t * dict, const char * key, int idx)
+  {
+  if((dict = gavl_track_get_metadata_nc(dict)))
+    return gavl_metadata_get_src_nc(dict, key, idx);
+  else
+    return NULL;
+  }
+  
+int gavl_track_has_src(const gavl_dictionary_t * dict, const char * key,
+                       const char * location)
+  {
+  if((dict = gavl_track_get_metadata(dict)))
+    return gavl_metadata_has_src(dict, key, location);
+  else
+    return 0;
+  }
+
+void gavl_track_from_location(gavl_dictionary_t * ret, const char * location)
+  {
+  gavl_dictionary_t * m;
+  track_init(ret);
+  m = gavl_track_get_metadata_nc(ret);
+  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  gavl_metadata_add_src(ret, GAVL_META_SRC, NULL, location);
   }
