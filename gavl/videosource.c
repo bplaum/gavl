@@ -299,12 +299,15 @@ static gavl_source_status_t read_frame(gavl_video_source_t * s,
 
   if(ret != GAVL_SOURCE_OK)
     return ret;
-  
-  if(((*frame)->timestamp != GAVL_TIME_UNDEFINED) &&
-     (s->pts == GAVL_TIME_UNDEFINED))
-    s->pts = gavl_time_rescale(s->src_format.timescale,
-                               s->dst_format.timescale,
-                               (*frame)->timestamp);
+
+  if(frame && *frame)
+    {
+    if(((*frame)->timestamp != GAVL_TIME_UNDEFINED) &&
+       (s->pts == GAVL_TIME_UNDEFINED))
+      s->pts = gavl_time_rescale(s->src_format.timescale,
+                                 s->dst_format.timescale,
+                                 (*frame)->timestamp);
+    }
   return ret;
   }
 
