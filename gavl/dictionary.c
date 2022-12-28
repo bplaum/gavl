@@ -876,3 +876,11 @@ gavl_video_format_t * gavl_dictionary_get_video_format_nc(gavl_dictionary_t * d,
   return gavl_value_get_video_format_nc(v);
   
   }
+
+void gavl_dictionary_copy_value(gavl_dictionary_t * dst,
+                                const gavl_dictionary_t * src,
+                                const char * key)
+  {
+  gavl_dictionary_set(dst, key, gavl_dictionary_get(src, key));
+  }
+                                

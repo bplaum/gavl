@@ -1417,9 +1417,13 @@ void gavl_track_finalize(gavl_dictionary_t * track)
   const char * pos1;
   const char * pos2;
 
-  const gavl_array_t * arr;
+  gavl_array_t * arr;
 
-  if((arr = gavl_dictionary_get_array(track, GAVL_META_STREAMS)))
+
+  if((arr = gavl_dictionary_get_array_nc(track, GAVL_META_VARIANTS)))
+    gavl_sort_tracks_by_quality(arr);
+  
+  if((arr = gavl_dictionary_get_array_nc(track, GAVL_META_STREAMS)))
     {
     gavl_array_foreach(arr, finalize_stream, track);
     }
@@ -1946,6 +1950,8 @@ void gavl_sort_tracks_by_label(gavl_array_t * arr)
   gavl_array_sort(arr, compare_metadata_string, GAVL_META_LABEL);
   }
 
+
+
 static int compare_metadata_int_reverse(const void * p1,
                                         const void * p2, void * data)
   {
@@ -1971,6 +1977,50 @@ void gavl_sort_tracks_by_bitrate(gavl_array_t * arr)
   gavl_array_sort(arr, compare_metadata_int_reverse, GAVL_META_BITRATE);
   }
 
+static int compare_quality(const void * p1,
+                           const void * p2, void * data)
+  {
+  int i1 = 0;
+  int i2 = 0;
+  
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+
+  if(!(dict1 = gavl_value_get_dictionary(p1)) ||
+     !(dict2 = gavl_value_get_dictionary(p2)) ||
+     !(dict1 = gavl_track_get_metadata(dict1)) ||
+     !(dict2 = gavl_track_get_metadata(dict2)))
+    return 0;
+
+  if(gavl_dictionary_get_int(dict1, GAVL_META_BITRATE, &i1) &&
+     gavl_dictionary_get_int(dict2, GAVL_META_BITRATE, &i2) &&
+     (i1 != i2))
+    return (i2 - i1);
+
+  if(gavl_dictionary_get_int(dict1, GAVL_META_WIDTH, &i1) &&
+     gavl_dictionary_get_int(dict2, GAVL_META_WIDTH, &i2) &&
+     (i1 != i2))
+    return (i2 - i1);
+
+  if(gavl_dictionary_get_int(dict1, GAVL_META_AUDIO_SAMPLERATE, &i1) &&
+     gavl_dictionary_get_int(dict2, GAVL_META_AUDIO_SAMPLERATE, &i2) &&
+     (i1 != i2))
+    return (i2 - i1);
+
+  if(gavl_dictionary_get_int(dict1, GAVL_META_AUDIO_CHANNELS, &i1) &&
+     gavl_dictionary_get_int(dict2, GAVL_META_AUDIO_CHANNELS, &i2) &&
+     (i1 != i2))
+    return (i2 - i1);
+  
+  return 0;
+  }
+
+
+void gavl_sort_tracks_by_quality(gavl_array_t * arr)
+  {
+  gavl_array_sort(arr, compare_quality, NULL);
+  }
+
 /* Compression info */
 
 #if 0
@@ -1992,7 +2042,7 @@ void gavl_sort_tracks_by_bitrate(gavl_array_t * arr)
   uint32_t max_ref_frames;      //!< Maximum reference frames (if > 2)
 #endif
 
-#define COMPRESSION_INFO_KEY                 "cmp"
+#define COMPRESSION_INFO_KEY                 GAVL_META_STREAM_COMPRESSION_INFOö
 #define COMPRESSION_INFO_KEY_FLAGS           "flg"
 #define COMPRESSION_INFO_KEY_ID              "id"
 #define COMPRESSION_INFO_KEY_BITRATE         "br"
@@ -2140,8 +2190,13 @@ gavl_stream_get_pts_range(const gavl_dictionary_t * s, int64_t * start, int64_t 
   if(!gavl_stream_get_stats(s, &stats))
     return 0;
 
+  if((stats.pts_start == GAVL_TIME_UNDEFINED) ||
+     (stats.pts_end == GAVL_TIME_UNDEFINED))
+    return 0;
+  
   *start = stats.pts_start;
   *end = stats.pts_end;
+  
   return 1;
   }
 
@@ -2411,83 +2466,7 @@ gavl_stream_set_enabled(gavl_dictionary_t * s, int enabled)
   gavl_dictionary_set_int(m, GAVL_META_STREAM_ENABLED, enabled);
   }
 
-typedef struct
-  {
-  const char * attr;
-  int ascend;
-  } sort_src_t;
-
-static int sort_src_func(const void * v1, const void * v2, void * data)
-  {
-  int64_t val1, val2;
-  const gavl_dictionary_t * src;
-
-  sort_src_t * s = data;  
-
-  src = gavl_value_get_dictionary(v1);
-  gavl_dictionary_get_long(src, s->attr, &val1);
-
-  src = gavl_value_get_dictionary(v2);
-  gavl_dictionary_get_long(src, s->attr, &val2);
-
-  if(val1 == val2)
-    return 0;
-  
-  if(s->ascend)
-    return val1 > val2 ? -1 : 1;
-  else
-    return val1 < val2 ? 1 : -1;
-  }
-
-
-int
-gavl_metadata_sort_source(gavl_dictionary_t * dict,
-                       const char * member,
-                       const char * attribute,
-                       int ascend)
-  {
-  int i;
-  sort_src_t d; 
-  int64_t dummy;
-  const gavl_dictionary_t * src;
-  gavl_array_t * arr;
-  
-  if(!(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)))
-    return 0;
-  
-  for(i = 0; i < arr->num_entries; i++)
-    {
-    if(!(src = gavl_value_get_dictionary(&arr->entries[i])) ||
-       !gavl_dictionary_get_long(src, attribute, &dummy))
-      return 0;
-    }
-
-  d.attr = attribute;
-  d.ascend = ascend;
-
-  gavl_array_sort(arr, sort_src_func, &d);
-  return 1;
-  }
-
 #if 0
-void
-gavl_track_set_multivariant(gavl_dictionary_t * dict)
-  {
-  gavl_array_t * arr;
-  
-  if(!(dict = gavl_track_get_metadata_nc(dict)) ||
-     !(arr = gavl_dictionary_get_array_nc(dict, GAVL_META_SRC)) ||
-     (arr->num_entries <= 1))
-    return;
-
-  if(!gavl_metadata_sort_source(dict, GAVL_META_SRC, GAVL_META_BITRATE, 0) &&
-     !gavl_metadata_sort_source(dict, GAVL_META_SRC, GAVL_META_WIDTH, 0))
-    return;
-  
-  gavl_dictionary_set_int(dict, GAVL_META_MULTIVARIANT, 1);
-  }
-#endif
-
 void
 gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale)
   {
@@ -2507,6 +2486,7 @@ gavl_stream_get_start_pts(const gavl_dictionary_t * s, int64_t * pts, int * scal
   *scale = GAVL_TIME_SCALE;
   gavl_dictionary_get_int(m, GAVL_META_STREAM_FIRST_PTS_SCALE, scale);
   }
+#endif
 
 gavl_time_t gavl_stream_get_start_time(const gavl_dictionary_t * s)
   {

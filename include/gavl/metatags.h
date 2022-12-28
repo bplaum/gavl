@@ -389,9 +389,6 @@
 #define GAVL_META_STREAM_SAMPLE_TIMESCALE "sscale"
 #define GAVL_META_STREAM_ENABLED          "enabled"
 
-#define GAVL_META_STREAM_FIRST_PTS       "pts_start"
-#define GAVL_META_STREAM_FIRST_PTS_SCALE "pts_pstart_scale"
-
 /* Set to the absolute stream index offset by one by default
    but can be changed to anything */
 
@@ -402,6 +399,8 @@
 #define GAVL_META_STREAM_ID_MSG_PROGRAM -1
 
 #define GAVL_META_STREAM_ID_MEDIA_START    1
+
+#define GAVL_META_STREAM_COMPRESSION_INFO "cmp"
 
 
 #define GAVL_META_STREAM_STATS "stats"

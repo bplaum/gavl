@@ -97,13 +97,6 @@ gavl_track_get_stream_all_nc(gavl_dictionary_t * d, int idx);
 GAVL_PUBLIC gavl_stream_type_t
 gavl_stream_get_type(const gavl_dictionary_t * s);
 
-/* Set/get first stream PTS (from MPEG-type timestamps) */
-GAVL_PUBLIC void
-gavl_stream_set_start_pts(gavl_dictionary_t * s, int64_t pts, int scale);
-
-GAVL_PUBLIC void
-gavl_stream_get_start_pts(const gavl_dictionary_t * s, int64_t * pts, int * scale);
-
 /*
     Timestamp generation modes (set by the demultiplexer and used by
     the packetbuffer for the PTS generation)
@@ -483,6 +476,10 @@ void gavl_sort_tracks_by_label(gavl_array_t * children);
 GAVL_PUBLIC
 void gavl_sort_tracks_by_bitrate(gavl_array_t * children);
 
+/* Highest first */
+GAVL_PUBLIC
+void gavl_sort_tracks_by_quality(gavl_array_t * children);
+
 GAVL_PUBLIC
 int gavl_track_get_num_children(const gavl_dictionary_t * track);
 
@@ -553,12 +550,6 @@ void gavl_track_get_page_children_end(const gavl_dictionary_t * parent_orig,
                                       int idx,
                                       int start, int len,
                                       gavl_array_t * ret);
-
-GAVL_PUBLIC int
-gavl_metadata_sort_source(gavl_dictionary_t * s,
-                          const char * member,
-                          const char * attribute,
-                          int ascend);
 
 /* If the track has more than 1 URIs, set GAVL_META_MULTIVARIANT
    and sort URIs for descreasing quality (best first) */

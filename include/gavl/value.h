@@ -188,6 +188,11 @@ GAVL_PUBLIC
 void gavl_dictionary_copy(gavl_dictionary_t * dst, const gavl_dictionary_t * src); 
 
 GAVL_PUBLIC
+void gavl_dictionary_copy_value(gavl_dictionary_t * dst,
+                                const gavl_dictionary_t * src,
+                                const char * key);
+
+GAVL_PUBLIC
 void gavl_dictionary_move(gavl_dictionary_t * dst, gavl_dictionary_t * src);
 
 GAVL_PUBLIC

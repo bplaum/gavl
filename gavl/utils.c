@@ -883,3 +883,26 @@ char * gavl_get_absolute_uri(const char * rel_uri, const char * abs_uri)
   return ret;
 
   }
+
+// https://stackoverflow.com/questions/44668774/reduce-fractions-in-c
+
+static int gcd(int x, int y)
+  {
+  int temp;
+  
+  while (y != 0)
+    {
+    temp = y;
+    y = x % y;
+    x = temp;
+    }
+  return x;
+  }
+
+void gavl_simplify_rational(int * num, int * den)
+  {
+  int fac = gcd(*num, *den);
+  
+  *num /= fac;
+  *den /= fac;
+  }
