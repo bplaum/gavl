@@ -157,7 +157,7 @@ static void reset_connection(gavl_http_client_t * c)
 
 static void close_connection(gavl_http_client_t * c)
   {
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing connection: %s", c->uri);
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Closing connection: %s", c->uri);
 
   do_reset_connection(c);
   
@@ -738,7 +738,7 @@ static int prepare_connection(gavf_io_t * io,
     }
   else if(c->io_int && !(c->flags & FLAG_KEEPALIVE))
     {
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing connection (keepalive wasn't specified)");
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Closing connection (keepalive wasn't specified)");
     do_close = 1;
     }
   if(!do_close && c->io_int && c->host && c->protocol && !(c->flags & FLAG_USE_PROXY))
@@ -1379,7 +1379,7 @@ int gavl_http_client_run_async(gavf_io_t * io,
   
   c->state = STATE_START;
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s method: %s", uri, method);
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Opening %s method: %s", uri, method);
 
   //  if(gavl_string_ends_with(uri, "webvtt"))
   //    fprintf(stderr, "Blah");
