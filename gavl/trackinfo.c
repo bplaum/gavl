@@ -2042,7 +2042,7 @@ void gavl_sort_tracks_by_quality(gavl_array_t * arr)
   uint32_t max_ref_frames;      //!< Maximum reference frames (if > 2)
 #endif
 
-#define COMPRESSION_INFO_KEY                 GAVL_META_STREAM_COMPRESSION_INFOö
+#define COMPRESSION_INFO_KEY                 GAVL_META_STREAM_COMPRESSION_INFO
 #define COMPRESSION_INFO_KEY_FLAGS           "flg"
 #define COMPRESSION_INFO_KEY_ID              "id"
 #define COMPRESSION_INFO_KEY_BITRATE         "br"

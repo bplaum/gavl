@@ -276,13 +276,12 @@ GAVL_PUBLIC
 gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
                                   gavl_cipher_mode_t mode,
                                   gavl_cipher_padding_t padding, int wr);
-                               
+
 GAVL_PUBLIC
 void gavf_io_cipher_init(gavf_io_t * io,
                          gavf_io_t * src,
                          const uint8_t * key,
                          const uint8_t * iv);
-
 
 GAVL_PUBLIC
 int gavf_io_get_flags(gavf_io_t * io);

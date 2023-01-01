@@ -602,9 +602,9 @@ static int poll_func(void * priv, int timeout, int wr)
   gavl_http_client_t * c = priv;
 
   if(wr)
-    return gavf_io_can_write(c->io_int, timeout);
+    return c->io_int ? gavf_io_can_write(c->io_int, timeout) : 0;
   else
-    return gavf_io_can_read(c->io_int, timeout);
+    return c->io_int ? gavf_io_can_read(c->io_int, timeout) : 0;
   }
 
 static void close_func(void * priv)
@@ -1209,6 +1209,9 @@ gavl_http_client_open(gavf_io_t * io,
 
   c->flags &= ~FLAG_GOT_REDIRECTION;
   c->num_redirections = 0;
+
+  gavf_io_clear_eof(io);
+  gavf_io_clear_error(io);
   
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
@@ -1272,12 +1275,15 @@ gavl_http_client_read_body(gavf_io_t * io,
     if(bytes_read < c->total_bytes)
       {
       /* Error */
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got %d bytes, wanted %"PRId64,
+               bytes_read, c->total_bytes);
       goto fail;
       }
     buf->len += bytes_read;
     }
   else
     {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Body has zero length");
     goto fail;
     }
   
@@ -1375,6 +1381,8 @@ int gavl_http_client_run_async(gavf_io_t * io,
 
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s method: %s", uri, method);
 
+  //  if(gavl_string_ends_with(uri, "webvtt"))
+  //    fprintf(stderr, "Blah");
   
   gavl_dictionary_reset(&c->vars_from_uri);
   gavl_dictionary_reset(&c->req);

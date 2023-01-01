@@ -54,6 +54,9 @@ int gavf_io_can_read(gavf_io_t * io, int timeout)
   {
   if(io->get_buf.len > 0)
     return 1;
+
+  if(gavf_io_got_eof(io))
+    return 1;
   
   if(io->poll_func)
     return io->poll_func(io->priv, timeout, 0);
@@ -215,7 +218,10 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
 
   if(!io->read_func)
     return 0;
-
+  
+  if(gavf_io_got_eof(io))
+    return 0;
+  
   if(io->get_buf.len > 0)
     {
     num_get = io->get_buf.len > len ? len : io->get_buf.len;
