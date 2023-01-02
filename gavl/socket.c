@@ -55,6 +55,8 @@
 #define MSG_NOSIGNAL 0
 #endif
 
+#define FLAG_LOOKUP_ACTIVE (1<<0)
+
 /* Opaque address structure so we can support IPv6 */
 
 struct gavl_socket_address_s 
@@ -70,6 +72,8 @@ struct gavl_socket_address_s
   
   char * gai_ar_name;
   int gai_port;
+  
+  int flags;
   };
 
 gavl_socket_address_t * gavl_socket_address_create()
@@ -107,11 +111,21 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
 
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
   {
+  int err;
+
   if(a->gai.ar_result)
     freeaddrinfo(a->gai.ar_result);
   
   if(a->gai_ar_name)
+    {
+    if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelled host lookup for %s", a->gai_ar_name);
+    else
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling host lookup for %s failed: %s",
+               a->gai_ar_name, gai_strerror(err));
+    
     free(a->gai_ar_name);
+    }
   free(a);
   }
 
@@ -300,6 +314,15 @@ int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up %s", host);
   set_addr_hints(&a->gai_ar_request, socktype, host);
 
+  /* TODO: Make this a noop whe host and port didn't change */
+
+  if(a->gai_ar_name && !strcmp(a->gai_ar_name, host) &&
+     (a->gai_port == port))
+    {
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Using cached host address for %s:%d", host, port);
+    return 1; // Nothing to do, take last result
+    }
+
   a->gai_ar_name = gavl_strrep(a->gai_ar_name, host);
   a->gai_port = port;
   
@@ -315,6 +338,8 @@ int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
   
   if(getaddrinfo_a(GAI_NOWAIT, a->gai_arr, 1, NULL))
     return 0;
+
+  a->flags |= FLAG_LOOKUP_ACTIVE;
   
   return 1;
   }
@@ -322,7 +347,10 @@ int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
 int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   {
   int result;
-
+  
+  if(!(a->flags & FLAG_LOOKUP_ACTIVE))
+    return 1; // Nothing to do
+  
   //  fprintf(stderr, "gavl_socket_address_set_async_done\n");
   
   if(timeout >= 0)
@@ -344,13 +372,6 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
       break;
     case EAI_SYSTEM:
       return 0;
-#if 0
-      if(errno == EAGAIN)
-        return 0;
-      else
-        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %s",
-                 a->gai_ar_name, strerror(errno));
-#endif
       break;
     case EAI_AGAIN:
     case EAI_INTR:
@@ -359,6 +380,7 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
     default:
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %d %s",
                a->gai_ar_name, result, gai_strerror(result));
+      a->flags &= ~FLAG_LOOKUP_ACTIVE;
       return -1;
       break;
     }
@@ -387,6 +409,7 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
 
       gavl_socket_address_to_string(a, str);
       gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up host %s succeeded: %s", a->gai_ar_name, str);
+      a->flags &= ~FLAG_LOOKUP_ACTIVE;
       return 1;
       }
       break;
@@ -396,14 +419,16 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
     case EAI_CANCELED:
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: Canceled",
                a->gai_ar_name);
+      a->flags &= ~FLAG_LOOKUP_ACTIVE;
       return -1;
       break;
     default:
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: %d %s",
                a->gai_ar_name, result, gai_strerror(result));
+      a->flags &= ~FLAG_LOOKUP_ACTIVE;
       return -1;
     }
-  
+  a->flags &= ~FLAG_LOOKUP_ACTIVE;
   return -1;
   }
 

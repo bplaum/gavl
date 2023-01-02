@@ -2,11 +2,15 @@
 #include <string.h>
 #include <math.h>
 
+#include <config.h>
+
 #include <gavfprivate.h>
 #include <gavl/utils.h>
 #include <gavl/numptr.h>
 #include <gavl/value.h>
 #include <gavl/metatags.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "io"
 
 // #define DUMP_MSG_WRITE
 // #define DUMP_MSG_READ
@@ -246,8 +250,10 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
       result = io->read_func(io->priv, buf, len);
 
     if(result < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read returned %d", result);
       gavf_io_set_error(io);
-    
+      }
     if(result > 0)
       {
       io->position += result;

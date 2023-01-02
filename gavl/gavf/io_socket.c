@@ -1,10 +1,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <config.h>
 
 
 #include <gavl/gavf.h>
 #include <gavl/gavlsocket.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "io_socket"
 
 #include <gavfprivate.h>
 
@@ -86,17 +89,15 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
     }
 
   if(block)
-    {
     result = gavl_socket_read_data(s->fd, data + bytes_read, len, s->timeout);
-    
-    if((result < len) && (err = gavl_socket_get_errno(s->fd)))
-      {
-      gavf_io_set_error(s->io);
-      fprintf(stderr, "Got socket error: %d [%s]\n", err, strerror(err));
-      }
-    }
   else
     result = gavl_socket_read_data_noblock(s->fd, data + bytes_read, len);
+
+  if((result < len) && (err = gavl_socket_get_errno(s->fd)))
+    {
+    gavf_io_set_error(s->io);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got socket error: %d [%s]\n", err, strerror(err));
+    }
   
   if(result <= 0)
     {
