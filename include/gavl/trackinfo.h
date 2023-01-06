@@ -350,6 +350,7 @@ void gavl_delete_track(gavl_dictionary_t*, int idx);
 GAVL_PUBLIC
 int gavl_track_can_seek(const gavl_dictionary_t * track);
 
+
 GAVL_PUBLIC
 int gavl_track_can_pause(const gavl_dictionary_t * track);
 
@@ -358,6 +359,14 @@ int gavl_track_is_async(const gavl_dictionary_t * track);
 
 GAVL_PUBLIC
 int gavl_track_set_async(gavl_dictionary_t * track, int async);
+
+GAVL_PUBLIC
+void gavl_track_set_clock_time_map(gavl_dictionary_t * track,
+                                   int64_t pts, int pts_scale, gavl_time_t clock_time);
+
+GAVL_PUBLIC
+int gavl_track_get_clock_time_map(const gavl_dictionary_t * track,
+                                  int64_t * pts, int * pts_scale, gavl_time_t * clock_time);
 
 GAVL_PUBLIC
 void gavl_track_splice_children(gavl_dictionary_t * dict, int idx, int del,

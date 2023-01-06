@@ -2510,9 +2510,9 @@ gavl_time_t gavl_stream_get_start_time(const gavl_dictionary_t * s)
 gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict)
   {
   const gavl_dictionary_t * s;
-
-  if((s = gavl_track_get_video_stream(dict, 0)) ||
-     (s = gavl_track_get_audio_stream(dict, 0)))
+  
+  if((s = gavl_track_get_audio_stream(dict, 0)) ||
+     (s = gavl_track_get_video_stream(dict, 0)))
     return gavl_stream_get_start_time(s);
   else
     return 0;
@@ -2844,4 +2844,36 @@ void gavl_track_from_location(gavl_dictionary_t * ret, const char * location)
   m = gavl_track_get_metadata_nc(ret);
   gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
   gavl_metadata_add_src(ret, GAVL_META_SRC, NULL, location);
+  }
+
+void gavl_track_set_clock_time_map(gavl_dictionary_t * track,
+                                   int64_t pts, int pts_scale, gavl_time_t clock_time)
+  {
+  gavl_dictionary_t * dict;
+
+  dict = gavl_dictionary_get_dictionary_create(track, GAVL_META_METADATA);
+  dict = gavl_dictionary_get_dictionary_create(dict, GAVL_META_CLOCK_TIME_MAP);
+
+  gavl_dictionary_set_long(dict, GAVL_META_CLOCK_TIME_PTS, pts);
+  gavl_dictionary_set_int(dict, GAVL_META_CLOCK_TIME_PTS_SCALE, pts_scale);
+  gavl_dictionary_set_long(dict, GAVL_META_CLOCK_TIME, clock_time);
+  
+  }
+
+
+int gavl_track_get_clock_time_map(const gavl_dictionary_t * track,
+                                  int64_t * pts, int * pts_scale, gavl_time_t * clock_time)
+  {
+  const gavl_dictionary_t * dict;
+
+  if(!(dict = gavl_track_get_metadata(track)) ||
+     !(dict = gavl_dictionary_get_dictionary(dict, GAVL_META_CLOCK_TIME_MAP)))
+    return 0;
+
+  if(gavl_dictionary_get_long(dict, GAVL_META_CLOCK_TIME_PTS, pts) &&
+     gavl_dictionary_get_int(dict, GAVL_META_CLOCK_TIME_PTS_SCALE, pts_scale) &&
+     gavl_dictionary_get_long(dict, GAVL_META_CLOCK_TIME, clock_time))
+    return 1;
+  else
+    return 0;
   }

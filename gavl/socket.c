@@ -116,7 +116,7 @@ void gavl_socket_address_destroy(gavl_socket_address_t * a)
   if(a->gai.ar_result)
     freeaddrinfo(a->gai.ar_result);
   
-  if(a->gai_ar_name)
+  if(a->flags & FLAG_LOOKUP_ACTIVE)
     {
     if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelled host lookup for %s", a->gai_ar_name);
@@ -124,8 +124,11 @@ void gavl_socket_address_destroy(gavl_socket_address_t * a)
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling host lookup for %s failed: %s",
                a->gai_ar_name, gai_strerror(err));
     
-    free(a->gai_ar_name);
     }
+  
+  if(a->gai_ar_name)
+    free(a->gai_ar_name);
+
   free(a);
   }
 

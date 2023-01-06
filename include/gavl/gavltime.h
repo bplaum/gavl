@@ -163,6 +163,15 @@ void gavl_time_delay(gavl_time_t * time);
 GAVL_PUBLIC void
 gavl_time_prettyprint(gavl_time_t time, char str[GAVL_TIME_STRING_LEN]);
 
+/*
+ *  Same as gavl_time_prettyprint but prints just hh:mm:ss in 24h format,
+ *  which are converted to local time from UTC
+ */
+  
+GAVL_PUBLIC void
+gavl_time_prettyprint_local(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_LEN]);
+
+  
 /*! \ingroup time
  * \brief Length of the string passed to \ref gavl_time_prettyprint_ms
  */

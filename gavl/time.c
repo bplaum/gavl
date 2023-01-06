@@ -396,6 +396,23 @@ gavl_time_prettyprint_absolute(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_
   }
 
 void
+gavl_time_prettyprint_local(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_LEN])
+  {
+  struct tm tm;
+  time_t t = gavl_time / GAVL_TIME_SCALE;
+  
+  localtime_r(&t, &tm);
+  
+  snprintf(str,
+           GAVL_TIME_STRING_LEN_ABSOLUTE,
+           "%d:%02d:%02d",
+           tm.tm_hour,
+           tm.tm_min,
+           tm.tm_sec);
+  }
+
+
+void
 gavl_time_prettyprint_absolute_full(gavl_time_t gavl_time, char * str, int local)
   {
   struct tm tm;

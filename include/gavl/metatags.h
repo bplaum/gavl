@@ -325,6 +325,15 @@
 #define GAVL_META_SAMPLE_ACCURATE "SampleAccurate"
 
 /*
+ *  Members: 
+ */
+
+#define GAVL_META_CLOCK_TIME_MAP  "ClockTimeMap"
+#define GAVL_META_CLOCK_TIME            "ClockTime"
+#define GAVL_META_CLOCK_TIME_PTS        "PTS"
+#define GAVL_META_CLOCK_TIME_PTS_SCALE  "scale"
+
+/*
  *  Several commands are expected in asynchronous mode.
  *  Details are specified in libgmerlin
  */
