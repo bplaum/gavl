@@ -661,17 +661,22 @@ gavl_dictionary_compare(const gavl_dictionary_t * m1,
                         const gavl_dictionary_t * m2)
   {
   int i;
-  int result = 1;
   const gavl_value_t * v1;
   const gavl_value_t * v2;
 
+#if 0
+  gavl_dprintf("gavl_dictionary_compare\n");
+  gavl_dictionary_dump(m1, 2);
+  gavl_dictionary_dump(m2, 2);
+#endif
+  
   /* Check if tags from m1 are present in m2 */
   for(i = 0; i < m1->num_entries; i++)
     {
     v1 = &m1->entries[i].v;
     v2 = gavl_dictionary_get(m2, m1->entries[i].name);
-    if(!v2 || (result = gavl_value_compare(v1, v2)))
-      return result;
+    if(!v2 || gavl_value_compare(v1, v2))
+      return 1;
     }
   
   /* Check if tags from m2 are present in m1 */
@@ -680,6 +685,11 @@ gavl_dictionary_compare(const gavl_dictionary_t * m1,
     if(!gavl_dictionary_get(m1, m2->entries[i].name))
       return 1;
     }
+  
+#if 0
+  gavl_dprintf("equal\n");
+#endif
+
   return 0;
   }
 

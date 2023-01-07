@@ -1426,11 +1426,12 @@ static int async_iteration(gavf_io_t * io, int timeout)
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid URI: %s", c->real_uri);
       return -1;
       }
-
+    
     if(!path)
       path = gavl_strdup("/");
     
-    prepare_connection(io, host, port, protocol);
+    if(!prepare_connection(io, host, port, protocol))
+      return -1;
     
     prepare_header(c, &c->req, host, port, path);
 
