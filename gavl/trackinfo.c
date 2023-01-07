@@ -2877,3 +2877,16 @@ int gavl_track_get_clock_time_map(const gavl_dictionary_t * track,
   else
     return 0;
   }
+
+int gavl_stream_is_sbr(const gavl_dictionary_t * s)
+  {
+  gavl_compression_info_t ci;
+  int ret = 0;
+
+  gavl_compression_info_init(&ci);
+  if(gavl_stream_get_compression_info(s, &ci))
+    ret = !!(ci.flags & GAVL_COMPRESSION_SBR);
+
+  gavl_compression_info_free(&ci);
+  return ret;
+  }

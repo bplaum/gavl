@@ -478,6 +478,9 @@
 
 #define GAVL_META_MEDIA_CLASS_LOCATION            "item.location"
 
+// External subtitle file
+#define GAVL_META_MEDIA_CLASS_SUBTITLES           "item.subtitles"
+
 // Stream comes from recording device
 #define GAVL_META_MEDIA_CLASS_AUDIO_RECORDER      "item.recorder.audio" 
 #define GAVL_META_MEDIA_CLASS_VIDEO_RECORDER      "item.recorder.video" 

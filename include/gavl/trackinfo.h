@@ -136,6 +136,9 @@ GAVL_PUBLIC void
 gavl_stream_set_id(gavl_dictionary_t * s, int id);
 
 GAVL_PUBLIC int
+gavl_stream_is_sbr(const gavl_dictionary_t * s);
+
+GAVL_PUBLIC int
 gavl_stream_get_pts_range(const gavl_dictionary_t * s, int64_t * start, int64_t * end);
 
 GAVL_PUBLIC gavl_dictionary_t *
