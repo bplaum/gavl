@@ -1411,6 +1411,7 @@ void gavl_track_finalize(gavl_dictionary_t * track)
   const char * var;
   int num_audio_streams;
   int num_video_streams;
+  int num_subtitle_streams;
   char * basename = NULL;
   
   const char * location = NULL;
@@ -1436,16 +1437,9 @@ void gavl_track_finalize(gavl_dictionary_t * track)
 
   num_audio_streams = gavl_track_get_num_audio_streams(track);
   num_video_streams = gavl_track_get_num_video_streams(track);
-
-#if 0  
-  if(!num_audio_streams && !num_video_streams && (location = gavl_dictionary_get_string(m, GAVL_META_REFURL)))
-    {
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
-    if(!gavl_dictionary_get_string(m, GAVL_META_LABEL))
-      gavl_dictionary_set_string(m, GAVL_META_LABEL, location);
-    return;
-    }
-#endif
+  num_subtitle_streams =
+    gavl_track_get_num_text_streams(track) +
+    gavl_track_get_num_overlay_streams(track);
   
   gavl_metadata_get_src(m, GAVL_META_SRC, 0,
                           NULL, &location);
@@ -1462,6 +1456,11 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     {
     /* Audio file */
     media_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
+    }
+  else if(!num_audio_streams && !num_video_streams && num_subtitle_streams)
+    {
+    /* Subtitle file */
+    media_class = GAVL_META_MEDIA_CLASS_SUBTITLE_FILE;
     }
   else if(num_video_streams >= 1)
     {
