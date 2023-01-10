@@ -41,7 +41,7 @@
 // #define DUMP_OUT_PACKETS
 
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
-// #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
+#define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
@@ -478,7 +478,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     {
     buf->valid_packets++;
 #ifdef DUMP_IN_PACKETS
-    if(buf->type == DUMP_PACKET_MASK)
+    if(buf->type & DUMP_PACKET_MASK)
       {
       gavl_dprintf("Buf in ");
       gavl_packet_dump(p);
@@ -592,7 +592,7 @@ source_func(void * priv, gavl_packet_t ** p)
   buf->packets[buf->num_packets] = NULL;
   
 #ifdef DUMP_OUT_PACKETS
-  if(buf->type == DUMP_PACKET_MASK)
+  if(buf->type & DUMP_PACKET_MASK)
     {
     gavl_dprintf("Buf out ");
     gavl_packet_dump(*p);
