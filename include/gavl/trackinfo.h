@@ -97,24 +97,6 @@ gavl_track_get_stream_all_nc(gavl_dictionary_t * d, int idx);
 GAVL_PUBLIC gavl_stream_type_t
 gavl_stream_get_type(const gavl_dictionary_t * s);
 
-/*
-    Timestamp generation modes (set by the demultiplexer and used by
-    the packetbuffer for the PTS generation)
- */
-
-typedef enum
-  {
-    GAVL_TS_DEFAULT     = 0, // PTS and Duration are valid 
-    GAVL_TS_DTS_ONLY    = 1, // DTS is given instead of PTS
-    GAVL_TS_NO_DURATION = 2, // No packet durations
-  } gavl_ts_mode_t;
-
-GAVL_PUBLIC 
-gavl_ts_mode_t gavl_stream_get_ts_mode(const gavl_dictionary_t * s);
-
-GAVL_PUBLIC 
-void gavl_stream_set_ts_mode(gavl_dictionary_t * s, gavl_ts_mode_t mode);
-
 
 /* Get the start time of the stream */
 GAVL_PUBLIC 

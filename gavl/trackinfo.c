@@ -2517,23 +2517,6 @@ gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict)
     return 0;
   }
 
-#define TS_MODE_KEY         "timestamp_mode"
-#define COMPRESSION_TAG_KEY "compression_tag"
-
-gavl_ts_mode_t gavl_stream_get_ts_mode(const gavl_dictionary_t * s)
-  {
-  int ret = GAVL_TS_DEFAULT;
-  gavl_dictionary_get_int(s, TS_MODE_KEY, &ret);
-  return ret;
-  }
-
-void gavl_stream_set_ts_mode(gavl_dictionary_t * s, gavl_ts_mode_t mode)
-  {
-  if(mode != GAVL_TS_DEFAULT)
-    gavl_dictionary_set_int(s, TS_MODE_KEY, mode);
-  else
-    gavl_dictionary_set(s, TS_MODE_KEY, NULL);
- }
 
 #define COMPRESSION_TAG_KEY "compression_tag"
 
@@ -2842,7 +2825,7 @@ void gavl_track_from_location(gavl_dictionary_t * ret, const char * location)
   track_init(ret);
   m = gavl_track_get_metadata_nc(ret);
   gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
-  gavl_metadata_add_src(ret, GAVL_META_SRC, NULL, location);
+  gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location);
   }
 
 void gavl_track_set_clock_time_map(gavl_dictionary_t * track,
