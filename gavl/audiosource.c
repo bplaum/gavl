@@ -391,7 +391,7 @@ read_frame_internal(void * sp, gavl_audio_frame_t ** frame, int num_samples)
         check_out_frame(s);
         gavl_audio_convert(s->cnv, in_frame, s->out_frame);
         s->frame = s->out_frame;
-#if 0        
+#if 0
         if(s->src_format.samplerate != s->dst_format.samplerate)
           fprintf(stderr, "Converted frame (resample) %d %d\n",
                   in_frame->valid_samples, s->out_frame->valid_samples);

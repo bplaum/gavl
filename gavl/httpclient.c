@@ -1400,6 +1400,7 @@ int gavl_http_client_run_async(gavf_io_t * io,
 
 static int async_iteration(gavf_io_t * io, int timeout)
   {
+  int result;
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
   c->flags &= ~FLAG_WAIT;
@@ -1458,7 +1459,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_RESOLVE)
     {
-    int result =
+    result =
       gavl_socket_address_set_async_done(c->addr, timeout);
 
     if(!result)
@@ -1530,7 +1531,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_SEND_CONNECT_REQUEST)
     {
-    int result = send_buffer_async(c->io_proxy, &c->header_buffer, timeout);
+    result = send_buffer_async(c->io_proxy, &c->header_buffer, timeout);
 
     if(!result)
       c->flags |= FLAG_WAIT;
@@ -1544,7 +1545,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_READ_CONNECT_RESPONSE)
     {
-    int result = gavl_http_response_read_async(c->io_proxy,
+    result = gavl_http_response_read_async(c->io_proxy,
                                                &c->header_buffer,
                                                &c->resp, timeout);
 
@@ -1584,7 +1585,6 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_TLS_HANDSHAKE)
     {
-    int result;
     result = gavf_io_create_tls_client_async_done(c->io_int, timeout);
 
     if(!result)
@@ -1598,8 +1598,6 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_SEND_REQUEST)
     {
-    int result;
-    
     if(!c->header_buffer.len)
       {
       // Create request header 
@@ -1638,13 +1636,35 @@ static int async_iteration(gavf_io_t * io, int timeout)
     gavl_dprintf("Sent request\n");
 #endif
     
-    c->state = STATE_READ_RESPONSE;
     gavl_buffer_reset(&c->header_buffer);
-    }
 
+    if(c->req_body && c->req_body->len)
+      c->state = STATE_SEND_BODY;
+    else
+      c->state = STATE_READ_RESPONSE;
+    }
+  
+  if(c->state == STATE_SEND_BODY)
+    {
+    result = send_buffer_async(c->io_int, c->req_body, timeout);
+
+    //    fprintf(stderr, "Got result: %d %d\n", result, c->header_buffer.len);
+
+    if(!result)
+      c->flags |= FLAG_WAIT;
+    
+    if(result <= 0)
+      {
+      if(result < 0)
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Sending request body failed");
+      return result;
+      }
+    c->state = STATE_READ_RESPONSE;
+    }
+  
   if(c->state == STATE_READ_RESPONSE)
     {
-    int result = gavl_http_response_read_async(c->io_int,
+    result = gavl_http_response_read_async(c->io_int,
                                                &c->header_buffer,
                                                &c->resp, timeout);
 
@@ -1711,7 +1731,6 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_BODY_NORMAL)
     {
-    int result;
     if(timeout >= 0)
       {
       if(!gavf_io_can_read(c->io_int, timeout))
@@ -1744,7 +1763,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_READ_CHUNK_HEADER)
     {
-    int result = read_chunk_header_async(c, timeout);
+    result = read_chunk_header_async(c, timeout);
 
     if(!result)
       c->flags |= FLAG_WAIT;
@@ -1768,8 +1787,6 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_CHUNK)
     {
-    int result;
-    
     if(!gavf_io_can_read(c->io_int, timeout))
       {
       c->flags |= FLAG_WAIT;
@@ -1804,7 +1821,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_CHUNK_TAIL)
     {
-    int result = read_chunk_tail_async(c, timeout);
+    result = read_chunk_tail_async(c, timeout);
 
     if(!result)
       c->flags |= FLAG_WAIT;

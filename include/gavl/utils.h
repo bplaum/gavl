@@ -317,7 +317,7 @@ int gavl_url_split(const char * url,
 
 GAVL_PUBLIC
 char * 
-gavl_base64_encode_data(void * data, int length);
+gavl_base64_encode_data(const void * data, int length);
 
 GAVL_PUBLIC
 int
@@ -325,7 +325,7 @@ gavl_base64_decode_data(const char * str, gavl_buffer_t * ret);
 
 GAVL_PUBLIC
 char * 
-gavl_base64_encode_data_urlsafe(void * data, int length);
+gavl_base64_encode_data_urlsafe(const void * data, int length);
 
 GAVL_PUBLIC
 int

@@ -6,7 +6,7 @@
 #include <nettle/base64.h>
 
 static char * 
-base64_encode_data_internal(void * data, int length, int urlsafe)
+base64_encode_data_internal(const void * data, int length, int urlsafe)
   {
   char * ret;
   struct base64_encode_ctx ctx;
@@ -55,7 +55,7 @@ base64_decode_data_internal(const char * str, gavl_buffer_t * ret, int urlsafe)
   }
 
 char * 
-gavl_base64_encode_data(void * data, int length)
+gavl_base64_encode_data(const void * data, int length)
   {
   return base64_encode_data_internal(data, length, 0);
   }
@@ -67,7 +67,7 @@ gavl_base64_decode_data(const char * str, gavl_buffer_t * ret)
   }
 
 char * 
-gavl_base64_encode_data_urlsafe(void * data, int length)
+gavl_base64_encode_data_urlsafe(const void * data, int length)
   {
   return base64_encode_data_internal(data, length, 1);
   }
