@@ -608,7 +608,7 @@ int gavl_dsp_video_frame_swap_endian(gavl_dsp_context_t * ctx,
   Since 1.5.0
 */
 
-void
+GAVL_PUBLIC void
 gavl_dsp_video_frame_shift_bits(gavl_dsp_context_t * ctx,
                                 gavl_video_frame_t * frame,
                                 const gavl_video_format_t * format, int bits);
@@ -625,7 +625,7 @@ gavl_dsp_video_frame_shift_bits(gavl_dsp_context_t * ctx,
   Since 1.5.0
 */
 
-void
+GAVL_PUBLIC void
 gavl_dsp_video_frame_shuffle_bytes(gavl_dsp_context_t * ctx,
                                    gavl_video_frame_t * frame,
                                    const gavl_video_format_t * format,

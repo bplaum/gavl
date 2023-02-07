@@ -1419,8 +1419,7 @@ void gavl_track_finalize(gavl_dictionary_t * track)
   const char * pos2;
 
   gavl_array_t * arr;
-
-
+  
   if((arr = gavl_dictionary_get_array_nc(track, GAVL_META_VARIANTS)))
     gavl_sort_tracks_by_quality(arr);
   
@@ -1539,9 +1538,9 @@ void gavl_track_finalize(gavl_dictionary_t * track)
   if(basename)
     free(basename);
 
-  /* Add country flag */
-
   media_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+  
+  /* Add country flag */
   
   if(media_class &&
      !strcmp(media_class, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY) &&
@@ -1579,9 +1578,67 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     gavl_dictionary_set(m, GAVL_META_SRC, gavl_dictionary_get(pm, GAVL_META_SRC));
     gavl_dictionary_set(track, GAVL_META_PARTS, NULL);
     }
+
+  /* Set default label */
+
+  gavl_track_set_label(track);
   
   }
 
+void gavl_track_set_label(gavl_dictionary_t * dict)
+  {
+  const char * klass;
+  const char * var;
+  gavl_dictionary_t * m;
+  
+  if(!(m = gavl_track_get_metadata_nc(dict)))
+    return;
+
+  if(gavl_dictionary_get_string(m, GAVL_META_LABEL))
+    return;
+
+  if((klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)))
+    {
+    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SONG))
+      {
+      const char * title;
+      char * artists;
+
+      if((title = gavl_dictionary_get_string(m, GAVL_META_TITLE)) &&
+         (artists = gavl_metadata_join_arr(m, GAVL_META_ARTIST, ", ")))
+        {
+        gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%s - %s",
+                                                                           artists, title));
+        free(artists);
+        }
+      
+      }
+    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE))
+      {
+      const char * title;
+      int year;
+
+      if((year = gavl_dictionary_get_year(m, GAVL_META_DATE)) &&
+         (title = gavl_dictionary_get_string(m, GAVL_META_TITLE)))
+        gavl_dictionary_set_string_nocopy(m, GAVL_META_LABEL, gavl_sprintf("%s (%d)", title, year));
+      }
+    }
+
+  if(gavl_dictionary_get_string(m, GAVL_META_LABEL))
+    return;
+
+  if((var = gavl_dictionary_get_string(m, GAVL_META_TITLE)) ||
+     (var = gavl_dictionary_get_string(m, GAVL_META_STATION)))
+    {
+    gavl_dictionary_set_string(m, GAVL_META_LABEL, var);
+    return;
+    }
+
+  if(gavl_dictionary_set_string(m, GAVL_META_LABEL, "Unnamed track"))
+    return;
+  
+  }
+  
 gavl_time_t gavl_track_get_duration(const gavl_dictionary_t * dict)
   {
   gavl_time_t dur;

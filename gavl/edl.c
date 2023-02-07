@@ -105,20 +105,50 @@ void gavl_edl_segment_get_speed(const gavl_edl_segment_t * seg, int * num, int *
   }
 
 int gavl_edl_segment_get(const gavl_edl_segment_t * seg,
-                         int * track,
-                         int * stream,
-                         int * timescale,
-                         int64_t * src_time,
-                         int64_t * dst_time,
-                         int64_t * dst_duration)
+                         int * track_p,
+                         int * stream_p,
+                         int * timescale_p,
+                         int64_t * src_time_p,
+                         int64_t * dst_time_p,
+                         int64_t * dst_duration_p)
   {
-  if(!(gavl_dictionary_get_int(seg,  GAVL_EDL_TRACK_IDX,  track)) ||
-     !(gavl_dictionary_get_int(seg,  GAVL_EDL_STREAM_IDX, stream)) ||
-     !(gavl_dictionary_get_int(seg,  GAVL_META_STREAM_SAMPLE_TIMESCALE,  timescale)) ||
-     !(gavl_dictionary_get_long(seg, GAVL_EDL_SRC_TIME,   src_time)) ||
-     !(gavl_dictionary_get_long(seg, GAVL_EDL_DST_TIME,   dst_time)) ||
-     !(gavl_dictionary_get_long(seg, GAVL_EDL_DST_DUR,    dst_duration)))
+  int track = -1;
+  int stream = -1;
+  int timescale = -1;
+  int64_t src_time = GAVL_TIME_UNDEFINED;
+  int64_t dst_time = GAVL_TIME_UNDEFINED;
+  int64_t dst_duration = -1;
+  
+  if(!(gavl_dictionary_get_int(seg,  GAVL_EDL_TRACK_IDX,  &track)) ||
+     !(gavl_dictionary_get_int(seg,  GAVL_EDL_STREAM_IDX, &stream)) ||
+     !(gavl_dictionary_get_int(seg,  GAVL_META_STREAM_SAMPLE_TIMESCALE,  &timescale)) ||
+     !(gavl_dictionary_get_long(seg, GAVL_EDL_SRC_TIME,   &src_time)) ||
+     !(gavl_dictionary_get_long(seg, GAVL_EDL_DST_TIME,   &dst_time)) ||
+     !(gavl_dictionary_get_long(seg, GAVL_EDL_DST_DUR,    &dst_duration)))
     return 0;
+  
+  /* Santiy checks */
+  if((track < 0) ||
+     (stream < 0) ||
+     (timescale <= 0) ||
+     (src_time == GAVL_TIME_UNDEFINED) ||
+     (dst_time == GAVL_TIME_UNDEFINED) ||
+     (dst_duration <= 0))
+    return 0;
+
+  if(track_p)
+    *track_p = track;
+  if(stream_p)
+    *stream_p = stream;
+  if(timescale_p)
+    *timescale_p = timescale;
+  if(src_time_p)
+    *src_time_p = src_time;
+  if(dst_time_p)
+    *dst_time_p = dst_time;
+  if(dst_duration_p)
+    *dst_duration_p = dst_duration;
+  
   return 1;
   }
 
@@ -131,12 +161,14 @@ typedef struct
 
   gavl_dictionary_t * track;
   gavl_dictionary_t * stream;
+  int error;
   } finalize_t;
 
 static void finalize_segment(void * priv, 
                              int idx,
                              const gavl_value_t * v_c)
   {
+  
   gavl_value_t * v;
   gavl_dictionary_t * seg;
   finalize_t * f = priv;
@@ -144,6 +176,11 @@ static void finalize_segment(void * priv,
   v = gavl_array_get_nc(f->segments, idx);
   seg = gavl_value_get_dictionary_nc(v);
 
+  if(!gavl_edl_segment_get(seg, NULL, NULL, NULL, NULL, NULL, NULL))
+    {
+    f->error = 1;
+    return;
+    }
   if(!gavl_dictionary_get_string(seg, GAVL_META_URI) && f->uri)
     {
     gavl_dictionary_set_string(seg, GAVL_META_URI, f->uri);
@@ -173,24 +210,34 @@ static void finalize_stream(void * priv,
   v = gavl_array_get_nc(finalize->streams, idx);
   if(!(finalize->stream = gavl_value_get_dictionary_nc(v)) ||
      !(finalize->segments = gavl_dictionary_get_array_nc(finalize->stream, GAVL_EDL_SEGMENTS)))
+    {
+    finalize->error = 1;
     return;
-
+    }
   gavl_array_foreach(finalize->segments, finalize_segment, finalize);
+
+  if(finalize->error)
+    return;
   
   gavl_stream_stats_init(&stats);
   
   if(!(v = gavl_array_get_nc(finalize->segments, 0)) ||
      !(seg = gavl_value_get_dictionary_nc(v)) ||
      !gavl_edl_segment_get(seg, &track, &stream, &timescale, &src_time, &dst_time, &dst_duration))
+    {
+    finalize->error = 1;
     return;
+    }
   
   stats.pts_start = dst_time;
 
   if(!(v = gavl_array_get_nc(finalize->segments, finalize->segments->num_entries-1)) ||
      !(seg = gavl_value_get_dictionary_nc(v)) ||
      !gavl_edl_segment_get(seg, &track, &stream, &timescale, &src_time, &dst_time, &dst_duration))
+    {
+    finalize->error = 1;
     return;
-  
+    }
   stats.pts_end = dst_time + dst_duration;
 
   gavl_stream_stats_apply_generic(&stats, NULL, gavl_stream_get_metadata_nc(finalize->stream));
@@ -203,6 +250,9 @@ static void finalize_track_internal(gavl_dictionary_t * t, finalize_t * f)
   
   if((f->streams = gavl_dictionary_get_array_nc(t, GAVL_META_STREAMS)))
     gavl_array_foreach(f->streams, finalize_stream, f);
+
+  if(f->error)
+    return;
   
   if((m = gavl_track_get_metadata_nc(t)))
     gavl_dictionary_set_long(m, GAVL_META_APPROX_DURATION, 0);
@@ -223,11 +273,14 @@ static void finalize_track(void * priv, int idx, const gavl_value_t * v_c)
   
   v = gavl_array_get_nc(arr, idx);
   if(!(t = gavl_value_get_dictionary_nc(v)))
+    {
+    finalize->error = 1;
     return;
+    }
   finalize_track_internal(t, finalize);
   }
 
-void gavl_edl_finalize(gavl_dictionary_t * edl)
+int gavl_edl_finalize(gavl_dictionary_t * edl)
   {
   finalize_t finalize;
   memset(&finalize, 0, sizeof(finalize));
@@ -236,10 +289,16 @@ void gavl_edl_finalize(gavl_dictionary_t * edl)
   
   if(finalize.tracks)
     gavl_array_foreach(finalize.tracks, finalize_track, &finalize);
-
+  else
+    finalize.error = 1;
+  
   /* We don't need the global URI anymore */
   gavl_dictionary_set(edl, GAVL_META_URI, NULL);
-  
+
+  if(finalize.error)
+    return 0;
+  else
+    return 1;
   }
 
 static void add_stream_to_timeline(gavl_dictionary_t * edl_stream,

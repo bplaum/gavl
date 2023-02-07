@@ -346,6 +346,9 @@ const char * gavl_language_get_label_from_code(const char * label);
 GAVL_PUBLIC
 void gavl_simplify_rational(int * num, int * den);
 
+GAVL_PUBLIC
+int gavl_num_cpus();
+
 
 #endif // GAVL_UTILS_H_INCLUDED
 

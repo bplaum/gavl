@@ -18,16 +18,17 @@
 
 #define LOG_DOMAIN "httpclient"
 
-#define FLAG_USE_PROXY         (1<<0)
-#define FLAG_KEEPALIVE         (1<<1)
-#define FLAG_CHUNKED           (1<<2)
-#define FLAG_USE_PROXY_TUNNEL  (1<<3)
-#define FLAG_USE_TLS           (1<<4)
-#define FLAG_GOT_REDIRECTION   (1<<5)
-#define FLAG_HAS_RESPONSE_BODY (1<<6)
-#define FLAG_USE_KEEPALIVE     (1<<7)
-
-#define FLAG_WAIT       (1<<8)
+#define FLAG_USE_PROXY          (1<<0)
+#define FLAG_KEEPALIVE          (1<<1)
+#define FLAG_CHUNKED            (1<<2)
+#define FLAG_USE_PROXY_TUNNEL   (1<<3)
+#define FLAG_USE_TLS            (1<<4)
+#define FLAG_GOT_REDIRECTION    (1<<5)
+#define FLAG_HAS_RESPONSE_BODY  (1<<6)
+#define FLAG_USE_KEEPALIVE      (1<<7)
+#define FLAG_WAIT               (1<<8)
+#define FLAG_RESPONSE_BODY_DONE (1<<9)
+#define FLAG_ERROR              (1<<10)
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -146,7 +147,7 @@ static void do_reset_connection(gavl_http_client_t * c)
 
   c->flags &= ~(FLAG_KEEPALIVE|
                 FLAG_CHUNKED|
-                FLAG_HAS_RESPONSE_BODY);
+                FLAG_HAS_RESPONSE_BODY|FLAG_ERROR);
   }
 
 static void reset_connection(gavl_http_client_t * c)
@@ -409,6 +410,7 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
           {
           /* End of body */
           c->state = STATE_COMPLETE;
+          c->flags |= FLAG_RESPONSE_BODY_DONE;
           check_keepalive(c);
           return bytes_read;
           }
@@ -741,6 +743,12 @@ static int prepare_connection(gavf_io_t * io,
     gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Closing connection (keepalive wasn't specified)");
     do_close = 1;
     }
+  else if((c->flags & (FLAG_HAS_RESPONSE_BODY|FLAG_RESPONSE_BODY_DONE)) == FLAG_HAS_RESPONSE_BODY)
+    {
+    gavl_log(GAVL_LOG_INFO , LOG_DOMAIN, "Closing connection (response body wasn't read)");
+    do_close = 1;
+    }
+  
   if(!do_close && c->io_int && c->host && c->protocol && !(c->flags & FLAG_USE_PROXY))
     {
     if(strcmp(host, c->host))
@@ -960,19 +968,25 @@ static void prepare_header(gavl_http_client_t * c,
   else
     gavl_http_request_init(request, c->method, path, "HTTP/1.1");
   
-  if(port > 0)
-    gavl_dictionary_set_string_nocopy(request, "Host", gavl_sprintf("%s:%d", host, port));
-  else
-    gavl_dictionary_set_string(request, "Host", host);
-  
   /* Append http variables from URI */
   gavl_dictionary_merge2(request, &c->vars_from_uri);
   gavl_dictionary_merge2(request, &c->vars);
+
+  if(!gavl_dictionary_get_string_i(request, "Host"))
+    {
+    if(port > 0)
+      gavl_dictionary_set_string_nocopy(request, "Host", gavl_sprintf("%s:%d", host, port));
+    else
+      gavl_dictionary_set_string(request, "Host", host);
+    }
   
   /* Send standard headers */
   append_header_var(request, "Accept", "*/*");
   append_header_var(request, "User-Agent", "gavl/"VERSION);
 
+  if(c->req_body && c->req_body->len)
+    gavl_dictionary_set_int(request, "Content-Length", c->req_body->len);
+  
   if((c->range_start > 0) || (c->range_end > 0))
     {
     if(c->range_end <= 0)
@@ -990,13 +1004,27 @@ static int handle_response(gavf_io_t * io)
   int status;
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  c->flags &= ~FLAG_GOT_REDIRECTION;
+  c->flags &= ~(FLAG_GOT_REDIRECTION|FLAG_RESPONSE_BODY_DONE);
   
   status = gavl_http_response_get_status_int(&c->resp);
 
+  if(gavl_http_response_is_chunked(&c->resp))
+    c->flags |= FLAG_CHUNKED;
+  else
+    c->flags &= ~FLAG_CHUNKED;
+    
+  if(gavl_http_response_has_body(&c->resp))
+    c->flags |= FLAG_HAS_RESPONSE_BODY;
+  else
+    c->flags &= ~FLAG_HAS_RESPONSE_BODY;
+
+  if(!c->total_bytes)
+    gavl_dictionary_get_long_i(&c->resp, "Content-Length", &c->total_bytes);
+  
   if(status < 200)
     {
     /* Not yet supported */
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "HTTP status %d not yet supported", status);
     goto fail;
     }
   else if(status < 300)
@@ -1015,14 +1043,11 @@ static int handle_response(gavf_io_t * io)
         var = gavl_dictionary_get_string_i(&c->resp, "Content-Range");
 
         if(!var)
-          {
           goto fail;
-          }
         
         if(!gavl_string_starts_with(var, "bytes "))
-          {
           goto fail;
-          }
+        
         var += 6;
 
         while(isspace(*var) && (*var != '\0'))
@@ -1036,47 +1061,36 @@ static int handle_response(gavf_io_t * io)
 
         if(c->range_end <= 0)
           c->position = resp_range_start;
-        
         }
       
       if(!strcmp(c->method, "GET"))
         {
-        var = gavl_dictionary_get_string_i(&c->resp, "Transfer-Encoding");
-        if(var && !strcasecmp(var, "chunked"))
+#if 0
+        if(!(c->flags & FLAG_CHUNKED) && (!c->total_bytes))
           {
-          c->flags |= (FLAG_CHUNKED | FLAG_HAS_RESPONSE_BODY);
+          if((status == 200) || (c->range_end > 0))
+            gavl_dictionary_get_long_i(&c->resp, "Content-Length", &c->total_bytes);
+          else
+            c->total_bytes = resp_range_total;
           }
-        else
-          {
-          c->flags &= ~FLAG_CHUNKED;
-
-          if(!c->total_bytes)
-            {
-            if((status == 200) || (c->range_end > 0))
-              {
-              gavl_dictionary_get_long_i(&c->resp, "Content-Length", &c->total_bytes);
-              c->flags |= FLAG_HAS_RESPONSE_BODY;
-              }
-            else
-              c->total_bytes = resp_range_total;
-            }
-          }
+#endif   
+        if(c->flags & FLAG_HAS_RESPONSE_BODY)
+          flags = GAVF_IO_CAN_READ;
         
-        flags = GAVF_IO_CAN_READ;
-
         if((var = gavl_dictionary_get_string_i(&c->resp, "Accept-Ranges")) &&
            !strcasecmp(var, "bytes") && (c->total_bytes > 0))
           flags |= GAVF_IO_CAN_SEEK;
         }
-      else // PUT?
+      else if(!strcmp(c->method, "PUT")) // Not supported yet
         flags = GAVF_IO_CAN_WRITE;
-
+      
       if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
         check_keepalive(c);
-      
-      gavf_io_set_info(io, c->total_bytes, c->uri,
-                       gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
-                       flags);
+
+      if(!strcmp(c->method, "GET") || !strcmp(c->method, "PUT"))
+        gavf_io_set_info(io, c->total_bytes, c->uri,
+                         gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
+                         flags);
       }
     else
       goto fail;
@@ -1119,8 +1133,7 @@ static int handle_response(gavf_io_t * io)
     
     gavl_dictionary_set_string(gavf_io_info(c->io), GAVL_META_REAL_URI, c->real_uri);
 
-    if(!gavl_dictionary_get_string_i(&c->resp, "Content-Length") &&
-       !gavl_dictionary_get_string_i(&c->resp, "Transfer-encoding"))
+    if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
       check_keepalive(c);
     }
   else
@@ -1134,7 +1147,10 @@ static int handle_response(gavf_io_t * io)
     
     gavl_dictionary_dump(&c->req, 2);
     
-    goto fail;
+    if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
+      check_keepalive(c);
+    
+    c->flags |= FLAG_ERROR;
     }
 
   ret = 1;
@@ -1562,7 +1578,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     fprintf(stderr, "Got connect response\n");
     gavl_dictionary_dump(&c->resp, 2);
 #endif // DUMP_HEADERS
-      
+    
     /* Check response status */
     if(gavl_http_response_get_status_int(&c->resp) != 200)
       {
@@ -1665,9 +1681,9 @@ static int async_iteration(gavf_io_t * io, int timeout)
   if(c->state == STATE_READ_RESPONSE)
     {
     result = gavl_http_response_read_async(c->io_int,
-                                               &c->header_buffer,
-                                               &c->resp, timeout);
-
+                                           &c->header_buffer,
+                                           &c->resp, timeout);
+    
     if(!result)
       c->flags |= FLAG_WAIT;
 
@@ -1681,7 +1697,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     
     if(!handle_response(io))
       return -1;
-
+    
     /* Handle redirection */
 
     if(c->flags & FLAG_GOT_REDIRECTION)
@@ -1694,7 +1710,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
       {
       c->state = STATE_COMPLETE;
       check_keepalive(c);
-      return 1;
+      return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
 
     if(c->res_body)
@@ -1711,20 +1727,21 @@ static int async_iteration(gavf_io_t * io, int timeout)
       
       if(c->res_body)
         {
-        gavl_buffer_alloc(c->res_body, c->total_bytes);
-
         if(c->total_bytes <= 0)
           {
-          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read body: No Content-Length given and no chunked encoding.");
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+                   "Cannot read body: No Content-Length given and no chunked encoding.");
           gavl_dictionary_dump(&c->resp, 2);
           
           return -1;
           }
+        gavl_buffer_alloc(c->res_body, c->total_bytes);
         }
       }
-    
+
+    /* Body will be read with gavf_io_read_data() or gavf_io_read_data_nonblock() */
     if(!c->res_body)
-      return 1;
+      return (c->flags & FLAG_ERROR) ? -1 : 1;
     
     //    return 0;
     }
@@ -1754,8 +1771,9 @@ static int async_iteration(gavf_io_t * io, int timeout)
     if(c->res_body->len == c->total_bytes)
       {
       c->state = STATE_COMPLETE;
+      c->flags |= FLAG_RESPONSE_BODY_DONE;
       check_keepalive(c);
-      return 1;
+      return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
     /* Not yet enough */
     return 0;
@@ -1832,8 +1850,9 @@ static int async_iteration(gavf_io_t * io, int timeout)
     if(!c->chunk_length) /* Tail after a zero length chunk: body finished */
       {
       c->state = STATE_COMPLETE;
+      c->flags |= FLAG_RESPONSE_BODY_DONE;
       check_keepalive(c);
-      return 1;
+      return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
     else
       {
@@ -1845,9 +1864,9 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_COMPLETE)
     {
-    return 1;
+    fprintf(stderr, "async_iteration done %d\n", !!(c->flags & FLAG_ERROR));
+    return (c->flags & FLAG_ERROR) ? -1 : 1;
     }
-
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown state %d", c->state);
   /* Unknown state */
   return -1;

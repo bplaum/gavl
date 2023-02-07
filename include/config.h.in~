@@ -56,9 +56,6 @@
 /* OpenGL available */
 #undef HAVE_GL
 
-/* GLX available */
-#undef HAVE_GLX
-
 /* Define to 1 if you have the <ifaddrs.h> header file. */
 #undef HAVE_IFADDRS_H
 

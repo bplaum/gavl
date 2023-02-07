@@ -107,13 +107,19 @@ int gavl_http_parse_vars_line(gavl_dictionary_t * m, char * line);
 
 
 GAVL_PUBLIC
-const char * gavl_http_response_get_protocol(gavl_dictionary_t * res);
+const char * gavl_http_response_get_protocol(const gavl_dictionary_t * res);
 
 GAVL_PUBLIC
-const int gavl_http_response_get_status_int(gavl_dictionary_t * res);
+const int gavl_http_response_get_status_int(const gavl_dictionary_t * res);
 
 GAVL_PUBLIC
-const char * gavl_http_response_get_status_str(gavl_dictionary_t * res);
+const char * gavl_http_response_get_status_str(const gavl_dictionary_t * res);
+
+GAVL_PUBLIC
+int gavl_http_response_has_body(const gavl_dictionary_t * res);
+
+GAVL_PUBLIC
+int gavl_http_response_is_chunked(const gavl_dictionary_t * res);
 
 GAVL_PUBLIC
 void gavl_http_header_set_empty_var(gavl_dictionary_t * h, const char * name);

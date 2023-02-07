@@ -78,7 +78,7 @@ int gavl_edl_segment_get(const gavl_edl_segment_t * seg,
 
 
 GAVL_PUBLIC
-void gavl_edl_finalize(gavl_dictionary_t * edl);
+int gavl_edl_finalize(gavl_dictionary_t * edl);
 
 /** \brief Create an empty EDL
  *  \returns A newly allocated EDL

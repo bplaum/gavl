@@ -584,19 +584,19 @@ int gavl_http_response_from_string(gavl_dictionary_t * res, const char * buf)
   }
 
 
-const char * gavl_http_response_get_protocol(gavl_dictionary_t * res)
+const char * gavl_http_response_get_protocol(const gavl_dictionary_t * res)
   {
   return gavl_dictionary_get_string(res, GAVL_HTTP_META_PROTOCOL);
   }
 
-const int gavl_http_response_get_status_int(gavl_dictionary_t * res)
+int gavl_http_response_get_status_int(const gavl_dictionary_t * res)
   {
   int ret = 0;
   gavl_dictionary_get_int(res, GAVL_HTTP_META_STATUS_INT, &ret);
   return ret;
   }
 
-const char * gavl_http_response_get_status_str(gavl_dictionary_t * res)
+const char * gavl_http_response_get_status_str(const gavl_dictionary_t * res)
   {
   return gavl_dictionary_get_string(res, GAVL_HTTP_META_STATUS_STR);
   }
@@ -604,6 +604,30 @@ const char * gavl_http_response_get_status_str(gavl_dictionary_t * res)
 void gavl_http_header_set_empty_var(gavl_dictionary_t * h, const char * name)
   {
   gavl_dictionary_set_string(h, name, GAVL_HTTP_META_EMPTY);
+  }
+
+int gavl_http_response_is_chunked(const gavl_dictionary_t * res)
+  {
+  const char * var;
+  if((var = gavl_dictionary_get_string(res, "Transfer-Encoding")) &&
+     !strcasecmp(var, "chunked"))
+    return 1;
+  else
+    return 0;
+  }
+
+int gavl_http_response_has_body(const gavl_dictionary_t * res)
+  {
+  int64_t total_bytes = 0;
+
+  if(gavl_http_response_is_chunked(res))
+    return 1;
+  else if(gavl_dictionary_get_long_i(res, "Content-Length", &total_bytes) && (total_bytes > 0))
+    return 1;
+  else if(gavl_dictionary_get_i(res, "Content-Type")) // Streaming case
+    return 1;
+  else
+    return 0;
   }
 
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name)

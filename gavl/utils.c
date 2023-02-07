@@ -22,17 +22,18 @@
 #include <config.h>
 #define _GNU_SOURCE
 
-#include <gavl/gavl.h>
-#include <gavl/utils.h>
-#include <gavl/http.h>
-
-
+#include <sched.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <errno.h>
+
+#include <gavl/gavl.h>
+#include <gavl/utils.h>
+#include <gavl/http.h>
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "utils"
@@ -906,3 +907,22 @@ void gavl_simplify_rational(int * num, int * den)
   *num /= fac;
   *den /= fac;
   }
+
+#undef LOG_DOMAIN
+#define LOG_DOMAIN "cpus"
+
+int gavl_num_cpus()
+  {
+  cpu_set_t mask;
+
+  if(sched_getaffinity(0, sizeof(cpu_set_t), &mask) == -1)
+    {
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+             "Could not obtain the CPU affinity: %s (switching to single threaded mode)",
+           strerror(errno));
+    return 1;
+    }
+  return CPU_COUNT(&mask);
+  }
+
+#undef LOG_DOMAIN

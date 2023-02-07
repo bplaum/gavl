@@ -423,6 +423,9 @@ GAVL_PUBLIC
 void gavl_track_set_duration(gavl_dictionary_t * dict, gavl_time_t dur);
 
 GAVL_PUBLIC
+void gavl_track_set_label(gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
 void gavl_set_current_track(gavl_dictionary_t * dict, int idx);
 
 GAVL_PUBLIC
