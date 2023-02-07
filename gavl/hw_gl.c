@@ -32,46 +32,40 @@
 
 #include <hw_private.h>
 
-/*
-
-1) *egl_image = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_IMAGE_BRCM_MULTIMEDIA, mmal_buffer_opaque, NULL);
-2) glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, *egl_image);
-
-*/
-
 
 static const struct
   {
   const gavl_pixelformat_t fmt;
   const GLenum format;
+  const GLenum internalformat;
   const GLenum type;
   
   }
 pixelformats[] =
   {
-    { GAVL_RGB_24,     GL_RGB,  GL_UNSIGNED_BYTE },
-    { GAVL_RGBA_32,    GL_RGBA, GL_UNSIGNED_BYTE },
-    { GAVL_RGB_48,     GL_RGB,  GL_SHORT },
-    { GAVL_RGBA_64,    GL_RGBA, GL_SHORT },
-    { GAVL_RGB_FLOAT,  GL_RGB,  GL_FLOAT },
+    { GAVL_RGB_24,     GL_RGB,  GL_RGBA,  GL_UNSIGNED_BYTE },
+    { GAVL_RGBA_32,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_BYTE },
+    { GAVL_RGB_48,     GL_RGB,  GL_RGBA,  GL_UNSIGNED_SHORT },
+    { GAVL_RGBA_64,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_SHORT },
+    { GAVL_RGB_FLOAT,  GL_RGB,  GL_RGBA,  GL_FLOAT },
     { GAVL_RGBA_FLOAT, GL_RGBA, GL_FLOAT },
     
-    { GAVL_YUV_420_P,    GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_410_P,    GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_411_P,    GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_422_P,    GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_422_P_16, GL_RED,  GL_UNSIGNED_SHORT },
-    { GAVL_YUV_444_P,    GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_444_P_16, GL_RED,  GL_UNSIGNED_SHORT },
-    { GAVL_YUVJ_420_P,   GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUVJ_422_P,   GL_RED,  GL_UNSIGNED_BYTE  },
-    { GAVL_YUVJ_444_P,   GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_420_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_410_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_411_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_422_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_422_P_16, GL_RED,  GL_RED, GL_UNSIGNED_SHORT },
+    { GAVL_YUV_444_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_444_P_16, GL_RED,  GL_RED, GL_UNSIGNED_SHORT },
+    { GAVL_YUVJ_420_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUVJ_422_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_YUVJ_444_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
     { GAVL_PIXELFORMAT_NONE    /* End */ },
   };
 
 #define NUM_PIXELFORMATS (sizeof(pixelformats)/sizeof(pixelformats[0]))
 
-int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * type)
+int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * internalformat, GLenum * type)
   {
   int i = 0;
 
@@ -81,6 +75,10 @@ int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * type)
       {
       *format = pixelformats[i].format;
       *type   = pixelformats[i].type;
+
+      if(internalformat)
+        *internalformat = pixelformats[i].internalformat;
+      
       return 1;
       }
     i++;
@@ -152,7 +150,7 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
   {
   int i;
   GLenum type = 0, format = 0;
-  GLint internalformat;
+  GLenum internalformat;
 
   GLsizei width;
   GLsizei height;
@@ -170,7 +168,7 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
   height = fmt->image_height;
 
   
-  if(!gavl_get_gl_format(fmt->pixelformat, &format, &type))
+  if(!gavl_get_gl_format(fmt->pixelformat, &format, &internalformat, &type))
     return 0;
   
   info->num_textures = gavl_pixelformat_num_planes(fmt->pixelformat);
@@ -212,7 +210,11 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
                  type,
                  NULL);
     
-    gavl_gl_log_error("glTexImage2D");
+    if(gavl_gl_log_error("glTexImage2D"))
+      {
+      fprintf(stderr, "glTexImage2D failed\n");
+      gavl_video_format_dump(fmt);
+      }
     
     }
   return ret;
@@ -243,7 +245,7 @@ void gavl_gl_frame_to_ram(const gavl_video_format_t * fmt,
 
   info = src->storage;
   
-  gavl_get_gl_format(fmt->pixelformat, &format, &type);
+  gavl_get_gl_format(fmt->pixelformat, &format, NULL, &type);
   
   for(i = 0; i < info->num_textures; i++)
     {
@@ -276,7 +278,7 @@ void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
 
   gavl_gl_frame_info_t * info = dst->storage;
   
-  gavl_get_gl_format(fmt->pixelformat, &format, &type);
+  gavl_get_gl_format(fmt->pixelformat, &format, NULL, &type);
 
   width = fmt->image_width;
   height = fmt->image_height;
@@ -308,7 +310,13 @@ void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
     glTexSubImage2D(GL_TEXTURE_2D,
                     0, 0, 0, width, height,
                     format, type, src->planes[i]);
-    gavl_gl_log_error("glTexSubImage2D");
+
+    if(gavl_gl_log_error("glTexSubImage2D"))
+      {
+      fprintf(stderr, "glTexSubImage2D failed\n");
+      gavl_video_format_dump(fmt);
+      }
+    
     }
   
   }
@@ -347,16 +355,18 @@ const char * gavl_gl_get_error_string(GLenum err)
   return "Unknown error";
   }
 
-void gavl_gl_log_error(const char * funcname)
+int gavl_gl_log_error(const char * funcname)
   {
+  int ret = 0;
   GLenum err;
   //  glFlush();
   while((err = glGetError()))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "%s failed: %s\n",
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "%s failed: %s",
              funcname, gavl_gl_get_error_string(err));
+    ret = 1;
     }
-  
+  return ret;
   }
 
 void gavl_gl_flush_errors()

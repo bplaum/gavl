@@ -33,7 +33,8 @@ typedef struct
   GLenum texture_target;
   } gavl_gl_frame_info_t;
 
-GAVL_PUBLIC int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * type);
+GAVL_PUBLIC int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format,
+                                   GLenum * internalformat, GLenum * type);
 
 GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx);
 GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_overlay_formats(gavl_hw_context_t * ctx);
@@ -61,7 +62,7 @@ GAVL_PUBLIC void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
 /* Generic utilities */
 
 GAVL_PUBLIC const char * gavl_gl_get_error_string(GLenum err);
-GAVL_PUBLIC void gavl_gl_log_error(const char * funcname);
+GAVL_PUBLIC int gavl_gl_log_error(const char * funcname);
 GAVL_PUBLIC void gavl_gl_flush_errors();
 
 #endif // GAVL_HW_GL_H_INCLUDED
