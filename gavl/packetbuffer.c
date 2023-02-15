@@ -435,15 +435,20 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   /* Merge field pictures */
   if(p->flags & GAVL_PACKET_FIELD_PIC)
     {
-    if((buf->valid_packets >= 2) &&
-       (buf->packets[buf->valid_packets-2]->flags & GAVL_PACKET_FIELD_PIC))
+    if((buf->valid_packets >= 1) &&
+       (buf->packets[buf->valid_packets-1]->flags & GAVL_PACKET_FIELD_PIC))
       {
       gavl_packet_merge_field2(buf->packets[buf->valid_packets-1], p);
       ok = 0;
       p = buf->packets[buf->valid_packets-1];
+      fprintf(stderr, "Merged field pic\n");
       }
     else
+      {
+      /* First field pic */
+      buf->valid_packets++;
       return GAVL_SINK_OK;
+      }
     }
 
   /* Detect frame type from PTS */

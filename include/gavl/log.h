@@ -1,6 +1,8 @@
 #ifndef GAVL_LOG_H_INCLUDED
 #define GAVL_LOG_H_INCLUDED
 
+#include <stdarg.h>
+
 #include <gavl/gavl.h>
 #include <gavl/msg.h>
 
@@ -22,8 +24,17 @@ void gavl_log_translate(const char * translation_domain,
                         gavl_log_level_t level, const char * domain,
                         const char * format, ...) __attribute__ ((format (printf, 4, 5)));
 
-#define gavl_log(level, domain, ...) \
+GAVL_PUBLIC
+void gavl_logv_translate(const char * translation_domain,
+                         gavl_log_level_t level, const char * domain, 
+                         const char * format, va_list argp);
+
+
+#define gavl_log(level, domain, ...)                     \
    gavl_log_translate(PACKAGE, level, domain, __VA_ARGS__)
+
+#define gavl_logv(level, domain, fmt, valist)            \
+   gavl_logv_translate(PACKAGE, level, domain, fmt, valist)
 
 
 GAVL_PUBLIC

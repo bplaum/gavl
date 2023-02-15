@@ -57,6 +57,8 @@
 
 #define FLAG_LOOKUP_ACTIVE (1<<0)
 
+#define DUMP_RECEIVED_SEARCH_REQUESTS
+
 /* Opaque address structure so we can support IPv6 */
 
 struct gavl_socket_address_s 
@@ -1313,7 +1315,7 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
   int ret;
   int err;
   uint8_t loop = 1;
-
+  
   gavl_socket_address_t bind_addr;
   
   if((ret = create_socket(addr->addr.ss_family, SOCK_DGRAM, 0)) < 0)

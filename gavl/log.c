@@ -69,7 +69,8 @@ static void logs_internal(gavl_log_level_t level, const char * domain,
   }
 
 
-static void log_internal(gavl_log_level_t level, const char * domain,
+void gavl_logv_translate(const char * translation_domain,
+                         gavl_log_level_t level, const char * domain, 
                          const char * format, va_list argp)
   {
   char * msg_string;
@@ -87,7 +88,6 @@ static void log_internal(gavl_log_level_t level, const char * domain,
   free(msg_string);
   }
 
-
 void gavl_log_translate(const char * translation_domain,
                         gavl_log_level_t level, const char * domain,
                         const char * format, ...)
@@ -95,7 +95,7 @@ void gavl_log_translate(const char * translation_domain,
   va_list argp; /* arg ptr */
 
   va_start( argp, format);
-  log_internal(level, domain, format, argp);
+  gavl_logv_translate(translation_domain, level, domain, format, argp);
   va_end(argp);
   }
 

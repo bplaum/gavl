@@ -14,7 +14,7 @@
 #include <gavfprivate.h>
 #include <gavl/metatags.h>
 
-// #define DUMP_HEADERS
+#define DUMP_HEADERS
 
 #define LOG_DOMAIN "httpclient"
 
@@ -634,7 +634,7 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
   int64_t pos = -1;
   gavl_http_client_t * c = priv;
 
-  //  fprintf(stderr, "seek_http %p\n", c->io_int);
+  fprintf(stderr, "seek_http %p\n", c->io_int);
 
   switch(whence)
     {
@@ -649,7 +649,7 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
       break;
     }
 
-  //  fprintf(stderr, "seek_http 1 %"PRId64" %"PRId64" %p\n", c->position, pos, c->io_int);
+  fprintf(stderr, "seek_http 1 %"PRId64" %"PRId64" %p\n", c->position, pos, c->io_int);
 
   if(c->position == pos)
     return c->position;
