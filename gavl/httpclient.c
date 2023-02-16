@@ -14,7 +14,7 @@
 #include <gavfprivate.h>
 #include <gavl/metatags.h>
 
-#define DUMP_HEADERS
+// #define DUMP_HEADERS
 
 #define LOG_DOMAIN "httpclient"
 
@@ -141,6 +141,7 @@ static void do_reset_connection(gavl_http_client_t * c)
   c->chunk_length = 0;
   c->pos = 0;
   c->state        = STATE_START;
+  c->num_redirections = 0;
   
   gavf_io_clear_eof(c->io);
   gavf_io_clear_error(c->io);
@@ -634,7 +635,7 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
   int64_t pos = -1;
   gavl_http_client_t * c = priv;
 
-  fprintf(stderr, "seek_http %p\n", c->io_int);
+  //  fprintf(stderr, "seek_http %p\n", c->io_int);
 
   switch(whence)
     {
@@ -649,7 +650,7 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
       break;
     }
 
-  fprintf(stderr, "seek_http 1 %"PRId64" %"PRId64" %p\n", c->position, pos, c->io_int);
+  //  fprintf(stderr, "seek_http 1 %"PRId64" %"PRId64" %p\n", c->position, pos, c->io_int);
 
   if(c->position == pos)
     return c->position;
@@ -1060,6 +1061,9 @@ static int handle_response(gavf_io_t * io)
           }
 
         if(c->range_end <= 0)
+          c->total_bytes = resp_range_total;
+        
+        if(c->range_end <= 0)
           c->position = resp_range_start;
         }
       
@@ -1070,7 +1074,7 @@ static int handle_response(gavf_io_t * io)
           {
           if((status == 200) || (c->range_end > 0))
             gavl_dictionary_get_long_i(&c->resp, "Content-Length", &c->total_bytes);
-          else
+          else if(status == 206)
             c->total_bytes = resp_range_total;
           }
 #endif   
