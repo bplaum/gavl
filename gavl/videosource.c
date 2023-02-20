@@ -227,16 +227,7 @@ void gavl_video_source_reset(gavl_video_source_t * s)
 GAVL_PUBLIC
 void gavl_video_source_destroy(gavl_video_source_t * s)
   {
-#if 0
-  if(s->src_fp)
-    gavl_video_frame_pool_destroy(s->src_fp);
-  if(s->dst_fp)
-    gavl_video_frame_pool_destroy(s->dst_fp);
-
-  if(s->transfer_frame)
-    gavl_video_frame_destroy(s->transfer_frame);
-#endif
-
+  
   if(s->in_frame)
     gavl_video_frame_destroy(s->in_frame);
 

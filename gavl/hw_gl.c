@@ -212,8 +212,11 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
     
     if(gavl_gl_log_error("glTexImage2D"))
       {
+      GLint val;
       fprintf(stderr, "glTexImage2D failed\n");
       gavl_video_format_dump(fmt);
+      glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
+      fprintf(stderr, "Maximum texture size: %d\n", val);
       }
     
     }

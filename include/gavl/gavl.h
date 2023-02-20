@@ -2398,6 +2398,23 @@ int gavl_interlace_mode_is_mixed(gavl_interlace_mode_t mode);
 #include <gavl/hw.h> // Needs forward declarations
 
 /* Video format structure */
+
+#define GAVL_IMAGE_ORIENT_FLIP_H     (1<<2)
+
+typedef enum
+  {
+
+    GAVL_IMAGE_ORIENT_NORMAL      = 0, // EXIF: 1
+    GAVL_IMAGE_ORIENT_ROT90_CW    = 1, // EXIF: 8
+    GAVL_IMAGE_ORIENT_ROT180_CW   = 2, // EXIF: 3
+    GAVL_IMAGE_ORIENT_ROT270_CW   = 3, // EXIF: 3
+    
+    GAVL_IMAGE_ORIENT_FH           = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_NORMAL),   // EXIF: 
+    GAVL_IMAGE_ORIENT_FH_ROT90_CW  = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT90_CW),
+    GAVL_IMAGE_ORIENT_FH_ROT180_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT180_CW),
+    GAVL_IMAGE_ORIENT_FH_ROT270_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT270_CW),
+    
+  } gavl_image_orientation_t;
   
 /*! \ingroup video_format
  * \brief Video format
@@ -2430,7 +2447,8 @@ struct gavl_video_format_s
   gavl_timecode_format_t  timecode_format;/*!< Optional timecode format */
 
   gavl_hw_context_t * hwctx;         //!< Handle for accessing the frames. If NULL, frames are in regular RAM
-
+  
+  gavl_image_orientation_t orientation;
   };
 
 /*!
