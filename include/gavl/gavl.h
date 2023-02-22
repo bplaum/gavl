@@ -2407,12 +2407,12 @@ typedef enum
     GAVL_IMAGE_ORIENT_NORMAL      = 0, // EXIF: 1
     GAVL_IMAGE_ORIENT_ROT90_CW    = 1, // EXIF: 8
     GAVL_IMAGE_ORIENT_ROT180_CW   = 2, // EXIF: 3
-    GAVL_IMAGE_ORIENT_ROT270_CW   = 3, // EXIF: 3
+    GAVL_IMAGE_ORIENT_ROT270_CW   = 3, // EXIF: 6
     
-    GAVL_IMAGE_ORIENT_FH           = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_NORMAL),   // EXIF: 
-    GAVL_IMAGE_ORIENT_FH_ROT90_CW  = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT90_CW),
-    GAVL_IMAGE_ORIENT_FH_ROT180_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT180_CW),
-    GAVL_IMAGE_ORIENT_FH_ROT270_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT270_CW),
+    GAVL_IMAGE_ORIENT_FH           = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_NORMAL),    // EXIF: 2
+    GAVL_IMAGE_ORIENT_FH_ROT90_CW  = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT90_CW),  // EXIF: 7
+    GAVL_IMAGE_ORIENT_FH_ROT180_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT180_CW), // EXIF: 4
+    GAVL_IMAGE_ORIENT_FH_ROT270_CW = (GAVL_IMAGE_ORIENT_FLIP_H | GAVL_IMAGE_ORIENT_ROT270_CW), // EXIF: 5
     
   } gavl_image_orientation_t;
   
@@ -2602,6 +2602,11 @@ void gavl_video_format_dump(const gavl_video_format_t * format);
 GAVL_PUBLIC
 void gavl_video_format_dumpi(const gavl_video_format_t * format, int indent);
 
+GAVL_PUBLIC
+void gavl_video_format_normalize_orientation(gavl_video_format_t * in_format,
+                                             gavl_video_format_t * out_format);
+
+  
   
 /** \defgroup video_frame Video frames
  * \ingroup video
@@ -3082,6 +3087,11 @@ int gavl_video_frames_equal(const gavl_video_format_t * format,
                              const gavl_video_frame_t * f1,
                              const gavl_video_frame_t * f2);
 
+GAVL_PUBLIC
+void gavl_video_frame_normalize_orientation(const gavl_video_format_t * in_format,
+                                            const gavl_video_format_t * out_format,
+                                            const gavl_video_frame_t * in_frame,
+                                            gavl_video_frame_t * out_frame);
   
 /*****************************
  Conversion options

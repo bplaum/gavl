@@ -148,15 +148,6 @@ void gavl_pixelformat_get_offset(gavl_pixelformat_t pixelformat,
                                  int plane,
                                  int * advance, int * offset);
 
-/* Orient a video frame to normal */
-
-void gavl_video_format_normalize_orientation(gavl_video_format_t * in_format,
-                                             gavl_video_format_t * out_format);
-
-void gavl_video_frame_normalize_orientation(const gavl_video_format_t * in_format,
-                                            const gavl_video_format_t * out_format,
-                                            const gavl_video_frame_t * in_frame,
-                                            gavl_video_frame_t * out_frame);
 
 
 #endif // VIDEO_H_INCLUDED
