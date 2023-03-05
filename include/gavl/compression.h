@@ -661,9 +661,12 @@ typedef struct
   } gavl_seek_index_t;
   
 GAVL_PUBLIC
-void gavl_seek_index_append(gavl_seek_index_t * idx,
-                            const gavl_packet_t * pkt, int compression_flags);
+void gavl_seek_index_append_packet(gavl_seek_index_t * idx,
+                                   const gavl_packet_t * pkt, int compression_flags);
 
+GAVL_PUBLIC
+void gavl_seek_index_append_pos_pts(gavl_seek_index_t * idx,  int64_t position, int64_t pts);
+  
 GAVL_PUBLIC
 int gavl_seek_index_seek(const gavl_seek_index_t * idx,
                          int64_t pts);

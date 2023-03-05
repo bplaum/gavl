@@ -378,6 +378,7 @@
 #define GAVL_META_TAG                "Tag" // Arbitrary tag
 
 #define GAVL_META_NFO_FILE           "NFOFILE" // 
+#define GAVL_META_TOOLTIP            "tooltip" // Tooltip to be shown in GUIs
 
 #define GAVL_META_STREAM_DURATION  "duration"
 #define GAVL_META_STREAM_FORMAT    "fmt"

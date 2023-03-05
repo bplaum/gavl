@@ -1963,6 +1963,61 @@ const gavl_dictionary_t * gavl_get_track_by_id(const gavl_dictionary_t * dict, c
   return NULL;
   }
 
+const gavl_dictionary_t * gavl_get_track_by_id_arr(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * track;
+  const gavl_dictionary_t * m;
+  const char * track_id;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((track = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (m = gavl_track_get_metadata(track)) &&
+       (track_id = gavl_dictionary_get_string(m, GAVL_META_ID)) &&
+       !strcmp(track_id, id))
+      return track;
+    }
+  return NULL;
+  }
+
+gavl_dictionary_t * gavl_get_track_by_id_arr_nc(gavl_array_t * arr, const char * id)
+  {
+  int i;
+  gavl_dictionary_t * track;
+  const gavl_dictionary_t * m;
+  const char * track_id;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((track = gavl_value_get_dictionary_nc(&arr->entries[i])) &&
+       (m = gavl_track_get_metadata(track)) &&
+       (track_id = gavl_dictionary_get_string(m, GAVL_META_ID)) &&
+       !strcmp(track_id, id))
+      return track;
+    }
+  return NULL;
+  }
+
+int gavl_get_track_idx_by_id_arr(const gavl_array_t * arr, const char * id)
+  {
+  int i;
+  const gavl_dictionary_t * track;
+  const gavl_dictionary_t * m;
+  const char * track_id;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((track = gavl_value_get_dictionary_nc(&arr->entries[i])) &&
+       (m = gavl_track_get_metadata(track)) &&
+       (track_id = gavl_dictionary_get_string(m, GAVL_META_ID)) &&
+       !strcmp(track_id, id))
+      return i;
+    }
+  return -1;
+  }
+
+
 gavl_dictionary_t * gavl_get_track_by_id_nc(gavl_dictionary_t * dict, const char * id)
   {
   int i;

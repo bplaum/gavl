@@ -107,6 +107,7 @@ void gavl_video_format_dumpi(const gavl_video_format_t * format, int indent)
       fprintf(stderr, "Drop");
     fprintf(stderr, "\n");
     }
+  fprintf(stderr, "  orientation:     %s\n", gavl_image_orientation_to_string(format->orientation));
   
   if(format->hwctx)
     fprintf(stderr, "  Frame storage:    %s\n", gavl_hw_type_to_string(gavl_hw_ctx_get_type(format->hwctx)));

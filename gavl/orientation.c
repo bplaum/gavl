@@ -12,20 +12,21 @@ static struct
   int transpose;
   int flip_h_src;
   int flip_v_src;
+  const char * label;
   }
 orientations[8] =
   {
     
-    { GAVL_IMAGE_ORIENT_NORMAL,       0, 0, 0 }, // EXIF: 1
-    { GAVL_IMAGE_ORIENT_ROT90_CW,     1, 1, 0 }, // EXIF: 8
-    { GAVL_IMAGE_ORIENT_ROT180_CW,    0, 1, 1 }, // EXIF: 3
-    { GAVL_IMAGE_ORIENT_ROT270_CW,    1, 0, 1 }, // EXIF: 6
+    { GAVL_IMAGE_ORIENT_NORMAL,       0, 0, 0, "Normal (exif: 1)" }, // EXIF: 1
+    { GAVL_IMAGE_ORIENT_ROT90_CW,     1, 1, 0, "Rotated 90 deg CW (exif: 8)" }, // EXIF: 8
+    { GAVL_IMAGE_ORIENT_ROT180_CW,    0, 1, 1, "Rotated 180 deg CW (exif: 3)" }, // EXIF: 3
+    { GAVL_IMAGE_ORIENT_ROT270_CW,    1, 0, 1, "Rotated 270 deg CW (exif: 6)" }, // EXIF: 6
     
-    { GAVL_IMAGE_ORIENT_FH,           0, 1, 0 }, // EXIF: 2
-    { GAVL_IMAGE_ORIENT_FH_ROT90_CW,  1, 1, 1 }, // EXIF: 7
-    { GAVL_IMAGE_ORIENT_FH_ROT180_CW, 0, 0, 1 }, // EXIF: 4
-    { GAVL_IMAGE_ORIENT_FH_ROT270_CW, 1, 0, 0 }, // EXIF: 5
-              
+    { GAVL_IMAGE_ORIENT_FH,           0, 1, 0, "Mirrored (exif: 2)" }, // EXIF: 2
+    { GAVL_IMAGE_ORIENT_FH_ROT90_CW,  1, 1, 1, "Mirrored rotated 90 deg CW (exif: 7)" }, // EXIF: 7
+    { GAVL_IMAGE_ORIENT_FH_ROT180_CW, 0, 0, 1, "Mirrored rotated 180 deg CW (exif: 4)" }, // EXIF: 4
+    { GAVL_IMAGE_ORIENT_FH_ROT270_CW, 1, 0, 0, "Mirrored rotated 270 deg CW (exif: 5)" }, // EXIF: 5
+    
   };
 
 typedef void (*scanline_func_t)(const uint8_t * in, uint8_t * out, int in_advance, int num);
@@ -39,6 +40,18 @@ static int get_orient_idx(gavl_image_orientation_t orient)
       return i;
     }
   return -1;
+  }
+
+const char *
+gavl_image_orientation_to_string(gavl_image_orientation_t orient)
+  {
+  int i;
+  for(i = 0; i < 8; i++)
+    {
+    if(orientations[i].orient == orient)
+      return orientations[i].label;
+    }
+  return NULL;
   }
 
 

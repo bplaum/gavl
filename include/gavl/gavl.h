@@ -2606,7 +2606,9 @@ GAVL_PUBLIC
 void gavl_video_format_normalize_orientation(gavl_video_format_t * in_format,
                                              gavl_video_format_t * out_format);
 
-  
+GAVL_PUBLIC const char *
+gavl_image_orientation_to_string(gavl_image_orientation_t orient);
+
   
 /** \defgroup video_frame Video frames
  * \ingroup video

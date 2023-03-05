@@ -685,14 +685,22 @@ void gavl_msg_set_splice_children(gavl_msg_t * msg, int msg_ns, int msg_id,
                                   int last, int idx, int del, const gavl_value_t * add)
   {
   gavl_msg_set_id_ns(msg, msg_id, msg_ns);
-
+  
   if(ctx)
     gavl_dictionary_set_string(&msg->header, GAVL_MSG_CONTEXT_ID, ctx);
   
   gavl_msg_set_last(msg, last);
   gavl_msg_set_arg_int(msg, 0, idx);
   gavl_msg_set_arg_int(msg, 1, del);
-  gavl_msg_set_arg(msg,     2, add);
+
+  if(add)
+    gavl_msg_set_arg(msg,     2, add);
+  else
+    {
+    gavl_value_t dummy;
+    gavl_value_init(&dummy);
+    gavl_msg_set_arg(msg,     2, &dummy);
+    }
   }
 
 void gavl_msg_set_splice_children_nocopy(gavl_msg_t * msg, int msg_ns, int msg_id,
@@ -707,7 +715,16 @@ void gavl_msg_set_splice_children_nocopy(gavl_msg_t * msg, int msg_ns, int msg_i
   
   gavl_msg_set_arg_int(msg,    0, idx);
   gavl_msg_set_arg_int(msg,    1, del);
-  gavl_msg_set_arg_nocopy(msg, 2, add);
+
+  if(add)
+    gavl_msg_set_arg_nocopy(msg,     2, add);
+  else
+    {
+    gavl_value_t dummy;
+    gavl_value_init(&dummy);
+    gavl_msg_set_arg(msg,     2, &dummy);
+    }
+
   }
 
 int gavl_msg_get_splice_children(gavl_msg_t * msg,

@@ -26,26 +26,16 @@
 #include <gavl/gavf.h>
 #include <gavl/compression.h>
 
-void gavl_seek_index_append(gavl_seek_index_t * idx,
-                            const gavl_packet_t * pkt, int compression_flags)
+void gavl_seek_index_append_pos_pts(gavl_seek_index_t * idx,
+                                    int64_t position, int64_t pts)
   {
-  /* No position */
-  if(pkt->position < 0)
-    return;
-  
-  /* Skip non P-frames */
-  if((compression_flags & GAVL_COMPRESSION_HAS_P_FRAMES) && 
-     !(pkt->flags & GAVL_PACKET_KEYFRAME))
-    return;
-
   /* If it is not the first packet starting at this position,
      skip this also */
 
   if(idx->num_entries &&
-     (idx->entries[idx->num_entries-1].position == pkt->position))
+     (idx->entries[idx->num_entries-1].position == position))
     return;
-    
-     
+  
   if(idx->num_entries == idx->entries_alloc)
     {
     idx->entries_alloc += 1024;
@@ -54,9 +44,25 @@ void gavl_seek_index_append(gavl_seek_index_t * idx,
            (idx->entries_alloc - idx->num_entries) * sizeof(*idx->entries));
     }
   
-  idx->entries[idx->num_entries].pts      = pkt->pts;
-  idx->entries[idx->num_entries].position = pkt->position;
+  idx->entries[idx->num_entries].pts      = pts;
+  idx->entries[idx->num_entries].position = position;
   idx->num_entries++;
+  }
+
+
+void gavl_seek_index_append_packet(gavl_seek_index_t * idx,
+                                   const gavl_packet_t * pkt, int compression_flags)
+  {
+  /* No position */
+  if(pkt->position < 0)
+    return;
+
+  /* Skip non P-frames */
+  if((compression_flags & GAVL_COMPRESSION_HAS_P_FRAMES) && 
+     !(pkt->flags & GAVL_PACKET_KEYFRAME))
+    return;
+
+  gavl_seek_index_append_pos_pts(idx,pkt->position, pkt->pts);
   }
 
 int gavl_seek_index_seek(const gavl_seek_index_t * idx,
@@ -78,6 +84,8 @@ void gavl_seek_index_free(gavl_seek_index_t * idx)
   if(idx->entries)
     free(idx->entries);
   }
+
+/* Serialize */
 
 void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf)
   {
