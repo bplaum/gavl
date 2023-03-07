@@ -454,6 +454,9 @@
 #define GAVL_META_MEDIA_CLASS_VIDEO_PODCAST_EPISODE "item.video.podcastepisode"
 
 #define GAVL_META_MEDIA_CLASS_TV_EPISODE          "item.video.episode"
+
+/* Streams get this this type when it's not clear if they are audio or video broadcasts */
+#define GAVL_META_MEDIA_CLASS_BROADCAST           "item.broadcast"
 #define GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST     "item.audio.broadcast"
 #define GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST     "item.video.broadcast"
 #define GAVL_META_MEDIA_CLASS_IMAGE               "item.image"
