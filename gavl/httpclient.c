@@ -549,6 +549,7 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
 
   if(c->pos == c->total_bytes)
     {
+    c->flags |= FLAG_RESPONSE_BODY_DONE;
     //    fprintf(stderr, "httpclient: Detected EOF %"PRId64" %d %"PRId64"\n",
     //            c->pos, len, c->total_bytes);
     check_keepalive(c);
