@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <pthread.h>
 
+// #include <poll.h>
 
 
 #ifdef HAVE_SYS_SELECT_H
@@ -906,10 +907,16 @@ int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
   {
   int result;
   
+  //  fprintf(stderr, "read_data_noblock 1\n");
+  
   if(!gavl_socket_can_read(fd, 0))
     return 0;
+
+  //  fprintf(stderr, "read_data_noblock 2 %d\n", len);
   
   result = recv(fd, data, len, 0);
+
+  //  fprintf(stderr, "read_data_noblock 3 %d\n", result);
 
   if(result < 0)
     {

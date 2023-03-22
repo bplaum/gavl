@@ -363,10 +363,28 @@ int gavl_http_response_read_async(gavf_io_t * io,
   int result;
   int ret = -1;
   if(!gavf_io_can_read(io, timeout))
-    return 0;
-
+    {
+    if(timeout > 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Timeout while reading response");
+      return -1;
+      }
+    else
+      return 0;
+    }
   gavl_buffer_alloc(buf, buf->len + BYTES_TO_READ + 1);
   result = gavf_io_read_data_nonblock(io, buf->buf + buf->len, BYTES_TO_READ);
+
+#if 1
+  if(!result && (timeout > 0))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection reset while reading response");
+    return -1;
+    }
+  else
+#endif
+    if(result < 0)
+    return -1;
   
   if(result > 0)
     buf->len += result;

@@ -59,8 +59,8 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
   socket_t * s = priv;
 
 //  if(len > 1)
-//    fprintf(stderr, "Read socket: %d %d %d\n", s->fd, len, s->buf.len);
-
+//  fprintf(stderr, "Read socket: %d %d %d\n", s->fd, len, s->buf.len);
+  
   /* Take from buffer */
   if(s->buf.len > 0)
     {
@@ -108,10 +108,6 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
     bytes_read += result;
 
   do_buffer(s);
-  
-  //  if(
-
-  //  fprintf(stderr, "Read socket 3: %d\n", bytes_read);
   
   return bytes_read;
   }

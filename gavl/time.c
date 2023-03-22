@@ -374,7 +374,7 @@ int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret)
   }
 
 void
-gavl_time_prettyprint_absolute(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_LEN_ABSOLUTE], int local)
+gavl_time_prettyprint_absolute(gavl_time_t gavl_time, char * str, int local)
   {
   struct tm tm;
   time_t t = gavl_time / GAVL_TIME_SCALE;

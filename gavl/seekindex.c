@@ -130,3 +130,17 @@ int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * b
   gavf_io_destroy(io);
   return ret;
   }
+
+void gavl_seek_index_dump(gavl_seek_index_t * idx)
+  {
+  int i;
+  gavl_dprintf("Seek index %d entries\n", idx->num_entries);
+
+  for(i = 0; i < idx->num_entries; i++)
+    {
+    gavl_dprintf("  %"PRId64" %"PRId64" %"PRId64" %"PRId64"\n", idx->entries[i].position, idx->entries[i].pts,
+                 (i < idx->num_entries - 1) ? idx->entries[i+1].pts - idx->entries[i].pts : 0,
+                 (i < idx->num_entries - 1) ? idx->entries[i+1].position - idx->entries[i].position : 0);
+    }
+  
+  }

@@ -256,8 +256,15 @@ static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
   while(1)
     {
     if(!gavf_io_can_read(c->io_int, timeout))
-      return 0;
-    
+      {
+      if(!timeout)
+        return 0;
+      else
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read timeout");
+        return -1;
+        }
+      }
     gavl_buffer_alloc(&c->chunk_header_buffer, c->chunk_header_buffer.len + CHUNK_HEADER_BYTES + 1);
     
     result = gavf_io_read_data_nonblock(c->io_int, c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
@@ -308,8 +315,15 @@ static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
   int result;
   
   if(!gavf_io_can_read(c->io_int, timeout))
-    return 0;
-
+    {
+    if(!timeout)
+      return 0;
+    else
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read timeout");
+      return -1;
+      }
+    }
   result = gavf_io_read_data_nonblock(c->io_int,
                                       c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
                                       2 - c->chunk_header_buffer.len);
@@ -1414,6 +1428,7 @@ int gavl_http_client_run_async(gavf_io_t * io,
   c->uri = gavl_url_extract_http_vars(c->uri, &c->vars_from_uri);
   c->real_uri = c->uri;
 
+  //  fprintf(stderr, "gavl_http_client_run_async %s %s\n", c->uri, c->real_uri);
   
   return 1;
   }
@@ -1758,15 +1773,30 @@ static int async_iteration(gavf_io_t * io, int timeout)
       if(!gavf_io_can_read(c->io_int, timeout))
         {
         if(!timeout)
+          {
           c->flags |= FLAG_WAIT;
-        return 0;
+          return 0;
+          }
+        else
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read timeout");
+          return -1;
+          }
         }
       }
     
     result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
                                         c->total_bytes - c->res_body->len);
 
-    if(result < 0)
+    // fprintf(stderr, "Got result: %d %"PRId64" %d (timeout: %d)\n", result, c->total_bytes, c->res_body->len, timeout);
+    
+    if(!result && (timeout >= 0))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read from %s: Connection reset by peer", c->real_uri);
+      // result = -1;
+      return -1;
+      }
+    else if(result < 0)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading data failed");
       return -1;
@@ -1810,10 +1840,20 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_CHUNK)
     {
+    int tries = 0;
+    
     if(!gavf_io_can_read(c->io_int, timeout))
       {
-      c->flags |= FLAG_WAIT;
-      return 0;
+      if(!timeout)
+        {
+        c->flags |= FLAG_WAIT;
+        return 0;
+        }
+      else
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read timeout");
+        return -1;
+        }
       }
     
     while(1)
@@ -1825,8 +1865,15 @@ static int async_iteration(gavf_io_t * io, int timeout)
       //              c->chunk_length, c->pos, c->chunk_length - c->pos, result);
 
       if(!result)
-        c->flags |= FLAG_WAIT;
-      
+        {
+        if(!tries)
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read from %s, connection reset by peer", c->real_uri);
+          result = -1;
+          }
+        else
+          c->flags |= FLAG_WAIT;
+        }
       if(result <= 0)
         return result;
 
@@ -1839,6 +1886,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
         gavl_buffer_reset(&c->chunk_header_buffer);
         gavl_buffer_alloc(&c->chunk_header_buffer, 2);
         }
+      tries++;
       }
     }
 

@@ -675,6 +675,9 @@ GAVL_PUBLIC
 void gavl_seek_index_free(gavl_seek_index_t * idx);
 
 GAVL_PUBLIC
+void gavl_seek_index_dump(gavl_seek_index_t * idx);
+  
+GAVL_PUBLIC
 void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf);
 
 GAVL_PUBLIC

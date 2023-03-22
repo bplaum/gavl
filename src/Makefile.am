@@ -33,6 +33,7 @@ benchmark \
 colorspace_time \
 deinterlace_time \
 dump_frame_table \
+httptest \
 orientationtest \
 pixelformat_penalty \
 plot_scale_kernels \
@@ -90,6 +91,9 @@ deinterlacetest_LDADD = ../gavl/libgavl.la -lpng -lz
 
 orientationtest_SOURCES = orientationtest.c pngutil.c
 orientationtest_LDADD = ../gavl/libgavl.la -lpng -lz
+
+httptest_SOURCES = httptest.c
+httptest_LDADD = ../gavl/libgavl.la -lpng -lz
 
 
 plot_scale_kernels_SOURCES = plot_scale_kernels.c

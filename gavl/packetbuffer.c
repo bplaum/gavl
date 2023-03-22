@@ -43,9 +43,11 @@
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
-#define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
+// #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
 // #define COUNT_PACKETS
+
+#define MAX_PACKETS 200
 
 struct gavl_packet_buffer_s
   {
@@ -257,7 +259,9 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
         if((buf->packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
           {
           /* Bug!! */
-          fprintf(stderr, "BUUUG!!\n!");
+          fprintf(stderr, "BUUUG 1!!\n");
+          fprintf(stderr, "Valid packets: %d\n", buf->valid_packets);
+          
           return;
           }
 
@@ -322,7 +326,7 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
     if((buf->packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
       {
       /* Bug!! */
-      fprintf(stderr, "BUUUG!!\n!");
+      fprintf(stderr, "BUUUG 2!!\n");
       return;
       }
 
@@ -372,13 +376,35 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
     }
   }
 
+static void dump_quit(gavl_packet_buffer_t * buf)
+  {
+  int i;
+  for(i = 0; i < buf->valid_packets; i++)
+    {
+    fprintf(stderr, "packet %d ", i);
+    gavl_packet_dump(buf->packets[i]);
+    }
+  abort();
+  }
+  
 static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   {
   int ok = 0;
   gavl_packet_buffer_t * buf = priv;
 
+  if(!p->buf.len)
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Packet has zero length");
+  
   if(p->flags & GAVL_PACKET_SKIP)
     return GAVL_SINK_OK; // Skip
+
+#ifdef MAX_PACKETS
+  if(buf->valid_packets >= MAX_PACKETS)
+    {
+    fprintf(stderr, "Exceeded max packets: %d\n", buf->valid_packets);
+    dump_quit(buf);
+    }
+#endif
   
   /* Get compression info */
   if(!(buf->flags & FLAG_GOT_CI))
