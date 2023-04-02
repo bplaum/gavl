@@ -62,7 +62,6 @@ struct gavl_packet_source_s
   void * lock_priv;
   gavl_connector_free_func_t free_func;
 
-  int have_lock;
   int64_t pts_offset;
   
   };
@@ -309,12 +308,6 @@ void gavl_packet_source_drain(gavl_packet_source_t * s)
     p = NULL;
   }
 
-void gavl_packet_source_drain_nolock(gavl_packet_source_t * s)
-  {
-  s->have_lock = 1;
-  gavl_packet_source_drain(s);
-  s->have_lock = 0;
-  }
 
 void
 gavl_packet_source_set_free_func(gavl_packet_source_t * src,

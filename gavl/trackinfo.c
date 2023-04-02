@@ -34,6 +34,35 @@
 #include <stdio.h>
 #include <ctype.h>
 
+const struct
+  {
+  gavl_stream_type_t type;
+  const char * name;
+  }
+stream_types[] =
+  {
+
+    { GAVL_STREAM_AUDIO, "Audio"     },
+    { GAVL_STREAM_VIDEO, "Video"     },
+    { GAVL_STREAM_TEXT, "Text"       },
+    { GAVL_STREAM_OVERLAY, "Overlay" },
+    { GAVL_STREAM_MSG, "Message"     },
+    { GAVL_STREAM_NONE, "None"       },
+    { /* End */  },
+  }; 
+
+const char * gavl_stream_type_name(gavl_stream_type_t type)
+  {
+  int idx = 0;
+  while(stream_types[idx].name)
+    {
+    if(type == stream_types[idx].type)
+      return stream_types[idx].name;
+    idx++;
+    }
+  return NULL;
+  }
+
 int gavl_track_get_num_streams(const gavl_dictionary_t * d, gavl_stream_type_t type)
   {
   int type_from_dict = 0;
@@ -2648,9 +2677,12 @@ void gavl_stream_set_sample_timescale(gavl_dictionary_t * s)
   {
   gavl_stream_type_t type;
   gavl_dictionary_t * m;
-  int scale;
+  int scale = 0;
   m = gavl_stream_get_metadata_nc(s);
   type = gavl_stream_get_type(s);
+
+  //  fprintf(stderr, "gavl_stream_set_sample_timescale %s\n", gavl_stream_type_name(type));
+  //  gavl_dictionary_dump(s, 2);
   
   if(!(m = gavl_stream_get_metadata_nc(s)) ||
      (gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &scale) && scale))
@@ -2686,7 +2718,7 @@ void gavl_stream_set_default_packet_timescale(gavl_dictionary_t * s)
   {
   gavl_stream_type_t type;
   gavl_dictionary_t * m;
-  int scale;
+  int scale = 0;
   m = gavl_stream_get_metadata_nc(s);
   type = gavl_stream_get_type(s);
   

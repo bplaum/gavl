@@ -76,8 +76,6 @@ struct gavl_audio_source_s
 
   gavl_connector_free_func_t free_func;
 
-  int have_lock;
-  
   int64_t pts_offset;
   };
 
@@ -316,12 +314,12 @@ static gavl_source_status_t do_read(gavl_audio_source_t * s,
                                     gavl_audio_frame_t ** frame)
   {
   gavl_source_status_t ret;
-  if(s->lock_func && !s->have_lock)
+  if(s->lock_func)
     s->lock_func(s->lock_priv);
 
   ret = s->func(s->priv, frame);
   
-  if(s->unlock_func && !s->have_lock)
+  if(s->unlock_func)
     s->unlock_func(s->lock_priv);
 
   //  if(frame && *frame)
@@ -505,12 +503,6 @@ void gavl_audio_source_drain(gavl_audio_source_t * s)
     fr = NULL;
   }
 
-void gavl_audio_source_drain_nolock(gavl_audio_source_t * s)
-  {
-  s->have_lock = 1;
-  gavl_audio_source_drain(s);
-  s->have_lock = 0;
-  }
 
 /* For cases where it's not immediately known, how many samples will be
    processed */

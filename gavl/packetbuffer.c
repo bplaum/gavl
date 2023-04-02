@@ -41,33 +41,92 @@
 // #define DUMP_OUT_PACKETS
 
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
-// #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
+#define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
 // #define COUNT_PACKETS
 
-#define MAX_PACKETS 200
+#define NEW_PTS
+
+// #define MAX_PACKETS 200
+
+typedef struct
+  {
+  gavl_packet_t ** packets;
+  int num;
+  int alloc;
+  } buf_t;
+
+/* Get first packet (fifo) */
+static gavl_packet_t * buf_shift(buf_t * buf)
+  {
+  gavl_packet_t * ret = NULL;
+  if(!buf->num)
+    return NULL;
+  ret = buf->packets[0];
+  buf->num--;
+
+  if(buf->num)
+    {
+    memmove(buf->packets, buf->packets+1, buf->num * sizeof(*buf->packets));
+    buf->packets[buf->num] = NULL;
+    }
+  else
+    buf->packets[0] = NULL;
+
+  return ret;
+  }
+
+static void buf_push(buf_t * buf, gavl_packet_t ** p)
+  {
+  if(buf->num == buf->alloc)
+    {
+    buf->alloc += 32;
+    buf->packets = realloc(buf->packets, buf->alloc * sizeof(*buf->packets));
+    memset(buf->packets + buf->num, 0, (buf->alloc - buf->num) * sizeof(*buf->packets) );
+    }
+  buf->packets[buf->num] = *p;
+  *p = NULL;
+  buf->num++;
+  }
+
+/* Get last packet (pool), return NULL if the pool is empty */
+static gavl_packet_t * buf_pop(buf_t * buf)
+  {
+  gavl_packet_t * ret;
+  
+  if(!buf->num)
+    return NULL;
+  
+  buf->num--;
+  ret = buf->packets[buf->num];
+  buf->packets[buf->num] = NULL;
+  return ret;
+  }
+
+static void buf_free(buf_t * buf)
+  {
+  int i;
+  for(i = 0; i < buf->num; i++)
+    gavl_packet_destroy(buf->packets[i]);
+  if(buf->packets)
+    free(buf->packets);
+  }
 
 struct gavl_packet_buffer_s
   {
   gavl_packet_sink_t * sink;
   gavl_packet_source_t * src;
-
-  /* Unused packets */
-  //  gavl_packet_t ** pool;
-  //  int pool_alloc;
-  //  int pool_size;
-
+  
   /* Valid packets */
-  gavl_packet_t ** packets;
-  int packets_alloc;
-  int valid_packets;
-  int num_packets; // Total packets (used and unused)
+
+  buf_t buf;  // Packet queue
+  buf_t pool;  // Unused packets
   
   /* Kept here to prevent overwriting */
   gavl_packet_t * out_packet;
-  
+  gavl_packet_t * in_packet;
   
   int64_t last_duration;
   int64_t pts;
@@ -93,26 +152,24 @@ struct gavl_packet_buffer_s
 #endif
   };
 
-static void do_realloc(gavl_packet_buffer_t * buf)
-  {
-  buf->packets_alloc += 32;
-  buf->packets = realloc(buf->packets, buf->packets_alloc * sizeof(*buf->packets));
-  memset(buf->packets + buf->num_packets, 0,
-         (buf->packets_alloc - buf->num_packets) * sizeof(*buf->packets));
-  }
 
-static void recycle_out_packet(gavl_packet_buffer_t * buf)
+#if 1
+static void dump_quit(gavl_packet_buffer_t * buf)
   {
-  if(!buf->out_packet)
-    return;
+  int i;
+  for(i = 0; i < buf->buf.num; i++)
+    {
+    fprintf(stderr, "packet %d ", i);
 
-  if(buf->packets_alloc == buf->num_packets)
-    do_realloc(buf);
-  
-  buf->packets[buf->num_packets] = buf->out_packet;
-  buf->num_packets++;
-  buf->out_packet = NULL;
+    if(buf->buf.packets[i])
+      gavl_packet_dump(buf->buf.packets[i]);
+    else
+      fprintf(stderr, "NULL\n");
+    
+    }
+  abort();
   }
+#endif
 
 /* Sink functions */
 
@@ -120,18 +177,220 @@ static gavl_packet_t * sink_get_func(void * priv)
   {
   gavl_packet_buffer_t * buf = priv;
 
-  if(buf->packets_alloc == buf->valid_packets)
-    do_realloc(buf);
-  
-  if(buf->valid_packets == buf->num_packets)
+  if(buf->in_packet)
     {
-    buf->packets[buf->num_packets] = gavl_packet_create();
-    buf->num_packets++;
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Called gavl_packet_sink_get_packet twice for %s buffer",
+             gavl_stream_type_name(buf->type));
+    dump_quit(buf);
+    return NULL;
     }
   
-  gavl_packet_reset(buf->packets[buf->valid_packets]);
-  return buf->packets[buf->valid_packets];
+  if(!(buf->in_packet = buf_pop(&buf->pool)))
+    buf->in_packet = gavl_packet_create();
+  
+  return buf->in_packet;
   }
+
+/* The following functions are, where pretty much of the A/V synchronization in the whole
+   gmerlin architecture is done */
+
+#ifdef NEW_PTS
+static void pts_from_duration(gavl_packet_buffer_t * buf, gavl_packet_t * p)
+  {
+  /* Initialize first timestamp */
+  if(buf->pts == GAVL_TIME_UNDEFINED)
+    {
+    if(p->pes_pts != GAVL_TIME_UNDEFINED)
+      buf->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
+                                   p->pes_pts);
+    else
+      buf->pts = 0;
+    }
+  
+  p->pts = buf->pts;
+  buf->pts += p->duration;
+  }
+
+static void duration_from_pts(gavl_packet_buffer_t * buf, gavl_packet_t * p, gavl_packet_t * next)
+  {
+  if(next)
+    {
+    p->duration = next->pts - p->pts;
+    buf->last_duration = p->duration;
+    }
+  else
+    p->duration = buf->last_duration;
+  }
+
+static void update_timestamps_low_delay(gavl_packet_buffer_t * buf)
+  {
+  int i;
+
+  /* PTS from DTS */
+  for(i = buf->buf.num - 1; i >= 0; i--)
+    {
+    if((buf->buf.packets[i]->pts == GAVL_TIME_UNDEFINED) &&
+       (buf->buf.packets[i]->dts != GAVL_TIME_UNDEFINED))
+      buf->buf.packets[i]->pts = buf->buf.packets[i]->dts;
+    else
+      break;
+    }
+  
+  /* Duration from PTS */
+  if(buf->flags & FLAG_CALC_FRAME_DURATIONS)
+    {
+    for(i = buf->buf.num - 2; i >= 0; i--)
+      {
+      if((buf->buf.packets[i]->duration < 0) &&
+         (buf->buf.packets[i]->pts != GAVL_TIME_UNDEFINED) &
+         (buf->buf.packets[i+1]->pts != GAVL_TIME_UNDEFINED))
+        duration_from_pts(buf, buf->buf.packets[i], buf->buf.packets[i+1]);
+      else
+        break;
+      }
+
+    if(buf->flags & FLAG_FLUSH)
+      duration_from_pts(buf, buf->buf.packets[buf->buf.num-1], NULL);
+    }
+  
+  /* PTS from duration */
+
+  if((buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->duration >= 0))
+    {
+    for(i = 0; i < buf->buf.num; i++)
+      {
+      if(buf->buf.packets[i]->pts != GAVL_TIME_UNDEFINED)
+        continue;
+
+      pts_from_duration(buf, buf->buf.packets[i]);
+      }
+    }
+  }
+
+static int get_next_ip_idx(gavl_packet_buffer_t * buf, int idx)
+  {
+  int i;
+  for(i = idx; i < buf->buf.num; i++)
+    {
+    if((buf->buf.packets[i]->flags & GAVL_PACKET_TYPE_MASK) != GAVL_PACKET_TYPE_B)
+      return i;
+    }
+  return -1;
+  }
+
+static void pts_from_duration_b_frames(gavl_packet_buffer_t * buf)
+  {
+  int i;
+  int ip1 = -1;
+  int ip2 = -1;
+  
+  if((ip1 = get_next_ip_idx(buf, 0)) < 0)
+    return;
+  
+  while(1)
+    {
+    if((ip2 = get_next_ip_idx(buf, ip1 + 1)) < 0)
+      {
+      if(buf->flags & FLAG_FLUSH)
+        ip2 = buf->buf.num;
+      else
+        break;
+      }
+
+    if(buf->buf.packets[ip1]->pts == GAVL_TIME_UNDEFINED)
+      {
+      /*
+       * PBBP -> P
+       * or
+       * IPBB -> PBB
+       */
+    
+      for(i = ip1+1; i < ip2; i++)
+        pts_from_duration(buf, buf->buf.packets[i]);
+
+      pts_from_duration(buf, buf->buf.packets[ip1]);
+      }
+    
+    ip1 = ip2;
+    }
+  
+  }
+
+static void update_timestamps_b_frames(gavl_packet_buffer_t * buf)
+  {
+  int i;
+  
+  /* Duration from dts */
+  if((buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->dts != GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->duration <= 0))
+    {
+    for(i = buf->buf.num - 2; i >= 0; i--)
+      {
+      if((buf->buf.packets[i]->duration <= 0) &&
+         (buf->buf.packets[i]->dts != GAVL_TIME_UNDEFINED) &
+         (buf->buf.packets[i+1]->dts != GAVL_TIME_UNDEFINED))
+        buf->buf.packets[i]->duration = buf->buf.packets[i+1]->dts - buf->buf.packets[i]->dts;
+      else
+        break;
+      }
+    }
+
+  /* PTS from frame type and duration */
+  if((buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->duration > 0))
+    {
+    pts_from_duration_b_frames(buf);
+    }
+  
+  /* TODO: Duration from PTS */
+
+  if((buf->flags & FLAG_CALC_FRAME_DURATIONS) &
+     (buf->buf.packets[buf->buf.num-1]->duration < 0))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Getting frame duration from PTS not supported for B-Frames yet");
+    }
+  
+  }
+
+static void update_timestamps(gavl_packet_buffer_t * buf)
+  {
+  if(buf->buf.num < 1)
+    return;
+
+  /* Check if this is necessary at all */
+  if((buf->buf.packets[buf->buf.num-1]->pts != GAVL_TIME_UNDEFINED) &&
+     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) ||
+      (buf->buf.packets[buf->buf.num-1]->duration > 0)))
+    return;
+  
+  /* Duration from DTS */
+  if((buf->buf.num > 1) &&
+     (buf->buf.packets[buf->buf.num-2]->duration <= 0) &&
+     (buf->buf.packets[buf->buf.num-2]->dts != GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->dts != GAVL_TIME_UNDEFINED))
+    {
+    buf->buf.packets[buf->buf.num-2]->duration = 
+      buf->buf.packets[buf->buf.num-1]->dts -
+      buf->buf.packets[buf->buf.num-2]->dts;
+
+    if(buf->flags & FLAG_FLUSH)
+      buf->buf.packets[buf->buf.num-1]->duration =
+        buf->buf.packets[buf->buf.num-2]->duration;
+    
+    }
+
+  
+  if(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES)
+    update_timestamps_b_frames(buf);
+  else
+    update_timestamps_low_delay(buf);
+  }
+#endif
+
+
+#ifndef NEW_PTS
 
 /*
  *  Timestamp generation modes:
@@ -145,18 +404,18 @@ static void update_timestamps_write(gavl_packet_buffer_t * buf)
   {
   gavl_packet_t * last_p, * last2_p;
 
-  if(buf->valid_packets < 1)
+  if(buf->buf.num < 1)
+    return;
+  
+  if((buf->buf.packets[buf->buf.num-1]->pts != GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->duration > 0))
     return;
 
-  if((buf->packets[buf->valid_packets-1]->pts != GAVL_TIME_UNDEFINED) &&
-     (buf->packets[buf->valid_packets-1]->duration > 0))
-    return;
-
-  if((buf->valid_packets >= 2) &&
-     (buf->packets[buf->valid_packets-2]->duration < 0))
+  if((buf->buf.num >= 2) &&
+     (buf->buf.packets[buf->buf.num-2]->duration < 0))
     {
-    last_p = buf->packets[buf->valid_packets-1];
-    last2_p = buf->packets[buf->valid_packets-2];
+    last_p  = buf->buf.packets[buf->buf.num-1];
+    last2_p = buf->buf.packets[buf->buf.num-2];
     
     /* Set duration from DTS */
     if((last_p->dts != GAVL_TIME_UNDEFINED) &&
@@ -184,9 +443,9 @@ static int get_next_ip_index(gavl_packet_buffer_t * buf, int idx)
   {
   int ret = idx+1;
 
-  while(ret < buf->valid_packets)
+  while(ret < buf->buf.num)
     {
-    if((buf->packets[ret]->flags & GAVL_PACKET_TYPE_MASK) != GAVL_PACKET_TYPE_B)
+    if((buf->buf.packets[ret]->flags & GAVL_PACKET_TYPE_MASK) != GAVL_PACKET_TYPE_B)
       return ret;
     ret++;
     }
@@ -204,36 +463,36 @@ static gavl_packet_t * find_next(gavl_packet_buffer_t * buf,
   
   for(i = start_idx; i < end_idx; i++)
     {
-    if((pts != GAVL_TIME_UNDEFINED) && buf->packets[i]->pts <= pts)
+    if((pts != GAVL_TIME_UNDEFINED) && buf->buf.packets[i]->pts <= pts)
       continue;
     
-    if(!p || (p->pts > buf->packets[i]->pts))
-      p = buf->packets[i];
+    if(!p || (p->pts > buf->buf.packets[i]->pts))
+      p = buf->buf.packets[i];
     }
   return p;
   }
                                  
 static void update_timestamps_read(gavl_packet_buffer_t * buf)
   {
-  if((buf->packets[0]->pts != GAVL_TIME_UNDEFINED) &&
-     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) || (buf->packets[0]->duration > 0)))
+  if((buf->buf.packets[0]->pts != GAVL_TIME_UNDEFINED) &&
+     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) || (buf->buf.packets[0]->duration > 0)))
     return;
   
   /* Set pts from duration */
-  if(buf->packets[0]->pts == GAVL_TIME_UNDEFINED)
+  if(buf->buf.packets[0]->pts == GAVL_TIME_UNDEFINED)
     {
-    if(buf->packets[0]->duration >= 0) // Need to allow 0 here (e.g. for the first Vorbis packet)
+    if(buf->buf.packets[0]->duration >= 0) // Need to allow 0 here (e.g. for the first Vorbis packet)
       {
       /* Get start PTS */
       if(buf->pts == GAVL_TIME_UNDEFINED)
         {
         /* 1st choice: pes packet */
-        if(buf->packets[0]->pes_pts != GAVL_TIME_UNDEFINED)
+        if(buf->buf.packets[0]->pes_pts != GAVL_TIME_UNDEFINED)
           buf->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
-                                       buf->packets[0]->pes_pts);
+                                       buf->buf.packets[0]->pes_pts);
         /* 2nd choice: DTS */
-        else if(buf->packets[0]->dts != GAVL_TIME_UNDEFINED)
-          buf->pts = buf->packets[0]->dts;
+        else if(buf->buf.packets[0]->dts != GAVL_TIME_UNDEFINED)
+          buf->pts = buf->buf.packets[0]->dts;
         else
           /* 3rd choice: Zero */
           {
@@ -246,21 +505,21 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
       /* Low delay */
       if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
         {
-        buf->packets[0]->pts = buf->pts;
-        buf->pts += buf->packets[0]->duration;
+        buf->buf.packets[0]->pts = buf->pts;
+        buf->pts += buf->buf.packets[0]->duration;
         }
       else
         {
         int ip_idx2;
 
-        if(buf->valid_packets < 2)
+        if(buf->buf.num < 2)
           return;
       
-        if((buf->packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
+        if((buf->buf.packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
           {
           /* Bug!! */
           fprintf(stderr, "BUUUG 1!!\n");
-          fprintf(stderr, "Valid packets: %d\n", buf->valid_packets);
+          fprintf(stderr, "Valid packets: %d\n", buf->buf.num);
           
           return;
           }
@@ -273,13 +532,13 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
             {
             int i;
             /* Flush PBB <EOS> */
-            for(i = 1; i < buf->valid_packets; i++)
+            for(i = 1; i < buf->buf.num; i++)
               {
-              buf->packets[i]->pts = buf->pts;
-              buf->pts += buf->packets[i]->duration;
+              buf->buf.packets[i]->pts = buf->pts;
+              buf->pts += buf->buf.packets[i]->duration;
               }
-            buf->packets[0]->pts = buf->pts;
-            buf->pts += buf->packets[0]->duration;
+            buf->buf.packets[0]->pts = buf->pts;
+            buf->pts += buf->buf.packets[0]->duration;
             }
           return;
           }
@@ -287,8 +546,8 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
         if(ip_idx2 == 1)
           {
           /* Two consecutive non-B-frames: Flush first one */
-          buf->packets[0]->pts = buf->pts;
-          buf->pts += buf->packets[0]->duration;
+          buf->buf.packets[0]->pts = buf->pts;
+          buf->pts += buf->buf.packets[0]->duration;
           }
         else
           {
@@ -296,34 +555,34 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
           /* Flush sequence PBB(P) */
           for(i = 1; i < ip_idx2; i++)
             {
-            buf->packets[i]->pts = buf->pts;
-            buf->pts += buf->packets[i]->duration;
+            buf->buf.packets[i]->pts = buf->pts;
+            buf->pts += buf->buf.packets[i]->duration;
             }
-          buf->packets[0]->pts = buf->pts;
-          buf->pts += buf->packets[0]->duration;
+          buf->buf.packets[0]->pts = buf->pts;
+          buf->pts += buf->buf.packets[0]->duration;
           }
         }
       }
     else // duration < 0
       {
-      if(buf->packets[0]->pes_pts >= 0)
+      if(buf->buf.packets[0]->pes_pts >= 0)
         {
-        buf->packets[0]->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
-                                                 buf->packets[0]->pes_pts);
+        buf->buf.packets[0]->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
+                                                     buf->buf.packets[0]->pes_pts);
         }
       }
     }
 
   
   /* Set duration from PTS (B-frame case) */
-  if((buf->packets[0]->pts != GAVL_TIME_UNDEFINED) &&
-     (buf->packets[0]->duration < 0) &&
+  if((buf->buf.packets[0]->pts != GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[0]->duration < 0) &&
      (buf->flags & FLAG_CALC_FRAME_DURATIONS))
     {
     int ip_idx2;
     int ip_idx3;
 
-    if((buf->packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
+    if((buf->buf.packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
       {
       /* Bug!! */
       fprintf(stderr, "BUUUG 2!!\n");
@@ -337,14 +596,14 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
       gavl_packet_t * p2;
       int64_t last_duration = GAVL_TIME_UNDEFINED;
 
-      p1 = find_next(buf, 0, buf->valid_packets,
+      p1 = find_next(buf, 0, buf->buf.num,
                      GAVL_TIME_UNDEFINED);
       if(!p1)
         return;
       
-      for(i = 0; i < buf->valid_packets; i++)
+      for(i = 0; i < buf->buf.num; i++)
         {
-        p2 = find_next(buf, 0, buf->valid_packets,
+        p2 = find_next(buf, 0, buf->buf.num,
                        p1->pts);
         if(!p2)
           {
@@ -375,33 +634,33 @@ static void update_timestamps_read(gavl_packet_buffer_t * buf)
       }
     }
   }
+#endif
 
-static void dump_quit(gavl_packet_buffer_t * buf)
-  {
-  int i;
-  for(i = 0; i < buf->valid_packets; i++)
-    {
-    fprintf(stderr, "packet %d ", i);
-    gavl_packet_dump(buf->packets[i]);
-    }
-  abort();
-  }
-  
+
 static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   {
-  int ok = 0;
   gavl_packet_buffer_t * buf = priv;
 
   if(!p->buf.len)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Packet has zero length");
-  
-  if(p->flags & GAVL_PACKET_SKIP)
-    return GAVL_SINK_OK; // Skip
 
-#ifdef MAX_PACKETS
-  if(buf->valid_packets >= MAX_PACKETS)
+  if(buf->in_packet != p)
     {
-    fprintf(stderr, "Exceeded max packets: %d\n", buf->valid_packets);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Something went wrong: in_packet != p");
+    return GAVL_SINK_OK; // Skip
+    }
+
+  /* Discard skip packet */
+  if(p->flags & GAVL_PACKET_SKIP)
+    {
+    buf_push(&buf->pool, &buf->in_packet);
+    return GAVL_SINK_OK; // Skip
+    }
+  
+#ifdef MAX_PACKETS
+  if(buf->buf.num >= MAX_PACKETS)
+    {
+    fprintf(stderr, "Exceeded max packets: %d\n", buf->buf.num);
     dump_quit(buf);
     }
 #endif
@@ -410,6 +669,10 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   if(!(buf->flags & FLAG_GOT_CI))
     {
     const gavl_dictionary_t * m = gavl_stream_get_metadata(buf->stream);
+
+    //    fprintf(stderr, "Getting compression info:");
+    //    gavl_dictionary_dump(buf->stream, 2);
+    
     gavl_dictionary_get_int(m, GAVL_META_STREAM_PACKET_TIMESCALE, &buf->packet_scale);
     gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &buf->sample_scale);
     
@@ -426,57 +689,38 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   if(buf->ci.flags & GAVL_COMPRESSION_HAS_P_FRAMES)
     {
     if(p->flags & GAVL_PACKET_KEYFRAME)
-      {
       buf->keyframes_seen++;
-      ok = 1;
-      }
-    else // Non keyframe
+    else if(!buf->keyframes_seen) // Non keyframe
       {
-      if(buf->keyframes_seen > 0)
-        ok = 1;
-      else
+      /* Else: Skip, but allow synchronizing a low delay stream */
+      if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
         {
-        /* Else: Skip, but allow synchronizing a low delay stream */
-        if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
+        if((buf->pts == GAVL_TIME_UNDEFINED) &&
+           (p->pes_pts != GAVL_TIME_UNDEFINED))
           {
-          if((buf->pts == GAVL_TIME_UNDEFINED) &&
-             (p->pes_pts != GAVL_TIME_UNDEFINED))
-            {
-            buf->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
-                                         p->pes_pts);
-            }
-          
-          if((buf->pts != GAVL_TIME_UNDEFINED) &&
-                  (p->duration > 0))
-            buf->pts += p->duration;
+          buf->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
+                                       p->pes_pts);
           }
-        
-        return GAVL_SINK_OK;
+          
+        if((buf->pts != GAVL_TIME_UNDEFINED) && (p->duration > 0))
+          buf->pts += p->duration;
         }
-      }
-    }
-  else
-    ok = 1;
-  
-  /* Merge field pictures */
-  if(p->flags & GAVL_PACKET_FIELD_PIC)
-    {
-    if((buf->valid_packets >= 1) &&
-       (buf->packets[buf->valid_packets-1]->flags & GAVL_PACKET_FIELD_PIC))
-      {
-      gavl_packet_merge_field2(buf->packets[buf->valid_packets-1], p);
-      ok = 0;
-      p = buf->packets[buf->valid_packets-1];
-      fprintf(stderr, "Merged field pic\n");
-      }
-    else
-      {
-      /* First field pic */
-      buf->valid_packets++;
+      buf_push(&buf->pool, &buf->in_packet);
       return GAVL_SINK_OK;
       }
     }
-
+  
+  /* Merge field pictures */
+  if((p->flags & GAVL_PACKET_FIELD_PIC) &&
+     (buf->buf.num >= 1) &&
+     (buf->buf.packets[buf->buf.num-1]->flags & GAVL_PACKET_FIELD_PIC))
+    {
+    gavl_packet_merge_field2(buf->buf.packets[buf->buf.num-1], p);
+    buf_push(&buf->pool, &buf->in_packet);
+    //    fprintf(stderr, "Merged field pic\n");
+    return GAVL_SINK_OK;
+    }
+  
   /* Detect frame type from PTS */
   if((buf->ci.flags & GAVL_COMPRESSION_HAS_P_FRAMES) &&
      !(p->flags & GAVL_PACKET_TYPE_MASK) &&
@@ -508,139 +752,116 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
       /* Else: Skip */
       if(buf->ip_frames_seen < 2)
         {
-        ok = 0;
+        buf_push(&buf->pool, &buf->in_packet);
         return GAVL_SINK_OK;
         }
       }
     else /* I/P frame */
       buf->ip_frames_seen++;
     }
-
-  if(ok)
-    {
-    buf->valid_packets++;
+  
+  /* Append packet to buffer */
+  
 #ifdef DUMP_IN_PACKETS
-    if(buf->type & DUMP_PACKET_MASK)
-      {
-      gavl_dprintf("Buf in ");
-      gavl_packet_dump(p);
-      }
+  if(buf->type & DUMP_PACKET_MASK)
+    {
+    gavl_dprintf("Buf in ");
+    gavl_packet_dump(p);
+    }
 #endif
 
 #ifdef COUNT_PACKETS
-    buf->in_count++;
+  buf->in_count++;
 #endif
+
+  if(!buf->in_packet->buf.len)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Added zero size packet");
+    gavl_packet_dump(p);
     }
-  
+    
+  buf_push(&buf->buf, &buf->in_packet);
+    
   if((p->pts != GAVL_TIME_UNDEFINED) &&
-     (p->duration > 0))
+     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) ||
+      (p->duration >= 0)))
     return GAVL_SINK_OK;
   
   //  else // No P-frames
   //    buf->valid_packets++;
 
+#ifdef NEW_PTS
+  update_timestamps(buf);
+#else  
   update_timestamps_write(buf);
-  
+#endif
   return GAVL_SINK_OK;
   }
 
-#if 0
-static void get_ip_indices(gavl_packet_buffer_t * buf, int * ret)
-  {
-  int idx;
-  
-  ret[0] = -1;
-  ret[1] = -1;
-  ret[2] = -1;
-
-  idx = 0;
-  
-  while((idx < buf->valid_packets) &&
-        (buf->packets[idx]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
-    {
-    idx++;
-    }
-
-  if(idx >= buf->valid_packets)
-    return;
-  
-  ret[0] = idx;
-  idx++;
-
-  while((idx < buf->valid_packets) &&
-        (buf->packets[idx]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
-    idx++;
-
-  if(idx >= buf->valid_packets)
-    return;
-    
-  ret[1] = idx;
-  idx++;
-
-  while((idx < buf->valid_packets) &&
-        (buf->packets[idx]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
-    {
-    idx++;
-    }
-  
-  if(idx >= buf->valid_packets)
-    return;
-
-  ret[2] = idx;
-  
-  }
-#endif
 
 static gavl_source_status_t
 source_func(void * priv, gavl_packet_t ** p)
   {
   gavl_packet_buffer_t * buf = priv;
+
+  if(buf->out_packet)
+    {
+    buf_push(&buf->pool, &buf->out_packet);
+    }
   
-  if(!buf->valid_packets)
+  if(!buf->buf.num)
     {
     if(buf->flags & FLAG_FLUSH)
       return GAVL_SOURCE_EOF;
     else
       return GAVL_SOURCE_AGAIN;
     }
-  
-  if((buf->valid_packets == 1) &&
+
+  /*
+   *  If we have to mark the last packet, we need at least 2 packets in the buffer
+   *  if we are not flushing
+   */
+  if((buf->buf.num == 1) &&
      ((buf->flags & (FLAG_MARK_LAST|FLAG_FLUSH)) == FLAG_MARK_LAST))
     return GAVL_SOURCE_AGAIN;
+
+  /*
+   *  Field pictures need to be merged
+   */
   
-  if(buf->packets[0]->flags & GAVL_PACKET_FIELD_PIC)
+  if(buf->buf.packets[0]->flags & GAVL_PACKET_FIELD_PIC)
     return GAVL_SOURCE_AGAIN; // Wait for next field
   
   if(!(buf->flags & FLAG_NON_CONTINUOUS)) // If stream is continuous...
     {
+#ifndef NEW_PTS
     update_timestamps_read(buf);
-    if((buf->packets[0]->pts == GAVL_TIME_UNDEFINED) ||
-       ((buf->packets[0]->duration < 0) && (buf->flags & FLAG_CALC_FRAME_DURATIONS)))
+#endif
+    if((buf->buf.packets[0]->pts == GAVL_TIME_UNDEFINED) ||
+       ((buf->buf.packets[0]->duration < 0) && (buf->flags & FLAG_CALC_FRAME_DURATIONS)))
       return GAVL_SOURCE_AGAIN;
     }
-
-  recycle_out_packet(buf);
   
-  buf->out_packet = buf->packets[0];
-  *p = buf->out_packet;
-  
-  buf->valid_packets--;
-  buf->num_packets--;
-  if(buf->num_packets > 0)
-    {
-    memmove(buf->packets, buf->packets + 1,
-            buf->num_packets*sizeof(*buf->packets));
-    }
-  buf->packets[buf->num_packets] = NULL;
+  buf->out_packet = buf_shift(&buf->buf);
   
 #ifdef DUMP_OUT_PACKETS
   if(buf->type & DUMP_PACKET_MASK)
     {
-    gavl_dprintf("Buf out ");
-    gavl_packet_dump(*p);
+    if(!buf->out_packet)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Outputting zero packet");
+      dump_quit(buf); 
+      }
+    else
+      {
+      gavl_dprintf("Buf out ");
+      gavl_packet_dump(buf->out_packet);
+      }
     }
 #endif
 
+  *p = buf->out_packet;
+  
 #ifdef COUNT_PACKETS
   buf->out_count++;
 #endif
@@ -655,27 +876,37 @@ void gavl_packet_buffer_flush(gavl_packet_buffer_t * buf)
   
   buf->flags |= FLAG_FLUSH;
   
-  if(buf->valid_packets > 0)
+  if(buf->buf.num > 0)
     {
-    if(buf->packets[buf->valid_packets-1]->duration < 0)
-      buf->packets[buf->valid_packets-1]->duration = buf->last_duration;
-
     if(buf->flags & FLAG_MARK_LAST)
-      buf->packets[buf->valid_packets-1]->flags |= GAVL_PACKET_LAST;
+      buf->buf.packets[buf->buf.num-1]->flags |= GAVL_PACKET_LAST;
     }
+#ifdef NEW_PTS
+  update_timestamps(buf);
+#endif
   }
 
 void gavl_packet_buffer_clear(gavl_packet_buffer_t * buf)
   {
-  buf->valid_packets = 0;
+  gavl_packet_t * p;
+  
+  while((p = buf_pop(&buf->buf)))
+    buf_push(&buf->pool, &p);
+  
+  if(buf->in_packet)
+    buf_push(&buf->pool, &buf->in_packet);
+  
+  if(buf->out_packet)
+    buf_push(&buf->pool, &buf->out_packet);
+  
   buf->flags &= ~FLAG_FLUSH;
   buf->last_duration = -1;
   buf->pts = GAVL_TIME_UNDEFINED;
   buf->max_pts = GAVL_TIME_UNDEFINED;
   buf->ip_frames_seen = 0;
   buf->keyframes_seen = 0;
-  recycle_out_packet(buf);
   gavl_packet_source_reset(buf->src);
+  //  fprintf(stderr, "gavl_packet_buffer_clear %d %d\n", buf->packet_scale, buf->sample_scale);
   }
 
 void gavl_packet_buffer_set_out_pts(gavl_packet_buffer_t * buf, int64_t pts)
@@ -724,19 +955,13 @@ void gavl_packet_buffer_destroy(gavl_packet_buffer_t * b)
   if(b->sink)
     gavl_packet_sink_destroy(b->sink);
 
-  if(b->packets)
-    {
-    int i;
-    for(i = 0; i < b->packets_alloc; i++)
-      {
-      if(b->packets[i])
-        gavl_packet_destroy(b->packets[i]);
-      }
-    free(b->packets);
-    }
-
+  if(b->in_packet)
+    gavl_packet_destroy(b->in_packet);
   if(b->out_packet)
     gavl_packet_destroy(b->out_packet);
+
+  buf_free(&b->buf);
+  buf_free(&b->pool);
   
   gavl_compression_info_free(&b->ci);
   

@@ -38,6 +38,9 @@ typedef enum
     GAVL_STREAM_MSG     = (1<<4),
   } gavl_stream_type_t;
 
+GAVL_PUBLIC
+const char * gavl_stream_type_name(gavl_stream_type_t type);
+
 
 /*
  *  Standardized info structures for media content.

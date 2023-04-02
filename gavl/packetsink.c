@@ -21,14 +21,21 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+
+#include <config.h>
 
 #include <gavl/connectors.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "packetsink"
 
-#define FLAG_GET_CALLED (1<<0)
+// #define FLAG_GET_CALLED (1<<0)
 
 
 struct gavl_packet_sink_s
   {
+  gavl_packet_t * pkt;
+  
   gavl_packet_sink_get_func get_func;
   gavl_packet_sink_put_func put_func;
   void * priv;
@@ -69,21 +76,27 @@ gavl_packet_sink_set_lock_funcs(gavl_packet_sink_t * sink,
 gavl_packet_t *
 gavl_packet_sink_get_packet(gavl_packet_sink_t * s)
   {
-  gavl_packet_t * ret;
-  s->flags |= FLAG_GET_CALLED;
+  //  gavl_packet_t * ret;
+  //  s->flags |= FLAG_GET_CALLED;
 
+  if(s->pkt)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_packet_sink_get_packet called twice %ld", pthread_self());
+    return NULL;
+    }
+  
   if(s->get_func)
     {
     if(s->lock_func)
       s->lock_func(s->lock_priv);
-    
-    ret = s->get_func(s->priv);
+
+    s->pkt = s->get_func(s->priv);
     
     if(s->unlock_func)
       s->unlock_func(s->lock_priv);
     
-    gavl_packet_reset(ret);
-    return ret;
+    gavl_packet_reset(s->pkt);
+    return s->pkt;
     }
   else
     return NULL;
@@ -92,12 +105,28 @@ gavl_packet_sink_get_packet(gavl_packet_sink_t * s)
 gavl_sink_status_t
 gavl_packet_sink_put_packet(gavl_packet_sink_t * s, gavl_packet_t * p)
   {
-  gavl_packet_t * dp;
+  //  gavl_packet_t * dp;
   gavl_sink_status_t st;
   
   if(s->lock_func)
     s->lock_func(s->lock_priv);
+
+  if(s->get_func)
+    {
+    if(!s->pkt)
+      s->pkt = s->get_func(s->priv);
+
+    if(s->pkt != p)
+      gavl_packet_copy(s->pkt, p);
     
+    st = s->put_func(s->priv, s->pkt);
+    s->pkt = NULL;
+    }
+  else
+    st = s->put_func(s->priv, p);
+
+#if 0  
+  
   if(!(s->flags & FLAG_GET_CALLED) &&
      s->get_func &&
      (dp = s->get_func(s->priv)))
@@ -107,7 +136,8 @@ gavl_packet_sink_put_packet(gavl_packet_sink_t * s, gavl_packet_t * p)
     }
   else  
     st = s->put_func(s->priv, p);
-
+#endif
+  
   if(s->unlock_func)
     s->unlock_func(s->lock_priv);
   return st;
