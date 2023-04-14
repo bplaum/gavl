@@ -284,6 +284,11 @@ void gavf_io_cipher_init(gavf_io_t * io,
                          const uint8_t * iv);
 
 GAVL_PUBLIC
+void gavf_io_cipher_set_src(gavf_io_t * io,
+                            gavf_io_t * src);
+
+
+GAVL_PUBLIC
 int gavf_io_get_flags(gavf_io_t * io);
 
 GAVL_PUBLIC

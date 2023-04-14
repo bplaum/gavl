@@ -41,7 +41,7 @@
 // #define DUMP_OUT_PACKETS
 
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
-#define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
+// #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
@@ -311,6 +311,9 @@ static void pts_from_duration_b_frames(gavl_packet_buffer_t * buf)
 
       pts_from_duration(buf, buf->buf.packets[ip1]);
       }
+
+    if(ip2 == buf->buf.num)
+      break;
     
     ip1 = ip2;
     }
@@ -765,7 +768,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
 #ifdef DUMP_IN_PACKETS
   if(buf->type & DUMP_PACKET_MASK)
     {
-    gavl_dprintf("Buf in ");
+    gavl_dprintf("Buf in %p ", p);
     gavl_packet_dump(p);
     }
 #endif
@@ -854,7 +857,7 @@ source_func(void * priv, gavl_packet_t ** p)
       }
     else
       {
-      gavl_dprintf("Buf out ");
+      gavl_dprintf("Buf out %p ", buf->out_packet);
       gavl_packet_dump(buf->out_packet);
       }
     }
@@ -906,6 +909,7 @@ void gavl_packet_buffer_clear(gavl_packet_buffer_t * buf)
   buf->ip_frames_seen = 0;
   buf->keyframes_seen = 0;
   gavl_packet_source_reset(buf->src);
+  gavl_packet_sink_reset(buf->sink);
   //  fprintf(stderr, "gavl_packet_buffer_clear %d %d\n", buf->packet_scale, buf->sample_scale);
   }
 

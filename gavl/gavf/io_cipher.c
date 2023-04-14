@@ -277,3 +277,10 @@ void gavf_io_cipher_init(gavf_io_t * io,
   gavf_io_clear_error(io);
   gavf_io_clear_eof(io);
   }
+
+void gavf_io_cipher_set_src(gavf_io_t * io,
+                            gavf_io_t * src)
+  {
+  cipher_t * c = io->priv;
+  c->src = src;
+  }

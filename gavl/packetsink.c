@@ -72,6 +72,10 @@ gavl_packet_sink_set_lock_funcs(gavl_packet_sink_t * sink,
   sink->lock_priv = priv;
   }
 
+void gavl_packet_sink_reset(gavl_packet_sink_t * s)
+  {
+  s->pkt = NULL;
+  }
 
 gavl_packet_t *
 gavl_packet_sink_get_packet(gavl_packet_sink_t * s)

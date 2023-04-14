@@ -973,6 +973,10 @@ gavl_packet_sink_set_free_func(gavl_packet_sink_t * sink,
 GAVL_PUBLIC gavl_packet_t *
 gavl_packet_sink_get_packet(gavl_packet_sink_t * s);
 
+GAVL_PUBLIC void 
+gavl_packet_sink_reset(gavl_packet_sink_t * s);
+
+  
 /** \brief Output a frame
  *  \param s A packet sink
  *  \param p Packet

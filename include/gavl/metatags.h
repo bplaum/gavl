@@ -372,6 +372,8 @@
 #define GAVL_META_TOTAL              "total"       // Total number (maximum idx + 1)
 #define GAVL_META_SHOW               "Show"        // TV Show, this item belongs to
 #define GAVL_META_SEASON             "Season"      // Season, this episode belongs to (integer but can be non-continuos
+#define GAVL_META_PODCAST            "Podcast"     // Name of the pocast this item belongs to
+
 #define GAVL_META_EPISODENUMBER      "EPNum"       // Number of the Episode (starting with 1)
 #define GAVL_META_RATING             "Rating"      // Rating (float, 0.0..1.0)
 #define GAVL_META_PARENTAL_CONTROL   "ParentalControl" // mpaa or FSK (or whatever) rating
