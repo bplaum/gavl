@@ -66,6 +66,7 @@
 #define GAVL_STATE_SRC_SEEK_WINDOW                "seek_window"
 #define GAVL_STATE_SRC_SEEK_WINDOW_START          "seek_window_start"
 #define GAVL_STATE_SRC_SEEK_WINDOW_END            "seek_window_end"
+#define GAVL_STATE_SRC_SEEK_WINDOW_UNIT           "seek_window_unit"
 
 GAVL_PUBLIC
 void gavl_msg_set_state(gavl_msg_t * msg,

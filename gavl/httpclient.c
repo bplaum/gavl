@@ -1107,9 +1107,12 @@ static int handle_response(gavf_io_t * io)
         check_keepalive(c);
 
       if(!strcmp(c->method, "GET") || !strcmp(c->method, "PUT"))
+        {
         gavf_io_set_info(io, c->total_bytes, c->uri,
                          gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
                          flags);
+        c->position = 0;
+        }
       }
     else
       goto fail;

@@ -273,7 +273,6 @@ void gavf_io_cipher_init(gavf_io_t * io,
   c->in_bufs = 0;
   c->last_block = 0;
   c->src = src;
-  
   gavf_io_clear_error(io);
   gavf_io_clear_eof(io);
   }

@@ -155,9 +155,8 @@
  *
  *  arg0: Time  (long)
  *  arg1: Scale (int)
+ *  arg2: Unit  (int)
  *
- *  Argument 2 decides, if the seek operation is expected in
- *  synchronout mode or not
  */
 
 #define GAVL_CMD_SRC_SEEK              103
@@ -801,6 +800,23 @@ void gavl_msg_set_last(gavl_msg_t * msg, int last);
 GAVL_PUBLIC 
 void gavl_msg_set_resp_for_req(gavl_msg_t * dst, const gavl_msg_t * src);
 
+/* SRC */
 
+typedef enum
+  {
+    GAVL_SRC_SEEK_PTS   = 0,
+    GAVL_SRC_SEEK_CLOCK = 1,
+    GAVL_SRC_SEEK_START = 2,
+  } gavl_src_seek_unit_t;
+
+GAVL_PUBLIC 
+void gavl_msg_set_msg_src_seek(gavl_msg_t * dst, int64_t time, int scale, gavl_src_seek_unit_t unit);
+
+GAVL_PUBLIC 
+void gavl_msg_get_msg_src_seek(const gavl_msg_t * dst, int64_t * time, int * scale, gavl_src_seek_unit_t * unit);
+
+GAVL_PUBLIC 
+gavl_time_t gavl_seek_time_translate(gavl_time_t src, gavl_src_seek_unit_t src_unit, 
+                                     gavl_src_seek_unit_t dst_unit, const gavl_dictionary_t * track);
 
 #endif // GAVL_MSG_H_INCLUDED

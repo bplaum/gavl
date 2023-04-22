@@ -205,6 +205,8 @@ static void pts_from_duration(gavl_packet_buffer_t * buf, gavl_packet_t * p)
                                    p->pes_pts);
     else
       buf->pts = 0;
+
+    // fprintf(stderr, "Buffer resync: %"PRId64"\n", gavl_time_unscale(buf->sample_scale, buf->pts));
     }
   
   p->pts = buf->pts;

@@ -132,6 +132,8 @@ void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
                          GAVF_IO_CAN_READ|
                          GAVF_IO_CAN_WRITE));
   
+  //  fprintf(stderr, "gavf_io_set_info %s\n", filename);
+  
   }
 
 void gavf_io_set_poll_func(gavf_io_t * io, gavf_poll_func f)
@@ -251,7 +253,7 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
 
     if(result < 0)
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read returned %d", result);
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read returned %d (block: %d)", result, block);
       gavf_io_set_error(io);
       }
     if(result > 0)

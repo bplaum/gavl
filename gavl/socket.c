@@ -937,8 +937,8 @@ int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
 
   if(result < 0)
     {
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Nonblocking write failed: %s", strerror(errno));
-    return 0;
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Nonblocking write failed: %s", strerror(errno));
+    return result;
     }
   return result;
   }

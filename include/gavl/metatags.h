@@ -321,17 +321,24 @@
 #define GAVL_META_ICON_NAME      "IconName"
 
 #define GAVL_META_CAN_SEEK        "CanSeek"
+#define GAVL_META_CAN_SEEK_CLOCK  "CanSeekClock"
+
 #define GAVL_META_CAN_PAUSE       "CanPause"
 #define GAVL_META_SAMPLE_ACCURATE "SampleAccurate"
 
-/*
- *  Members: 
- */
+#define GAVL_META_TIME_PTS    "PTS"
+#define GAVL_META_TIME_CLOCK  "Clock"
+#define GAVL_META_TIME_START  "Start"
 
+#define GAVL_META_TIME_PTS_TO_CLOCK "PTSToClock"
+#define GAVL_META_TIME_PTS_TO_START "PTSToStart"
+
+#if 0
 #define GAVL_META_CLOCK_TIME_MAP  "ClockTimeMap"
 #define GAVL_META_CLOCK_TIME            "ClockTime"
 #define GAVL_META_CLOCK_TIME_PTS        "PTS"
 #define GAVL_META_CLOCK_TIME_PTS_SCALE  "scale"
+#endif
 
 /*
  *  Several commands are expected in asynchronous mode.

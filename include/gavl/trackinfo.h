@@ -338,6 +338,8 @@ void gavl_delete_track(gavl_dictionary_t*, int idx);
 GAVL_PUBLIC
 int gavl_track_can_seek(const gavl_dictionary_t * track);
 
+GAVL_PUBLIC
+int gavl_track_can_seek_clock(const gavl_dictionary_t * track);
 
 GAVL_PUBLIC
 int gavl_track_can_pause(const gavl_dictionary_t * track);
@@ -349,12 +351,26 @@ GAVL_PUBLIC
 int gavl_track_set_async(gavl_dictionary_t * track, int async);
 
 GAVL_PUBLIC
+gavl_time_t gavl_track_get_pts_to_clock_time(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+gavl_time_t gavl_track_get_pts_to_start_time(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+void gavl_track_set_pts_to_clock_time(gavl_dictionary_t * dict, gavl_time_t offset);
+
+GAVL_PUBLIC
+void gavl_track_set_pts_to_start_time(gavl_dictionary_t * dict, gavl_time_t offset);
+
+#if 0
+GAVL_PUBLIC
 void gavl_track_set_clock_time_map(gavl_dictionary_t * track,
                                    int64_t pts, int pts_scale, gavl_time_t clock_time);
 
 GAVL_PUBLIC
 int gavl_track_get_clock_time_map(const gavl_dictionary_t * track,
                                   int64_t * pts, int * pts_scale, gavl_time_t * clock_time);
+#endif
 
 GAVL_PUBLIC
 void gavl_track_splice_children(gavl_dictionary_t * dict, int idx, int del,
@@ -595,6 +611,9 @@ const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, in
 
 GAVL_PUBLIC
 gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+void gavl_track_set_display_time_offset(gavl_dictionary_t * dict, gavl_time_t offset);
 
 /* Compression tags (like AVI four character codes etc.) */
 
