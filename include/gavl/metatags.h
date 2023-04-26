@@ -322,6 +322,7 @@
 
 #define GAVL_META_CAN_SEEK        "CanSeek"
 #define GAVL_META_CAN_SEEK_CLOCK  "CanSeekClock"
+// #define GAVL_META_CAN_SEEK_START  "CanSeekStart"
 
 #define GAVL_META_CAN_PAUSE       "CanPause"
 #define GAVL_META_SAMPLE_ACCURATE "SampleAccurate"

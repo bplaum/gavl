@@ -292,11 +292,17 @@ static void RENAME(convert_float_to_u16)(gavl_audio_convert_context_t * ctx)
 static void RENAME(convert_float_to_s32)(gavl_audio_convert_context_t * ctx)
   {
   int64_t tmp;
+  
+  //  fprintf(stderr, "Convert float to S32 %d\n", ctx->input_frame->valid_samples); 
+  
   CONVERSION_FUNC_START
   tmp = llrintf((ctx->input_frame->FLOAT) * 2147483648.0);
   CLAMP(tmp, -2147483648LL, 2147483647LL);
   ctx->output_frame->S_32 = tmp;
   CONVERSION_FUNC_END
+
+  //  fprintf(stderr, "Convert float to S32 done\n"); 
+  
   }
 
 /* Double to int */

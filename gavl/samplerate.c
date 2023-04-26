@@ -31,6 +31,7 @@
 
 #include <samplerate.h>
 
+// #define DUMP_SAMPLE_COUNTS
 
 static int get_filter_type(gavl_audio_options_t * opt)
   {
@@ -99,10 +100,11 @@ static void resample_interleave_none_f(gavl_audio_convert_context_t * ctx)
     }
   ctx->output_frame->valid_samples =
     ctx->samplerate_converter->data.output_frames_gen;
-#if 0
-  fprintf(stderr, "Resampled %d -> %ld\n",
-          ctx->input_frame->valid_samples,
-          ctx->samplerate_converter->data.output_frames_gen);
+
+#ifdef DUMP_SAMPLE_COUNTS
+  gavl_dprintf("Resampled %d -> %ld\n",
+               ctx->input_frame->valid_samples,
+               ctx->samplerate_converter->data.output_frames_gen);
 #endif
   }
 
@@ -125,6 +127,13 @@ static void resample_interleave_2_f(gavl_audio_convert_context_t * ctx)
     }
   ctx->output_frame->valid_samples =
     ctx->samplerate_converter->data.output_frames_gen;
+
+#ifdef DUMP_SAMPLE_COUNTS
+  gavl_dprintf("Resampled %d -> %ld\n",
+               ctx->input_frame->valid_samples,
+               ctx->samplerate_converter->data.output_frames_gen);
+#endif
+
   }
   
 static void resample_interleave_all_f(gavl_audio_convert_context_t * ctx)
@@ -141,6 +150,13 @@ static void resample_interleave_all_f(gavl_audio_convert_context_t * ctx)
               &ctx->samplerate_converter->data);
   ctx->output_frame->valid_samples =
     ctx->samplerate_converter->data.output_frames_gen;
+
+#ifdef DUMP_SAMPLE_COUNTS
+  gavl_dprintf("Resampled %d -> %ld\n",
+               ctx->input_frame->valid_samples,
+               ctx->samplerate_converter->data.output_frames_gen);
+#endif
+
   }
 
 static void resample_interleave_none_d(gavl_audio_convert_context_t * ctx)

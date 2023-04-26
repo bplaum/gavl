@@ -2210,7 +2210,7 @@ void gavl_sort_tracks_by_quality(gavl_array_t * arr)
 int gavl_stream_get_compression_info(const gavl_dictionary_t * s,
                                      gavl_compression_info_t * ret)
   {
-  int id;
+  int id = GAVL_CODEC_ID_NONE;
   const gavl_buffer_t * buf;
   const gavl_dictionary_t * cmp;
   
@@ -3035,7 +3035,7 @@ gavl_time_t gavl_track_get_pts_to_clock_time(const gavl_dictionary_t * dict)
   {
   gavl_time_t ret = GAVL_TIME_UNDEFINED;
 
-  if(!gavl_dictionary_get_dictionary(dict, GAVL_META_METADATA) ||
+  if(!(dict = gavl_dictionary_get_dictionary(dict, GAVL_META_METADATA)) ||
      !gavl_dictionary_get_long(dict, GAVL_META_TIME_PTS_TO_CLOCK, &ret))
     return GAVL_TIME_UNDEFINED;
   
@@ -3046,7 +3046,7 @@ gavl_time_t gavl_track_get_pts_to_start_time(const gavl_dictionary_t * dict)
   {
   gavl_time_t ret = GAVL_TIME_UNDEFINED;
 
-  if(!gavl_dictionary_get_dictionary(dict, GAVL_META_METADATA) ||
+  if(!(dict = gavl_dictionary_get_dictionary(dict, GAVL_META_METADATA)) ||
      !gavl_dictionary_get_long(dict, GAVL_META_TIME_PTS_TO_START, &ret))
     return GAVL_TIME_UNDEFINED;
   

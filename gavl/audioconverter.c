@@ -319,12 +319,11 @@ int gavl_audio_converter_reinit(gavl_audio_converter_t* cnv)
                                          &tmp_format);
     add_context(cnv, ctx);
     }
-
-  //  fprintf(stderr, "Audio converter initialized, %d conversions\n", cnv->num_conversions);
-  
-  //  gavl_audio_format_dump(&cnv->input_format);
-
-  //  gavl_audio_format_dump(&cnv->output_format);
+#if 0
+  fprintf(stderr, "Audio converter initialized, %d conversions\n", cnv->num_conversions);
+  gavl_audio_format_dump(&cnv->input_format);
+  gavl_audio_format_dump(&cnv->output_format);
+#endif  
   //  gavl_audio_format_dump(cnv->current_format);
 
   /* Set samples_per_frame of the first context
@@ -375,6 +374,7 @@ static void alloc_frames(gavl_audio_converter_t* cnv,
       if(ctx->output_frame)
         gavl_audio_frame_destroy(ctx->output_frame);
       ctx->output_frame = gavl_audio_frame_create(&ctx->output_format);
+      gavl_audio_frame_mute(ctx->output_frame, &ctx->output_format);
       ctx->next->input_frame = ctx->output_frame;
       }
     ctx = ctx->next;

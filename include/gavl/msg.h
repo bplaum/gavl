@@ -813,7 +813,7 @@ GAVL_PUBLIC
 void gavl_msg_set_msg_src_seek(gavl_msg_t * dst, int64_t time, int scale, gavl_src_seek_unit_t unit);
 
 GAVL_PUBLIC 
-void gavl_msg_get_msg_src_seek(const gavl_msg_t * dst, int64_t * time, int * scale, gavl_src_seek_unit_t * unit);
+void gavl_msg_get_msg_src_seek(const gavl_msg_t * src, int64_t * time, int * scale, gavl_src_seek_unit_t * unit);
 
 GAVL_PUBLIC 
 gavl_time_t gavl_seek_time_translate(gavl_time_t src, gavl_src_seek_unit_t src_unit, 
