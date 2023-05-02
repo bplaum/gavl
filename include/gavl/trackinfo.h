@@ -338,8 +338,6 @@ void gavl_delete_track(gavl_dictionary_t*, int idx);
 GAVL_PUBLIC
 int gavl_track_can_seek(const gavl_dictionary_t * track);
 
-GAVL_PUBLIC
-int gavl_track_can_seek_clock(const gavl_dictionary_t * track);
 
 GAVL_PUBLIC
 int gavl_track_can_pause(const gavl_dictionary_t * track);
@@ -610,10 +608,7 @@ const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, in
 //
 
 GAVL_PUBLIC
-gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict);
-
-GAVL_PUBLIC
-void gavl_track_set_display_time_offset(gavl_dictionary_t * dict, gavl_time_t offset);
+gavl_time_t gavl_track_get_start_time(const gavl_dictionary_t * dict);
 
 /* Compression tags (like AVI four character codes etc.) */
 

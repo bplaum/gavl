@@ -809,22 +809,19 @@ int gavl_msg_send(gavl_msg_t * msg, gavl_handle_msg_func func, void * priv)
   
   }
 
-void gavl_msg_set_msg_src_seek(gavl_msg_t * dst, int64_t time, int scale, gavl_src_seek_unit_t unit)
+void gavl_msg_set_msg_src_seek(gavl_msg_t * dst, int64_t time, int scale)
   {
   gavl_msg_set_id_ns(dst, GAVL_CMD_SRC_SEEK, GAVL_MSG_NS_SRC);
   gavl_msg_set_arg_long(dst, 0, time);
   gavl_msg_set_arg_int(dst, 1, scale);
-  gavl_msg_set_arg_int(dst, 2, unit);
   }
 
-void gavl_msg_get_msg_src_seek(const gavl_msg_t * dst, int64_t * time, int * scale, gavl_src_seek_unit_t * unit)
+void gavl_msg_get_msg_src_seek(const gavl_msg_t * dst, int64_t * time, int * scale)
   {
   if(time)
     *time = gavl_msg_get_arg_long(dst, 0);
   if(scale)
     *scale = gavl_msg_get_arg_int(dst, 1);
-  if(unit)
-    *unit = gavl_msg_get_arg_int(dst, 2);
   }
 
 

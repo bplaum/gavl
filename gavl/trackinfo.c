@@ -1752,18 +1752,6 @@ int gavl_track_can_seek(const gavl_dictionary_t * track)
   return 1;
   }
 
-int gavl_track_can_seek_clock(const gavl_dictionary_t * track)
-  {
-  int val = 0;
-  const gavl_dictionary_t * m;
-
-  if(!(m = gavl_track_get_metadata(track)) ||
-     !gavl_dictionary_get_int(m, GAVL_META_CAN_SEEK_CLOCK, &val) ||
-     !val)
-    return 0;
-
-  return 1;
-  }
 
 int gavl_track_can_pause(const gavl_dictionary_t * track)
   {
@@ -2659,17 +2647,9 @@ gavl_time_t gavl_stream_get_start_time(const gavl_dictionary_t * s)
     return 0;
   }
 
-#define DISPLAY_TIME_OFFSET_KEY "DisplayTimeOffset"
-
-gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict)
+gavl_time_t gavl_track_get_start_time(const gavl_dictionary_t * dict)
   {
   const gavl_dictionary_t * d;
-  gavl_time_t ret = 0;
-  
-  if((d = gavl_track_get_metadata(dict)) &&
-     gavl_dictionary_get_long(d, DISPLAY_TIME_OFFSET_KEY, &ret))
-    return ret;
-  
   if((d = gavl_track_get_audio_stream(dict, 0)) ||
      (d = gavl_track_get_video_stream(dict, 0)))
     return gavl_stream_get_start_time(d);
@@ -2677,12 +2657,6 @@ gavl_time_t gavl_track_get_display_time_offset(const gavl_dictionary_t * dict)
     return 0;
   }
 
-void gavl_track_set_display_time_offset(gavl_dictionary_t * dict, gavl_time_t offset)
-  {
-  gavl_dictionary_t * d;
-  d = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
-  gavl_dictionary_set_long(d, DISPLAY_TIME_OFFSET_KEY, offset);
-  }
 
 #define COMPRESSION_TAG_KEY "compression_tag"
 
