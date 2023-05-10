@@ -463,77 +463,12 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
       }
     }
   return bytes_read;
-  
-#if 0
-  if(c->pos == c->chunk_length)
-    {
-    if(c->chunk_length)
-      {
-      if(!block && !gavf_io_can_read(c->io_int, 0))
-        return bytes_read;
-        
-      if(!read_chunk_tail(c))
-        return bytes_read;
-      }
-      
-    /* Read chunk_len */
-
-    if(!block && !gavf_io_can_read(c->io_int, 0))
-      return bytes_read;
-      
-    if(!read_chunk_length(c))
-      {
-      goto fail;
-      }
-    c->pos = 0;
-    }
-
-  bytes_to_read = len - bytes_read;
-
-  if(c->pos + bytes_to_read >= c->chunk_length)
-    bytes_to_read = c->chunk_length - c->pos;
-
-  if(!block)
-    {
-    result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
-    if(result < 0)
-      goto fail;
-    }
-  else
-    {
-    result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
-    if(result < bytes_to_read)
-      goto fail;
-    }
-  bytes_read += result;
-  c->pos += result;
-
-  if(!block)
-    break;
-  }
-
-  return bytes_read;
-  
-  fail:
-
-  return -1;
-#endif
   }
 
 static int read_normal(void * priv, uint8_t * data, int len, int block)
   {
   int result = 0;
   gavl_http_client_t * c = priv;
-
-#if 0
-  if(c->pos % 2)
-    fprintf(stderr, "Oops 2\n");
-
-  if(len % 2)
-    fprintf(stderr, "Oops 1 %d\n", len);
-#endif
-  
-  //  fprintf(stderr, "Read normal: %d %"PRId64" %"PRId64"\n", len, c->pos, c->total_bytes);
   
   if(c->total_bytes)
     {
@@ -697,6 +632,8 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
 
   //  fprintf(stderr, "seek_http done %p\n", c->io_int);
 
+  //  fprintf(stderr, "seek_http 2 %"PRId64"\n", c->position);
+  
   return pos;
   }
 
@@ -1012,6 +949,10 @@ static void prepare_header(gavl_http_client_t * c,
                                                                         c->range_start, c->range_end - 1));
     }
 
+#if 0
+  if(c->range_start > 0)
+    gavl_dictionary_dump(request, 2);
+#endif
   }
 
 static int handle_response(gavf_io_t * io)
@@ -1054,6 +995,8 @@ static int handle_response(gavf_io_t * io)
       int64_t resp_range_end = 0;
       int64_t resp_range_total = 0;
 
+      c->position = 0;
+      
       if(status == 206)
         {
         var = gavl_dictionary_get_string_i(&c->resp, "Content-Range");
@@ -1111,7 +1054,6 @@ static int handle_response(gavf_io_t * io)
         gavf_io_set_info(io, c->total_bytes, c->uri,
                          gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
                          flags);
-        c->position = 0;
         }
       }
     else
@@ -1358,7 +1300,7 @@ void gavl_http_client_pause(gavf_io_t * io)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  //  fprintf(stderr, "gavl_http_client_pause\n");
+  //  fprintf(stderr, "gavl_http_client_pause %"PRId64"\n", c->position);
 
   close_connection(c);
   
@@ -1370,7 +1312,7 @@ void gavl_http_client_resume(gavf_io_t * io)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  //  fprintf(stderr, "gavl_http_client_resume\n");
+  //  fprintf(stderr, "gavl_http_client_resume %"PRId64"\n", c->position);
 
   gavl_http_client_set_range(io, c->position, -1);
   reopen(io);
