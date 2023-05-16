@@ -22,7 +22,7 @@
 #ifndef GAVL_VALUE_H_INCLUDED
 #define GAVL_VALUE_H_INCLUDED
 
-#include <gavl/utils.h>
+#include <gavl/buffer.h>
 
 typedef enum
   {

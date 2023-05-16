@@ -24,6 +24,7 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "v4l"
 
+#include <gavl/utils.h>
 
 #include <gavl/hw_v4l2.h>
 #include <gavl/hw_dmabuf.h>

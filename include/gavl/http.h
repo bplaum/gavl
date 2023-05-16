@@ -188,28 +188,6 @@ gavl_http_client_run_async(gavf_io_t * io, const char * method, const char * uri
 GAVL_PUBLIC int
 gavl_http_client_run_async_done(gavf_io_t * io, int timeout);
 
-/* URL variables */
-
-GAVL_PUBLIC
-void gavl_url_get_vars_c(const char * path,
-                         gavl_dictionary_t * vars);
-
-GAVL_PUBLIC
-void gavl_url_get_vars(char * path,
-                       gavl_dictionary_t * vars);
-
-GAVL_PUBLIC
-char * gavl_url_append_vars(char * path,
-                            const gavl_dictionary_t * vars);
-
-
-/* Append/Remove http variables from the URL */
-
-GAVL_PUBLIC
-char * gavl_url_append_http_vars(char * url, const gavl_dictionary_t * vars);
-
-GAVL_PUBLIC
-char * gavl_url_extract_http_vars(char * url, gavl_dictionary_t * vars);
 
 GAVL_PUBLIC
 char * gavl_make_basic_auth(const char * username, const char * password);

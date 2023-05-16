@@ -200,6 +200,7 @@ trackinfo.c \
 transform.c \
 transform_context.c \
 transform_table.c \
+urlvars.c \
 utils.c \
 videoconnector.c \
 videoconverter.c \

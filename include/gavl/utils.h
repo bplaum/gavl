@@ -252,55 +252,6 @@ const char * gavl_find_char_c(const char * start, char delim);
 GAVL_PUBLIC
 char * gavl_find_char(char * start, char delim);
 
-/* Buffer */
-
-typedef struct
-  {
-  uint8_t * buf;
-  int len;
-  int alloc;
-  int alloc_static;
-  int pos;
-  } gavl_buffer_t;
-
-GAVL_PUBLIC
-void gavl_buffer_init(gavl_buffer_t * buf);
-
-GAVL_PUBLIC
-void gavl_buffer_init_static(gavl_buffer_t * buf, uint8_t * data, int size);
-
-GAVL_PUBLIC
-int gavl_buffer_alloc(gavl_buffer_t * buf,
-                      int size);
-
-GAVL_PUBLIC
-void gavl_buffer_free(gavl_buffer_t * buf);
-
-GAVL_PUBLIC
-void gavl_buffer_reset(gavl_buffer_t * buf);
-
-GAVL_PUBLIC
-void gavl_buffer_copy(gavl_buffer_t * dst, const gavl_buffer_t * src);
-
-GAVL_PUBLIC
-void gavl_buffer_append(gavl_buffer_t * dst, const gavl_buffer_t * src);
-
-GAVL_PUBLIC
-void gavl_buffer_append_pad(gavl_buffer_t * dst, const gavl_buffer_t * src, int padding);
-
-GAVL_PUBLIC
-void gavl_buffer_append_data(gavl_buffer_t * dst, const uint8_t * data, int len);
-
-GAVL_PUBLIC
-void gavl_buffer_append_data_pad(gavl_buffer_t * dst, const uint8_t * data, int len,
-                                 int padding);
-
-
-GAVL_PUBLIC
-void gavl_buffer_prepend_data(gavl_buffer_t * dst, const uint8_t * data, int len);
-
-GAVL_PUBLIC
-void gavl_buffer_flush(gavl_buffer_t * buf, int len);
 
 
 GAVL_PUBLIC
@@ -348,6 +299,60 @@ void gavl_simplify_rational(int * num, int * den);
 
 GAVL_PUBLIC
 int gavl_num_cpus();
+
+/* URL variables */
+
+#define GAVL_URL_VAR_TRACK      "track"
+#define GAVL_URL_VAR_VARIANT    "variant"
+
+#define GAVL_URL_VAR_CLOCK_TIME "clocktime"
+
+/* URL variables */
+
+GAVL_PUBLIC
+void gavl_url_get_vars_c(const char * path,
+                         gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+void gavl_url_get_vars(char * path,
+                       gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+char * gavl_url_append_vars(char * path,
+                            const gavl_dictionary_t * vars);
+
+/* Append url variables */
+GAVL_PUBLIC
+char * gavl_url_add_var_string(char * uri, const char * var, const char * val);
+
+GAVL_PUBLIC
+char * gavl_url_add_var_long(char * uri, const char * var, int64_t val);
+
+GAVL_PUBLIC
+char * gavl_url_add_var_double(char * uri, const char * var, double val);
+
+/* Extract url variables */
+
+/* *val = NULL if variable doesn't exist */
+GAVL_PUBLIC
+char * gavl_url_extract_var_string(char * uri, const char * var, char ** val);
+
+GAVL_PUBLIC
+char * gavl_url_extract_var_long(char * uri, const char * var, int64_t * val);
+
+/* *val = -1 if variable doesn't exist */
+GAVL_PUBLIC
+char * gavl_url_extract_var_double(char * uri, const char * var, double * val);
+
+
+/* Append/Remove http variables from the URL */
+
+GAVL_PUBLIC
+char * gavl_url_append_http_vars(char * url, const gavl_dictionary_t * vars);
+
+GAVL_PUBLIC
+char * gavl_url_extract_http_vars(char * url, gavl_dictionary_t * vars);
+
 
 
 #endif // GAVL_UTILS_H_INCLUDED

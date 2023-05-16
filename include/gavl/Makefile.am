@@ -1,4 +1,5 @@
 pkginclude_HEADERS = \
+buffer.h \
 chapterlist.h \
 compression.h \
 connectors.h \

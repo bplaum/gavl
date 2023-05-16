@@ -1113,6 +1113,9 @@ static int handle_response(gavf_io_t * io)
     
     if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
       check_keepalive(c);
+
+    if(status == 416)
+      fprintf(stderr, "Blupp\n");
     
     c->flags |= FLAG_ERROR;
     }
@@ -1377,7 +1380,6 @@ int gavl_http_client_run_async(gavf_io_t * io,
   
   return 1;
   }
-
 
 static int async_iteration(gavf_io_t * io, int timeout)
   {
