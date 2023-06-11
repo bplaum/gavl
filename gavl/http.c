@@ -87,7 +87,7 @@ static void write_vars_func(void * priv, const char * name, const gavl_value_t *
       if(!strcmp(val->v.str, GAVL_HTTP_META_EMPTY))
         {
         put_string(io, name);
-        put_string(io, ":\r\n");
+        put_string(io, ": \r\n");
         }
       else
         {

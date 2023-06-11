@@ -70,6 +70,10 @@ int gavl_socket_address_get_port(gavl_socket_address_t * addr);
 GAVL_PUBLIC
 char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * str);
 
+GAVL_PUBLIC
+int gavl_socket_address_from_string(gavl_socket_address_t * addr, const char * str1);
+
+
 /* Wildcard can be "0.0.0.0" for IPV4 or "::" for IPV6 */
 GAVL_PUBLIC
 int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const char * wildcard);

@@ -1038,7 +1038,6 @@ gavl_dictionary_t * gavl_track_get_metadata_nc(gavl_dictionary_t * dict)
     return NULL;
   }
 
-
 const gavl_dictionary_t * gavl_track_get_metadata(const gavl_dictionary_t * dict)
   {
   const gavl_value_t * val;
@@ -1047,6 +1046,7 @@ const gavl_dictionary_t * gavl_track_get_metadata(const gavl_dictionary_t * dict
   else
     return NULL;
   }
+
 
 static void get_stream_duration(void * priv, 
                                 int idx,

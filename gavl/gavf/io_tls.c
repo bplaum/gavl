@@ -114,11 +114,17 @@ static int do_wait(tls_t * p, int timeout)
         break;
       case WAIT_STATE_READ:
         if(!gavl_socket_can_read(p->fd, timeout))
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read timeout (%d ms) exceeded", timeout);
           return 0;
+          }
         break;
       case WAIT_STATE_WRITE:
         if(!gavl_socket_can_write(p->fd, timeout))
+          {
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Write timeout (%d ms) exceeded", timeout);
           return 0;
+          }
         break;
       }
     }
@@ -177,33 +183,46 @@ static int flush_tls(void * priv)
   return do_flush(priv, 1);
   }
   
-static int read_record(tls_t * p, int timeout)
+static int read_record(tls_t * p, int timeout_init)
   {
   ssize_t result;
-
+  int timeout;
   int bytes_to_read;
   
   if(!do_flush(p, !!timeout))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot reading TLS record: Flushing failed");
     return 0;
-
+    }
   bytes_to_read = p->buffer_size;
 
   gavl_timer_set(p->timer, 0);
   gavl_timer_start(p->timer);
+
+  timeout = timeout_init;
   
   do
     {
     result = gnutls_record_recv(p->session, p->read_buffer.buf, bytes_to_read);
 
+    if(!result)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gnutls_record_recv returned zero (EOF)");
+      }
+    
     if((result == GNUTLS_E_AGAIN))
       {
       p->wait_state = 1 + gnutls_record_get_direction(p->session);
       
       if(!timeout || !do_wait(p, timeout))
+        {
+        if(timeout_init > 0)
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gnutls_record_recv: Timeout (%d ms) expired", timeout_init);
         break;
+        }
       }
     
-    timeout -= gavl_timer_get(p->timer) / 1000;
+    timeout = timeout_init - gavl_timer_get(p->timer) / 1000;
     
     if(timeout < 0)
       timeout = 0;
@@ -213,8 +232,9 @@ static int read_record(tls_t * p, int timeout)
     
   gavl_timer_stop(p->timer);
   
-  if((result < 0) && gnutls_error_is_fatal(result))
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading TLS record failed: %s", gnutls_strerror(result));
+  if((result < 0) && gnutls_error_is_fatal(result) && (result != GNUTLS_E_PREMATURE_TERMINATION))
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading TLS record failed: %s (timeout was %d ms)",
+             gnutls_strerror(result), timeout);
   
   if(result > 0)
     {
@@ -225,7 +245,6 @@ static int read_record(tls_t * p, int timeout)
     }
   return 0;
   }
-
 
 static int do_read_tls(void * priv, uint8_t * data, int len, int block)
   {
@@ -238,7 +257,11 @@ static int do_read_tls(void * priv, uint8_t * data, int len, int block)
     if(p->read_buffer.pos >= p->read_buffer.len)
       {
       if(!read_record(p, block ? 3000 : 0))
+        {
+        if(block)
+          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading TLS record failed");
         break;
+        }
       }
 
     bytes_to_read = len - bytes_read;
@@ -254,7 +277,14 @@ static int do_read_tls(void * priv, uint8_t * data, int len, int block)
     
     p->read_buffer.pos += bytes_to_read;
     }
-  
+
+#if 0  
+  if((bytes_read < len) && block)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "do_read_tls requested: %d got %d", len, bytes_read);
+    }
+#endif
+
   return bytes_read;
   }
 

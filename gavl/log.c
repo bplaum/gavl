@@ -58,8 +58,16 @@ static void logs_internal(gavl_log_level_t level, const char * domain,
     while(lines[i])
       {
       gavl_msg_t msg;
+
+      gavl_strtrim(lines[i]);
+      if(*(lines[i]) == '\0')
+        {
+        i++;
+        continue;
+        }
+      
       gavl_msg_init(&msg);
-      gavl_log_msg_set(&msg, level, domain, message);
+      gavl_log_msg_set(&msg, level, domain, lines[i]);
       gavl_log_handler(gavl_log_priv, &msg);
       gavl_msg_free(&msg);
       i++;

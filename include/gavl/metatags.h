@@ -427,6 +427,9 @@
 #define GAVL_META_EDL              "edl"
 #define GAVL_META_TRACKS           GAVL_META_CHILDREN // Array containing single tracks
 
+// Additional url variables passed to the open() function
+#define GAVL_META_URLVARS          "urlvars"
+
 #define GAVL_META_CURIDX           "curidx" // Index of "current" child
 
 #define GAVL_META_PARTS            "parts" // Parts of a multipart movie

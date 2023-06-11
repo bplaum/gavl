@@ -224,7 +224,6 @@ char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * 
       {
       char buf[INET6_ADDRSTRLEN];
       struct sockaddr_in6 * a;
-      
       a = (struct sockaddr_in6*)&addr->addr;
 
       inet_ntop(AF_INET6, &a->sin6_addr, buf, INET6_ADDRSTRLEN);
@@ -236,6 +235,67 @@ char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * 
       break;
     }
   return NULL;
+  }
+
+int gavl_socket_address_from_string(gavl_socket_address_t * addr, const char * str1)
+  {
+  char * str = gavl_strdup(str1);
+  char * pos;
+  char * host_pos;
+  char * port_pos;
+  
+  if(str[0] == '[')
+    {
+    struct sockaddr_in6 * a;
+    a = (struct sockaddr_in6*)&addr->addr;
+    
+    addr->addr.ss_family = AF_INET6;
+
+    host_pos = str+1;
+
+    if(!(pos = strchr(str, ']')))
+      goto fail;
+
+    *pos = '\0';
+
+    if(!(pos = strchr(str, ':')))
+      goto fail;
+
+    port_pos = pos+1;
+    
+    if(!inet_pton(AF_INET6, host_pos, &a->sin6_addr))
+      goto fail;
+    
+    a->sin6_port = htons(atoi(port_pos));
+    
+    }
+  else
+    {
+    struct sockaddr_in * a;
+    
+    a = (struct sockaddr_in*)&addr->addr;
+    addr->addr.ss_family = AF_INET;
+
+    host_pos = str;
+    if(!(pos = strchr(host_pos, ':')))
+      goto fail;
+    
+    *pos = '\0';
+    port_pos = pos+1;
+    
+    if(!inet_pton(AF_INET, host_pos, &a->sin_addr))
+      goto fail;
+    
+    a->sin_port = htons(atoi(port_pos));
+    }
+  
+  free(str);
+  return 1;
+  
+  fail:
+  free(str);
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot convert %s to socket address", str1);
+  return 0;
   }
 
 static void set_addr_hints(struct addrinfo * hints, int socktype, const char * hostname)
@@ -933,7 +993,7 @@ int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
   if(!gavl_socket_can_write(fd, 0))
     return 0;
 
-  result = send(fd, data, len, MSG_DONTWAIT);
+  result = send(fd, data, len, MSG_DONTWAIT | MSG_NOSIGNAL);
 
   if(result < 0)
     {
@@ -1346,8 +1406,9 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
   gavl_socket_address_set(&bind_addr, "0.0.0.0",
                         gavl_socket_address_get_port(addr), SOCK_DGRAM);
 
-  err = bind(ret, (struct sockaddr*)&addr->addr, addr->len);
-
+  //  err = bind(ret, (struct sockaddr*)&addr->addr, addr->len);
+  err = bind(ret, (struct sockaddr*)&bind_addr.addr, bind_addr.len);
+  
   if(err)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot bind UDP socket: %s", strerror(errno));
@@ -1359,9 +1420,11 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
     {
     struct ip_mreq req;
     struct sockaddr_in * a = (struct sockaddr_in *)(&addr->addr);
+    memset(&req, 0, sizeof(req));
+    
     memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
-    req.imr_interface.s_addr = INADDR_ANY;
-
+    req.imr_interface.s_addr = htonl(INADDR_ANY);
+    
     if(setsockopt(ret, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",

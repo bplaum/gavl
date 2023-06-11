@@ -487,11 +487,16 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
       result = gavf_io_read_data_nonblock(c->io_int, data, len);
   
     if(result < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read function returned %d, block: %d",
+               result, block);
       goto fail;
-  
+      }
     if(block && (result < len))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requested %d bytes, got %d", len, result);
       goto fail;
-  
+      }
     c->pos += result;
     c->position += result;
     }
@@ -1758,6 +1763,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
       return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
     /* Not yet enough */
+    c->flags |= FLAG_WAIT;
     return 0;
     }
   

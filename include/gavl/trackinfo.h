@@ -424,6 +424,7 @@ gavl_dictionary_t * gavl_track_get_metadata_nc(gavl_dictionary_t*);
 GAVL_PUBLIC
 const gavl_dictionary_t * gavl_track_get_metadata(const gavl_dictionary_t*);
 
+
 GAVL_PUBLIC
 void gavl_track_compute_duration(gavl_dictionary_t * dict);
 

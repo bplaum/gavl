@@ -249,8 +249,12 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
     if(!block && io->read_func_nonblock)
       result = io->read_func_nonblock(io->priv, buf, len);
     else
+      {
       result = io->read_func(io->priv, buf, len);
-
+      if(result < len)
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requested %d bytes, got %d", len, result);
+      }
+    
     if(result < 0)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read returned %d (block: %d)", result, block);
