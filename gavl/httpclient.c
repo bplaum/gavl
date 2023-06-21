@@ -1720,6 +1720,14 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_READ_BODY_NORMAL)
     {
+    /* Should never happen */
+    if(!c->res_body)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "BUG: Asyncronous reading requested but no buffer of the body given");
+      return -1;
+      }
+    
     if(timeout >= 0)
       {
       if(!gavf_io_can_read(c->io_int, timeout))

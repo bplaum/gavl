@@ -1369,12 +1369,11 @@ int gavl_udp_socket_connect(int fd, gavl_socket_address_t * dst)
   if(connect(fd, (struct sockaddr*)&dst->addr, dst->len) < 0)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "connect() failed for UDP socket: %s",
-           strerror(errno));
+             strerror(errno));
     return 0;
     }
   return 1;
   }
-
 
 int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
   {
@@ -1441,6 +1440,7 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
     }
   
   setsockopt(ret, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+  
   return ret;
   }
 
@@ -1485,15 +1485,6 @@ int gavl_unix_socket_create(char ** name, int queue_size)
   pthread_mutex_unlock(&unix_socket_mutex);
   return gavl_listen_socket_create_unix(*name, queue_size);
   }
-
-#if 0
-void gavl_unix_socket_close(int fd, char * name)
-  {
-  unlink(name);
-  free(name);
-  gavl_socket_close(fd);
-  }
-#endif
 
 void gavl_socket_close(int fd)
   {
