@@ -29,6 +29,7 @@
 #define FLAG_WAIT               (1<<8)
 #define FLAG_RESPONSE_BODY_DONE (1<<9)
 #define FLAG_ERROR              (1<<10)
+// #define FLAG_RECONNECT          (1<<11)
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -50,6 +51,8 @@
 
 /* Read chunk header in these byte increments */
 #define CHUNK_HEADER_BYTES 4
+
+#define MAX_RECONNECTS 5
 
 
 typedef struct
@@ -109,6 +112,7 @@ typedef struct
 
   const char * real_uri;
   gavl_timer_t * timer;
+  int num_reconnects;
   
   } gavl_http_client_t;
 
@@ -149,12 +153,79 @@ static void do_reset_connection(gavl_http_client_t * c)
   c->flags &= ~(FLAG_KEEPALIVE|
                 FLAG_CHUNKED|
                 FLAG_HAS_RESPONSE_BODY|FLAG_ERROR);
+  c->num_reconnects = 0;
   }
 
 static void reset_connection(gavl_http_client_t * c)
   {
   //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Resetting keepalive connection to %s://%s:%d", c->protocol, c->host, c->port);
   do_reset_connection(c);
+  }
+
+/* */
+static int handle_remote_close(gavl_http_client_t * c)
+  {
+  if(c->num_reconnects > MAX_RECONNECTS)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many re-connects");
+    return -1;
+    }
+  
+  switch(c->state)
+    {
+    case STATE_READ_CHUNK_HEADER:
+    case STATE_READ_CHUNK:
+    case STATE_READ_CHUNK_TAIL:
+      /* Chunked reading */
+      if(!c->res_body)
+        goto error;
+      /* Close and repeat request */
+      gavl_buffer_reset(c->res_body);
+      c->pos = 0;
+      c->chunk_length = 0;
+      break;
+    case STATE_READ_BODY_NORMAL:
+      if(c->total_bytes <= 0)
+        goto error;
+      
+      if(gavf_io_can_seek(c->io))
+        gavl_http_client_set_range(c->io, c->pos, -1);
+      else
+        {
+        gavl_buffer_reset(c->res_body);
+        c->pos = 0;
+        }
+      break;
+    default:
+      goto error;
+    }
+  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Connection closed unexpectedly, re-opening");
+  /* Re-connect */
+  c->num_redirections = 0;
+  c->num_reconnects++;
+  
+  if(c->io_int)
+    {
+    gavf_io_destroy(c->io_int);
+    c->io_int = NULL;
+    }
+  if(c->io_proxy)
+    {
+    gavf_io_destroy(c->io_proxy);
+    c->io_proxy = NULL;
+    }
+  
+  c->state = STATE_CONNECT;
+  c->fd = gavl_socket_connect_inet(c->addr, 0);
+  
+  return 0;
+  
+  error:
+
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection closed unexpectedly (state: %d)", c->state);
+  
+  return -1;
   }
 
 static void close_connection(gavl_http_client_t * c)
@@ -177,7 +248,7 @@ static void close_connection(gavl_http_client_t * c)
   c->flags        &= FLAG_GOT_REDIRECTION;
   c->port         = -1;
   c->proxy_port   = -1;
-
+  c->num_reconnects = 0;
   }
 
 static void check_keepalive(gavl_http_client_t * c)
@@ -759,7 +830,7 @@ static int prepare_connection(gavf_io_t * io,
   if(c->io_int)
     {
     ret = 1;
-    //    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Re-using keepalive connection");
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Re-using keepalive connection");
     c->flags |= FLAG_USE_KEEPALIVE;
     goto end;
     }
@@ -1119,8 +1190,8 @@ static int handle_response(gavf_io_t * io)
     if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
       check_keepalive(c);
 
-    if(status == 416)
-      fprintf(stderr, "Blupp\n");
+    //    if(status == 416)
+    //      fprintf(stderr, "Blupp\n");
     
     c->flags |= FLAG_ERROR;
     }
@@ -1184,6 +1255,7 @@ reopen(gavf_io_t * io)
       return 1;
     
     }
+  return 0;
   }
 
 
@@ -1320,10 +1392,19 @@ void gavl_http_client_resume(gavf_io_t * io)
   {
   gavl_http_client_t * c = gavf_io_get_priv(io);
 
-  //  fprintf(stderr, "gavl_http_client_resume %"PRId64"\n", c->position);
+  fprintf(stderr, "gavl_http_client_resume %d\n", c->state);
 
-  gavl_http_client_set_range(io, c->position, -1);
-  reopen(io);
+  /* Resume after seek */
+  if(c->state != STATE_COMPLETE)
+    {
+    if(c->state != STATE_START) 
+      gavl_http_client_set_range(io, c->position, -1);
+
+    if(!reopen(io))
+      fprintf(stderr, "Re-opening failed\n");
+    else
+      fprintf(stderr, "Re-opened\n");
+    }
   }
 
 /* Asynchronous states */
@@ -1704,7 +1785,6 @@ static int async_iteration(gavf_io_t * io, int timeout)
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
                    "Cannot read body: No Content-Length given and no chunked encoding.");
           gavl_dictionary_dump(&c->resp, 2);
-          
           return -1;
           }
         gavl_buffer_alloc(c->res_body, c->total_bytes);
@@ -1752,9 +1832,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     
     if(!result && (timeout >= 0))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read from %s: Connection reset by peer", c->real_uri);
-      // result = -1;
-      return -1;
+      return handle_remote_close(c);
       }
     else if(result < 0)
       {
@@ -1827,11 +1905,8 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
       if(!result)
         {
-        if(!tries)
-          {
-          gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read from %s, connection reset by peer", c->real_uri);
-          result = -1;
-          }
+        if(!tries && (timeout >= 0))
+          return handle_remote_close(c);
         else
           c->flags |= FLAG_WAIT;
         }
