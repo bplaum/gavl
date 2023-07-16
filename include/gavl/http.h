@@ -132,7 +132,6 @@ void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 GAVL_PUBLIC
 gavf_io_t * gavl_http_client_create();
 
-
 GAVL_PUBLIC int
 gavl_http_client_read_body(gavf_io_t *,
                            gavl_buffer_t * buf);
