@@ -353,7 +353,15 @@ int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len)
     ret = io->write_func(io->priv, buf, len);
   else
     ret = 0;
-  
+
+#if 0
+  if(!ret)
+    {
+    fprintf(stderr, "gavf_io_write_data_nonblock: write returned null %p %p\n",
+            io->write_func_nonblock, io->write_func);
+    } 
+#endif
+
   if(ret > 0)
     io->position += ret;
   

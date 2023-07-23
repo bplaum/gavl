@@ -251,6 +251,12 @@ static void close_connection(gavl_http_client_t * c)
   c->num_reconnects = 0;
   }
 
+int gavl_http_client_get_state(gavf_io_t * io)
+  {
+  gavl_http_client_t * c = gavf_io_get_priv(io);
+  return c->state;
+  }
+
 static void check_keepalive(gavl_http_client_t * c)
   {
   const char * protocol;
@@ -1422,8 +1428,12 @@ static int send_buffer_async(gavf_io_t * io,
   
   //  fprintf(stderr, "send_buffer_async 2 %d\n", buf->len - buf->pos);
   result = gavf_io_write_data_nonblock(io, buf->buf + buf->pos, buf->len - buf->pos);
-  //  fprintf(stderr, "send_buffer_async result: %d\n", result);
-
+  
+  if(result <= 0)
+    {
+    fprintf(stderr, "send_buffer_async result: %d, timeout was: %d, bytes: %d\n",
+            result, timeout, buf->len - buf->pos);
+    }
   if(result <= 0)
     return result;
   else

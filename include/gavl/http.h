@@ -140,6 +140,9 @@ gavl_http_client_read_body(gavf_io_t *,
 GAVL_PUBLIC void
 gavl_http_client_set_range(gavf_io_t * io, int64_t start, int64_t end);
 
+GAVL_PUBLIC
+int gavl_http_client_get_state(gavf_io_t * io);
+
 /*
  *  Call before gavl_http_client_open() to specify extra header
  *  variables

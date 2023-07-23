@@ -160,7 +160,18 @@ static int do_flush(void * priv, int block)
         }
       
       } while((result == GNUTLS_E_AGAIN) || (result == GNUTLS_E_INTERRUPTED));
-        
+
+    if(result < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "gnutls_record_send failed: %s", gnutls_strerror(result));
+      }
+    if(!result)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "gnutls_record_send returned zero");
+      }
+    
     if(result <= 0)
       return 0;
 
@@ -171,8 +182,8 @@ static int do_flush(void * priv, int block)
       }
     }
 
-  //  p->write_buffer.len = 0;
-  //  p->write_buffer.pos = 0;
+  if(p->write_buffer.pos == p->write_buffer.len)
+    gavl_buffer_reset(&p->write_buffer);
   
   return 1;
   }
@@ -188,18 +199,18 @@ static int read_record(tls_t * p, int timeout_init)
   ssize_t result;
   int timeout;
   int bytes_to_read;
+
+  timeout = timeout_init;
   
   if(!do_flush(p, !!timeout))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot reading TLS record: Flushing failed");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot read TLS record: Flushing failed");
     return 0;
     }
   bytes_to_read = p->buffer_size;
 
   gavl_timer_set(p->timer, 0);
   gavl_timer_start(p->timer);
-
-  timeout = timeout_init;
   
   do
     {
@@ -309,10 +320,19 @@ static int do_write(void * priv, const uint8_t * data, int len, int block)
     {
     if(p->write_buffer.len == p->buffer_size)
       {
-      do_flush(priv, block);
-      
+      if(!do_flush(priv, block))
+        {
+        fprintf(stderr, "Flushing data failed\n");
+        return -1;
+        }
       if(p->write_buffer.len == p->buffer_size)
+        {
+        if(!bytes_sent && !block)
+          fprintf(stderr, "write_nonblock retured 0 [1] buffer_size: %d wait_state: %d\n",
+                  p->buffer_size, p->wait_state);
+        
         return bytes_sent;
+        }
       }
     
     bytes_to_copy = len - bytes_sent;
@@ -327,6 +347,8 @@ static int do_write(void * priv, const uint8_t * data, int len, int block)
     p->write_buffer.len += bytes_to_copy;
     bytes_sent += bytes_to_copy;
     }
+  if(!bytes_sent && !block)
+    fprintf(stderr, "write_nonblock retured 0 [2]\n");
   return bytes_sent;
   }
 
