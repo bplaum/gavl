@@ -1282,6 +1282,14 @@ gavl_http_client_open(gavf_io_t * io,
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
 
+  result = gavl_http_client_run_async_done(io, 3000);
+
+  if(result > 0)
+    return 1;
+  else
+    return 0;
+    
+#if 0  
   while(1)
     {
     result = gavl_http_client_run_async_done(io, 3000);
@@ -1293,6 +1301,7 @@ gavl_http_client_open(gavf_io_t * io,
     else
       break;
     }
+#endif
   return 1;
   }
 
@@ -1999,7 +2008,7 @@ int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
     if(!result)
       {
       /* Waiting for socket */
-      if(c->flags & FLAG_WAIT)
+      if(!timeout && (c->flags & FLAG_WAIT))
         return 0;
 
       if(timeout > 0)

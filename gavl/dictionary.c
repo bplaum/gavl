@@ -396,9 +396,6 @@ const gavl_buffer_t * gavl_dictionary_get_binary(const gavl_dictionary_t * d, co
   return gavl_value_get_binary(val);
   }
 
-
-
-
 const gavl_value_t * gavl_dictionary_get_i(const gavl_dictionary_t * d, const char * name)
   {
   int idx;
@@ -424,7 +421,6 @@ int gavl_dictionary_get_num_items(const gavl_dictionary_t * d, const char * name
   return gavl_value_get_num_items(&d->entries[idx].v);
   }
   
-GAVL_PUBLIC
 void gavl_dictionary_delete_item(gavl_dictionary_t * d, const char * name, int item)
   {
   int idx;
