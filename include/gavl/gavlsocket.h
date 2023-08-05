@@ -73,6 +73,15 @@ char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * 
 GAVL_PUBLIC
 int gavl_socket_address_from_string(gavl_socket_address_t * addr, const char * str1);
 
+/* Reverse DNS */
+GAVL_PUBLIC
+char * gavl_socket_address_get_hostname(gavl_socket_address_t * addr);
+
+GAVL_PUBLIC
+gavl_socket_address_t ** gavl_lookup_hostname_full(const char * hostname, int socktype);
+
+GAVL_PUBLIC
+void gavl_socket_address_free_array(gavl_socket_address_t ** addr);
 
 /* Wildcard can be "0.0.0.0" for IPV4 or "::" for IPV6 */
 GAVL_PUBLIC

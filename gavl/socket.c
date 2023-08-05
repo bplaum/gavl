@@ -352,8 +352,71 @@ hostbyname(const char * hostname, int socktype)
   return ret;
   }
 
+/* Do reverse DNS lookup */
+char * gavl_socket_address_get_hostname(gavl_socket_address_t * addr)
+  {
+  char name_buf[NI_MAXHOST];
+  if(getnameinfo((struct sockaddr *)&addr->addr, addr->len,
+                 name_buf, NI_MAXHOST,
+                 NULL, 0, 0))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reverse DNS lookup failed");
+    return NULL;
+    }
+  return gavl_strdup(name_buf);
+  }
+
+/* Do full DNS lookup */
+gavl_socket_address_t ** gavl_lookup_hostname_full(const char * hostname, int socktype)
+  {
+  gavl_socket_address_t ** ret;
+  int count = 0;
+  int i;
+  struct addrinfo * ptr;
+  struct addrinfo * addr = hostbyname(hostname, socktype);
+
+  if(!addr)
+    return NULL;
+
+  /* Count entries */
+  ptr = addr;
+  while(ptr)
+    {
+    count++;
+    ptr = ptr->ai_next;
+    }
+
+  /* Copy addresses */
+  ptr = addr;
+  ret = calloc(count + 1, sizeof(*ret));
+  
+  for(i = 0; i < count; i++)
+    {
+    ret[i] = gavl_socket_address_create();
+
+    memcpy(&ret[i]->addr, ptr->ai_addr, ptr->ai_addrlen);
+    ret[i]->len = ptr->ai_addrlen;
+    
+    ptr = ptr->ai_next;
+    }
+  
+  freeaddrinfo(addr);
+  return ret;
+  }
+
+void gavl_socket_address_free_array(gavl_socket_address_t ** addr)
+  {
+  int i = 0;
+  while(addr[i])
+    {
+    gavl_socket_address_destroy(addr[i]);
+    i++;
+    }
+  free(addr);
+  }
+
 int gavl_socket_address_set(gavl_socket_address_t * a, const char * hostname,
-                          int port, int socktype)
+                            int port, int socktype)
   {
   struct addrinfo * addr;
   
