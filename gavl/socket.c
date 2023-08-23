@@ -1129,80 +1129,6 @@ int gavl_socket_write_data(int fd, const void * data, int len)
   return result;
   }
 
-/*
- *  Read a single line from a filedescriptor
- *
- *  ret will be reallocated if neccesary and ret_alloc will
- *  be updated then
- *
- *  The string will be 0 terminated, a trailing \r or \n will
- *  be removed
- */
-
-#define BYTES_TO_ALLOC 1024
-
-int gavl_socket_read_line(int fd, char ** ret,
-                        int * ret_alloc, int milliseconds)
-  {
-  char * pos;
-  char c;
-  int bytes_read;
-  bytes_read = 0;
-  /* Allocate Memory for the case we have none */
-  if(!(*ret_alloc))
-    {
-    *ret_alloc = BYTES_TO_ALLOC;
-    *ret = realloc(*ret, *ret_alloc);
-    }
-  pos = *ret;
-  while(1)
-    {
-    c = 0;
-    if(!gavl_socket_read_data(fd, (uint8_t*)(&c), 1, milliseconds))
-      {
-      //  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading line failed: %s", strerror(errno));
-
-      if(!bytes_read)
-        {
-        return 0;
-        }
-      break;
-      }
-
-    // fprintf(stderr, "%c", c);
-    
-    if((c > 0x00) && (c < 0x20) && (c != '\r') && (c != '\n'))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got non ASCII character (%d) while reading line", c);
-      return 0;
-      }
-    
-    /*
-     *  Line break sequence
-     *  is starting, remove the rest from the stream
-     */
-    if(c == '\n')
-      {
-      break;
-      }
-    /* Reallocate buffer */
-    else if((c != '\r') && (c != '\0'))
-      {
-      if(bytes_read+2 >= *ret_alloc)
-        {
-        *ret_alloc += BYTES_TO_ALLOC;
-        *ret = realloc(*ret, *ret_alloc);
-        pos = &((*ret)[bytes_read]);
-        }
-      /* Put the byte and advance pointer */
-      *pos = c;
-      pos++;
-      bytes_read++;
-      }
-    }
-  *pos = '\0';
-  return 1;
-  }
 
 int gavl_socket_is_unix(int fd)
   {
@@ -1560,4 +1486,17 @@ void gavl_socket_close(int fd)
   {
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Closing socket %d", fd);
   close(fd);
+  }
+
+int gavl_socket_is_disconnected(int fd, int timeout)
+  {
+  /* Figure out if a socket is disconnected */
+  
+  uint8_t buf;
+  
+  if(gavl_socket_can_read(fd, 0) &&
+     (recv(fd, &buf, 1, MSG_PEEK) <= 0))
+    return 1;
+  else
+    return 0;
   }

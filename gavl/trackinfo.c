@@ -861,6 +861,18 @@ static const gavl_dictionary_t * get_track(const gavl_dictionary_t * dict, const
     return gavl_value_get_dictionary(val);
   }
 
+static gavl_dictionary_t * get_track_nc(gavl_dictionary_t * dict, const char * array_name, int idx)
+  {
+  gavl_value_t * val;
+  gavl_array_t * arr;
+
+  if(!(arr = gavl_dictionary_get_array_nc(dict, array_name)) ||
+     !(val = gavl_array_get_nc(arr, idx)))
+    return NULL;
+  else
+    return gavl_value_get_dictionary_nc(val);
+  }
+
 const gavl_dictionary_t * gavl_get_track(const gavl_dictionary_t * dict, int idx)
   {
   if((idx < 0) && !gavl_dictionary_get_int(dict, GAVL_META_CURIDX, &idx))
@@ -2917,6 +2929,12 @@ gavl_dictionary_t * gavl_track_append_part(gavl_dictionary_t * dict, const char 
 const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, int idx)
   {
   return get_track(dict, GAVL_META_PARTS, idx);
+  
+  }
+
+gavl_dictionary_t * gavl_track_get_part_nc(gavl_dictionary_t * dict, int idx)
+  {
+  return get_track_nc(dict, GAVL_META_PARTS, idx);
   
   }
 

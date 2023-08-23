@@ -635,6 +635,10 @@ gavl_metadata_get_src(const gavl_dictionary_t * m, const char * key, int idx,
     return NULL;
 
   dict = val->v.dictionary;
+
+  /* Src without URI is invalid */
+  if(!gavl_dictionary_get_string(dict, GAVL_META_URI))
+    return NULL;
   
   if(location)
     *location = gavl_dictionary_get_string(dict, GAVL_META_URI);

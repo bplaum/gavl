@@ -226,6 +226,11 @@ GAVL_PUBLIC
 gavl_array_t *
 gavl_dictionary_get_array_create(gavl_dictionary_t * d, const char * name);
 
+GAVL_PUBLIC
+const gavl_dictionary_t * gavl_dictionary_get_recursive(const gavl_dictionary_t * dict, const char * path);
+
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_dictionary_get_recursive_create(gavl_dictionary_t * dict, const char * path);
 
 GAVL_PUBLIC void
 gavl_dictionary_delete_fields(gavl_dictionary_t * m, const char * fields[]);

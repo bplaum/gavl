@@ -113,6 +113,12 @@ int gavl_socket_set_block(int fd, int block);
 GAVL_PUBLIC
 int gavl_socket_get_errno(int fd);
 
+/* Wait for a specified time until the socket is readable.
+   If yes, try to peek one byte from the socket (leaving it in the receive buffer).
+   It zero bytes are read, the remote end disconnected */
+
+GAVL_PUBLIC
+int gavl_socket_is_disconnected(int fd, int timeout);
 
 /* Server socket (stream oriented) */
 
@@ -122,9 +128,9 @@ int gavl_socket_get_errno(int fd);
 
 GAVL_PUBLIC
 int gavl_listen_socket_create_inet(gavl_socket_address_t * addr,
-                                 int port,
-                                 int queue_size,
-                                 int flags);
+                                   int port,
+                                   int queue_size,
+                                   int flags);
 
 GAVL_PUBLIC
 int gavl_listen_socket_create_unix(const char * name,
@@ -178,10 +184,6 @@ int gavl_socket_write_data(int fd, const void * data, int len);
 
 GAVL_PUBLIC
 int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len);
-
-GAVL_PUBLIC
-int gavl_socket_read_line(int fd, char ** ret,
-                        int * ret_alloc, int milliseconds);
 
 GAVL_PUBLIC
 int gavl_socket_is_local(int fd);

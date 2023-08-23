@@ -1289,19 +1289,6 @@ gavl_http_client_open(gavf_io_t * io,
   else
     return 0;
     
-#if 0  
-  while(1)
-    {
-    result = gavl_http_client_run_async_done(io, 3000);
-
-    if(result < 0)
-      return 0;
-    else if(!result)
-      continue;
-    else
-      break;
-    }
-#endif
   return 1;
   }
 

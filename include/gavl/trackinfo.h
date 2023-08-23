@@ -605,6 +605,8 @@ gavl_dictionary_t * gavl_track_append_part(gavl_dictionary_t * dict, const char 
 GAVL_PUBLIC
 const gavl_dictionary_t * gavl_track_get_part(const gavl_dictionary_t * dict, int i);
 
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_track_get_part_nc(gavl_dictionary_t * dict, int i);
 
 //
 

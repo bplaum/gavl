@@ -889,4 +889,52 @@ void gavl_dictionary_copy_value(gavl_dictionary_t * dst,
   {
   gavl_dictionary_set(dst, key, gavl_dictionary_get(src, key));
   }
-                                
+
+const gavl_dictionary_t * gavl_dictionary_get_recursive(const gavl_dictionary_t * dict, const char * path)
+  {
+  int i;
+  char ** dirs;
+  if(!strchr(path, '/')) // Shortcut
+    return gavl_dictionary_get_dictionary(dict, path);
+  
+  dirs = gavl_strbreak(path, '/');
+  i = 0;
+  while(dirs[i])
+    {
+    if(!(dict = gavl_dictionary_get_dictionary(dict, dirs[i])))
+      break;
+    i++;
+    }
+  
+  gavl_strbreak_free(dirs);
+  return dict;
+  }
+
+gavl_dictionary_t * gavl_dictionary_get_recursive_create(gavl_dictionary_t * dict, const char * path)
+  {
+  int i = 0;
+  char ** dirs = NULL;
+
+  if(!strchr(path, '/')) // Shortcut
+    return gavl_dictionary_get_dictionary_create(dict, path);
+  
+  dirs = gavl_strbreak(path, '/');
+
+  while(dirs[i])
+    {
+    if(!(dict = gavl_dictionary_get_dictionary_create(dict, dirs[i])))
+      break;
+    i++;
+    }
+  
+  gavl_strbreak_free(dirs);
+
+  return dict;
+  }
+
+#if 0
+void gavl_dictionary_foreach_recursive()
+  {
+  
+  }
+#endif
