@@ -61,6 +61,8 @@
 #define DECODER_SENT_EOS    (1<<1)
 #define DECODER_GOT_EOS     (1<<2)
 
+#define DECODER_HAVE_FRAME  (1<<3)
+
 static gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev);
 
   

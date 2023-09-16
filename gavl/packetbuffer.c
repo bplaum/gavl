@@ -27,6 +27,7 @@
 
 #include <gavl/connectors.h>
 #include <gavl/metatags.h>
+#include <gavl/utils.h>
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "packetbuffer"
@@ -772,6 +773,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     {
     gavl_dprintf("Buf in %p ", p);
     gavl_packet_dump(p);
+
     }
 #endif
 
@@ -786,7 +788,8 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     }
     
   buf_push(&buf->buf, &buf->in_packet);
-    
+  //  fprintf(stderr, "put_func: %p %d\n", buf, buf->buf.num);
+  
   if((p->pts != GAVL_TIME_UNDEFINED) &&
      (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) ||
       (p->duration >= 0)))
@@ -809,6 +812,8 @@ source_func(void * priv, gavl_packet_t ** p)
   {
   gavl_packet_buffer_t * buf = priv;
 
+  //  fprintf(stderr, "source_func: %p %d\n", buf, buf->buf.num);
+  
   if(buf->out_packet)
     {
     buf_push(&buf->pool, &buf->out_packet);

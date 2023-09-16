@@ -1055,7 +1055,6 @@ int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
   
   if(!gavl_socket_can_write(fd, 0))
     {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Nonblocking write returned zero: %s", strerror(errno));
     return 0;
     }
   result = send(fd, data, len, MSG_DONTWAIT | MSG_NOSIGNAL);
@@ -1068,6 +1067,7 @@ int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
   if(result < 0)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Nonblocking write failed: %s", strerror(errno));
+    gavl_hexdump(data, len, 16);
     return result;
     }
   return result;
