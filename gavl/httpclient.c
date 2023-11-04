@@ -1282,7 +1282,7 @@ gavl_http_client_open(gavf_io_t * io,
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
 
-  result = gavl_http_client_run_async_done(io, 3000);
+  result = gavl_http_client_run_async_done(io, 10000);
 
   if(result > 0)
     return 1;
