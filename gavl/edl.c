@@ -295,6 +295,8 @@ int gavl_edl_finalize(gavl_dictionary_t * edl)
   /* We don't need the global URI anymore */
   gavl_dictionary_set(edl, GAVL_META_URI, NULL);
 
+  gavl_track_update_children(edl);
+  
   if(finalize.error)
     return 0;
   else

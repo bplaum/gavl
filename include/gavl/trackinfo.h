@@ -120,6 +120,7 @@ gavl_stream_get_id(const gavl_dictionary_t * s, int * id);
 GAVL_PUBLIC void
 gavl_stream_set_id(gavl_dictionary_t * s, int id);
 
+
 GAVL_PUBLIC int
 gavl_stream_is_sbr(const gavl_dictionary_t * s);
 
@@ -488,6 +489,9 @@ int gavl_get_track_idx_by_id(const gavl_dictionary_t * dict, const char * id);
 
 GAVL_PUBLIC
 const char * gavl_track_get_id(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC
+const char * gavl_track_get_media_class(const gavl_dictionary_t * dict);
 
 GAVL_PUBLIC
 void gavl_track_set_id_nocopy(gavl_dictionary_t * dict, char * id);

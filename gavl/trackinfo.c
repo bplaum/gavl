@@ -1874,6 +1874,7 @@ void gavl_track_update_children(gavl_dictionary_t * dict)
   gavl_time_t track_duration = GAVL_TIME_UNDEFINED;
   
   arr = gavl_get_tracks_nc(dict);
+  
   m = gavl_dictionary_get_dictionary_create(dict, GAVL_META_METADATA);
 
   //  fprintf(stderr, "gavl_track_update_children %p\n", dict);
@@ -1925,6 +1926,16 @@ const char * gavl_track_get_id(const gavl_dictionary_t * dict)
 
   if((m = gavl_track_get_metadata(dict)))
     return gavl_dictionary_get_string(m, GAVL_META_ID);
+  else
+    return NULL;
+  }
+
+const char * gavl_track_get_media_class(const gavl_dictionary_t * dict)
+  {
+  const gavl_dictionary_t * m;
+
+  if((m = gavl_track_get_metadata(dict)))
+    return gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
   else
     return NULL;
   }
@@ -1984,6 +1995,7 @@ int gavl_get_track_idx_by_id(const gavl_dictionary_t * dict, const char * id)
     }
   return -1;
   }
+
 
 const gavl_dictionary_t * gavl_get_track_by_id(const gavl_dictionary_t * dict, const char * id)
   {
@@ -2393,11 +2405,21 @@ void gavl_track_set_num_children(gavl_dictionary_t * track,
   if(!(m = gavl_track_get_metadata_nc(track)))
     return;
 
-  gavl_dictionary_set_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, num_container_children);
-  gavl_dictionary_set_int(m, GAVL_META_NUM_ITEM_CHILDREN,      num_item_children);
+  if(num_container_children)
+    gavl_dictionary_set_int(m, GAVL_META_NUM_CONTAINER_CHILDREN, num_container_children);
+  else
+    gavl_dictionary_set(m, GAVL_META_NUM_CONTAINER_CHILDREN, NULL);
 
-  gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN,
-                          num_container_children + num_item_children);
+  if(num_item_children)
+    gavl_dictionary_set_int(m, GAVL_META_NUM_ITEM_CHILDREN,      num_item_children);
+  else
+    gavl_dictionary_set(m, GAVL_META_NUM_ITEM_CHILDREN, NULL);
+
+  if(num_container_children + num_item_children)
+    gavl_dictionary_set_int(m, GAVL_META_NUM_CHILDREN,
+                            num_container_children + num_item_children);
+  else
+    gavl_dictionary_set(m, GAVL_META_NUM_CHILDREN, NULL);
   
   }
 
