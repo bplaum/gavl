@@ -326,7 +326,7 @@ void gavl_transform_table_init(gavl_transform_table_t * tab,
   for(i = 1; i < height; i++)
     tab->pixels[i] = tab->pixels[0] + i * width;
 
-  nt = opt->num_threads;
+  nt = gavl_thread_pool_get_num_threads(opt->tp);
   if(nt > height)
     nt = height;
   if(nt < 1)
@@ -337,16 +337,16 @@ void gavl_transform_table_init(gavl_transform_table_t * tab,
 
   for(i = 0; i < nt - 1; i++)
     {
-    opt->run_func(init_slice, &sd, scanline, scanline+delta,
-                  opt->run_data, i);
+    gavl_thread_pool_run(init_slice, &sd, scanline, scanline+delta,
+                         opt->tp, i);
         
     scanline += delta;
     }
-  opt->run_func(init_slice, &sd, scanline, height,
-                opt->run_data, nt - 1);
+  gavl_thread_pool_run(init_slice, &sd, scanline, height,
+                       opt->tp, nt - 1);
   
   for(i = 0; i < nt; i++)
-    opt->stop_func(opt->stop_data, i);
+    gavl_thread_pool_stop(opt->tp, i);
   }
 
 void gavl_transform_table_init_int(gavl_transform_table_t * tab,

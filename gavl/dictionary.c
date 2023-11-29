@@ -613,7 +613,7 @@ void gavl_dictionary_dump(const gavl_dictionary_t * m, int indent)
 
     fprintf(stderr, "\n");
     }
-  gavl_diprintf(indent, "}\n");
+  gavl_diprintf(indent, "}");
   }
 
 static void merge_func_r(void * priv, const char * name, const gavl_value_t * val)

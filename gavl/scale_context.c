@@ -1324,23 +1324,25 @@ static void scale_context_scale_mt(gavl_video_scale_context_t * ctx,
       ctx->src_stride = src->strides[ctx->src_frame_plane];
       ctx->dst_frame = dst;
       
-      nt = ctx->opt->num_threads;
+      nt = gavl_thread_pool_get_num_threads(ctx->opt->tp);
       if(nt > ctx->dst_rect.h)
         nt = ctx->dst_rect.h;
+
+      //  fprintf(stderr, "Scaling 1 direction (%d threads)\n", nt);
       
       delta = ctx->dst_rect.h / nt;
       scanline = 0;
       for(i = 0; i < nt - 1; i++)
         {
-        ctx->opt->run_func(func_1, ctx, scanline, scanline+delta, ctx->opt->run_data, i);
+        gavl_thread_pool_run(func_1, ctx, scanline, scanline+delta, ctx->opt->tp, i);
         
         //        fprintf(stderr, "scanline: %d (%d)\n", ctx->scanline, ctx->dst_rect.h);
         scanline += delta;
         }
-      ctx->opt->run_func(func_1, ctx, scanline, ctx->dst_rect.h, ctx->opt->run_data, nt - 1);
+      gavl_thread_pool_run(func_1, ctx, scanline, ctx->dst_rect.h, ctx->opt->tp, nt - 1);
       
       for(i = 0; i < nt; i++)
-        ctx->opt->stop_func(ctx->opt->stop_data, i);
+        gavl_thread_pool_stop(ctx->opt->tp, i);
       break;
     case 2:
       /* First step */
@@ -1357,25 +1359,27 @@ static void scale_context_scale_mt(gavl_video_scale_context_t * ctx,
       fprintf(stderr, "First direction\n");
       dump_offset(ctx->offset);
 #endif
-
-      nt = ctx->opt->num_threads;
+      
+      nt = gavl_thread_pool_get_num_threads(ctx->opt->tp);
       if(nt > ctx->buffer_height)
         nt = ctx->buffer_height;
 
+      //      fprintf(stderr, "Scaling 2 directions (%d threads)\n", nt);
+      
       delta = ctx->buffer_height / nt;
       scanline = 0;
       for(i = 0; i < nt - 1; i++)
         {
-        ctx->opt->run_func(func_1_of_2, ctx, scanline, scanline+delta, ctx->opt->run_data, i);
+        gavl_thread_pool_run(func_1_of_2, ctx, scanline, scanline+delta, ctx->opt->tp, i);
         
         //        fprintf(stderr, "scanline: %d (%d)\n", ctx->scanline, ctx->dst_rect.h);
         scanline += delta;
         }
-      ctx->opt->run_func(func_1_of_2, ctx, scanline, ctx->buffer_height,
-                         ctx->opt->run_data, nt - 1);
+      gavl_thread_pool_run(func_1_of_2, ctx, scanline, ctx->buffer_height,
+                         ctx->opt->tp, nt - 1);
       
       for(i = 0; i < nt; i++)
-        ctx->opt->stop_func(ctx->opt->stop_data, i);
+        gavl_thread_pool_stop(ctx->opt->tp, i);
       
       //      fprintf(stderr, "done\n");
 
@@ -1390,7 +1394,7 @@ static void scale_context_scale_mt(gavl_video_scale_context_t * ctx,
       ctx->dst_size = ctx->dst_rect.w;
       ctx->dst_frame = dst;
       
-      nt = ctx->opt->num_threads;
+      nt = gavl_thread_pool_get_num_threads(ctx->opt->tp);
       if(nt > ctx->dst_rect.h)
         nt = ctx->dst_rect.h;
       
@@ -1399,16 +1403,16 @@ static void scale_context_scale_mt(gavl_video_scale_context_t * ctx,
       scanline = 0;
       for(i = 0; i < nt - 1; i++)
         {
-        ctx->opt->run_func(func_2_of_2, ctx, scanline, scanline+delta, ctx->opt->run_data, i);
+        gavl_thread_pool_run(func_2_of_2, ctx, scanline, scanline+delta, ctx->opt->tp, i);
         
         //        fprintf(stderr, "scanline: %d (%d)\n", ctx->scanline, ctx->dst_rect.h);
         scanline += delta;
         }
-      ctx->opt->run_func(func_2_of_2, ctx, scanline, ctx->dst_rect.h,
-                         ctx->opt->run_data, nt - 1);
+      gavl_thread_pool_run(func_2_of_2, ctx, scanline, ctx->dst_rect.h,
+                         ctx->opt->tp, nt - 1);
       
       for(i = 0; i < nt; i++)
-        ctx->opt->stop_func(ctx->opt->stop_data, i);
+        gavl_thread_pool_stop(ctx->opt->tp, i);
       //      fprintf(stderr, "done\n");
       break;
     }
@@ -1433,7 +1437,7 @@ void gavl_video_scale_context_scale(gavl_video_scale_context_t * ctx,
   uint8_t * dst_save;
   int i;
   
-  if(ctx->opt->num_threads > 1)
+  if(ctx->opt->tp)
     {
     scale_context_scale_mt(ctx, src, dst);
     return;

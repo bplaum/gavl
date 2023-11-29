@@ -30,22 +30,13 @@
 #include <config.h>
 #include <video.h>
 #include <accel.h>
+#include <utils.h>
 
 /***************************************************
  * Default Options
  ***************************************************/
 
-static void run_func_default(void (*func)(void*, int, int),
-                             void * gavl_data,
-                             int start, int len,
-                             void * client_data, int thread)
-  {
-  func(gavl_data, start, len);
-  }
 
-static void stop_func_default(void * client_data, int thread)
-  {
-  }
 
 void gavl_video_options_set_defaults(gavl_video_options_t * opt)
   {
@@ -56,57 +47,8 @@ void gavl_video_options_set_defaults(gavl_video_options_t * opt)
   opt->downscale_blur = 1.0;
   opt->downscale_filter = GAVL_DOWNSCALE_FILTER_WIDE;
 
-  opt->num_threads = 1;
-  opt->run_func = run_func_default;
-  opt->stop_func = stop_func_default;
   
   gavl_init_memcpy();
-  }
-
-int gavl_video_options_get_num_threads(const gavl_video_options_t * opt)
-  {
-  return opt->num_threads;
-  }
-
-void gavl_video_options_set_num_threads(gavl_video_options_t * opt, int n)
-  {
-  opt->num_threads = n;
-  }
-
-void gavl_video_options_set_run_func(gavl_video_options_t * opt,
-                                     void (*run)(void (*func)(void*, int start, int num),
-                                                 void * gavl_data,
-                                                 int start, int num,
-                                                 void * client_data, int thread), 
-                                     void * client_data)
-  {
-  opt->run_func = run;
-  opt->run_data = client_data;
-  }
-
-gavl_video_run_func
-gavl_video_options_get_run_func(const gavl_video_options_t * opt,
-                                void ** client_data)
-  {
-  *client_data = opt->run_data;
-  return opt->run_func;
-  }
-
-
-void gavl_video_options_set_stop_func(gavl_video_options_t * opt,
-                                      void (*stop)(void * client_data, int thread), 
-                                      void * client_data)
-  {
-  opt->stop_func = stop;
-  opt->stop_data = client_data;
-  }
-
-gavl_video_stop_func
-gavl_video_options_get_stop_func(const gavl_video_options_t * opt,
-                                 void ** client_data)
-  {
-  *client_data = opt->stop_data;
-  return opt->stop_func;
   }
 
 void gavl_video_options_set_rectangles(gavl_video_options_t * opt,
@@ -316,3 +258,12 @@ void gavl_video_options_destroy(gavl_video_options_t * opt)
   free(opt);
   }
 
+void gavl_video_options_set_thread_pool(gavl_video_options_t * opt, gavl_thread_pool_t * tp)
+  {
+  opt->tp = tp;
+  }
+
+gavl_thread_pool_t * gavl_video_options_get_thread_pool(const gavl_video_options_t * opt)
+  {
+  return opt->tp;
+  }

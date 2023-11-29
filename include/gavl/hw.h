@@ -72,7 +72,7 @@ GAVL_PUBLIC int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx);
 GAVL_PUBLIC int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
                                                  gavl_hw_context_t * ctx2,
                                                  gavl_video_frame_t ** frame2,
-                                                 gavl_video_format_t * fmt);
+                                                 const gavl_video_format_t * fmt);
 
 
 /* Returned array must be free()d */

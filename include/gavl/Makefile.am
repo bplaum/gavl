@@ -29,6 +29,7 @@ metadata.h \
 metatags.h \
 msg.h \
 peakdetector.h \
+threadpool.h \
 utils.h \
 value.h
 

@@ -22,6 +22,7 @@
 #ifndef VIDEO_H_INCLUDED
 #define VIDEO_H_INCLUDED
 
+#include <hw.h>
 
 /* Private structures for the video converter */
 
@@ -67,13 +68,8 @@ struct gavl_video_options_s
   gavl_downscale_filter_t downscale_filter;
   float downscale_blur;
 
-  int num_threads;
-  void (*run_func)(void (*func)(void*, int start, int len),
-                   void * gavl_data, int start, int len, void * client_data, int thread);
-  void * run_data;
+  gavl_thread_pool_t * tp;
   
-  void (*stop_func)(void * gavl_data, int thread);
-  void * stop_data;
   };
 
 typedef struct gavl_video_convert_context_s gavl_video_convert_context_t;
@@ -106,8 +102,15 @@ struct gavl_video_converter_s
   gavl_video_convert_context_t * first_context;
   gavl_video_convert_context_t * last_context;
   int num_contexts;
-
   int have_frames;
+  
+  gavl_thread_pool_t * tp_priv;
+  
+  /* Hardware accelerated converter (unused for now) */
+  //  gavl_video_source_t * src;
+  //  gavl_video_sink_t * sink;
+  //  gavl_hw_context_t * hwctx;
+  
   };
 
 

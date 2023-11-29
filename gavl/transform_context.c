@@ -335,14 +335,14 @@ void gavl_transform_context_transform(gavl_transform_context_t * ctx,
   
   ctx->src_stride = src->strides[ctx->plane] * ctx->num_fields;
   
-  if(ctx->opt->num_threads > 1)
+  if(ctx->opt->tp)
     {
     int delta;
     int scanline;
     int nt;
     
     ctx->dst_frame = dst;
-    nt = ctx->opt->num_threads;
+    nt = gavl_thread_pool_get_num_threads(ctx->opt->tp);
     if(nt > ctx->dst_height)
       nt = ctx->dst_height;
     
@@ -350,15 +350,15 @@ void gavl_transform_context_transform(gavl_transform_context_t * ctx,
     scanline = 0;
     for(i = 0; i < nt - 1; i++)
       {
-      ctx->opt->run_func(func_1, ctx, scanline,
-                         scanline+delta, ctx->opt->run_data, i);
+      gavl_thread_pool_run(func_1, ctx, scanline,
+                           scanline+delta, ctx->opt->tp, i);
       scanline += delta;
       }
-    ctx->opt->run_func(func_1, ctx, scanline, ctx->dst_height,
-                       ctx->opt->run_data, nt - 1);
+    gavl_thread_pool_run(func_1, ctx, scanline, ctx->dst_height,
+                         ctx->opt->tp, nt - 1);
     
     for(i = 0; i < nt; i++)
-      ctx->opt->stop_func(ctx->opt->stop_data, i);
+      gavl_thread_pool_stop(ctx->opt->tp, i);
     }
   else
     {

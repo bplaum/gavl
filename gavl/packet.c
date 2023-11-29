@@ -28,6 +28,7 @@
 
 #include <gavl/gavl.h>
 #include <gavl/compression.h>
+#include <gavl/utils.h>
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "packet"

@@ -39,6 +39,9 @@ drm_formats[] =
     { DRM_FORMAT_YUV420, GAVL_YUV_420_P },
     { DRM_FORMAT_YUV422, GAVL_YUV_422_P },
     { DRM_FORMAT_YUV444, GAVL_YUV_444_P },
+    { DRM_FORMAT_YUV420, GAVL_YUVJ_420_P },
+    { DRM_FORMAT_YUV422, GAVL_YUVJ_422_P },
+    { DRM_FORMAT_YUV444, GAVL_YUVJ_444_P },
     { /* */ }
   };
 
@@ -55,18 +58,6 @@ uint32_t gavl_drm_fourcc_from_gavl(gavl_pixelformat_t pfmt)
   return 0;
   }
 
-gavl_pixelformat_t gavl_drm_fourcc_to_gavl(uint32_t drm_fourcc)
-  {
-  int i = 0;
-
-  while(drm_formats[i].drm_fourcc)
-    {
-    if(drm_formats[i].drm_fourcc == drm_fourcc)
-      return drm_formats[i].pfmt;
-    i++;
-    }
-  return 0;
-  }
 
 #if 0
 typedef struct

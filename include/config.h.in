@@ -98,6 +98,9 @@
 /* Define to 1 if you have the `posix_memalign' function. */
 #undef HAVE_POSIX_MEMALIGN
 
+/* System supports POSIX semaphores */
+#undef HAVE_POSIX_SEMAPHORES
+
 /* Define to 1 if you have the `sched_setaffinity' function. */
 #undef HAVE_SCHED_SETAFFINITY
 

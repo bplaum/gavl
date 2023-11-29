@@ -223,7 +223,7 @@ static int imports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
   return 0;
   }
 
-static int import_video_frame_egl(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+static int import_video_frame_egl(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
                                   gavl_video_frame_t * src, gavl_video_frame_t * dst)
   {
   gavl_hw_type_t src_hw_type = gavl_hw_ctx_get_type(src->hwctx);
@@ -454,7 +454,7 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
                              gavl_video_frame_t * src,
                              gavl_video_frame_t * dst)
   {
-
+  int sub_h = 1, sub_v = 1;
   egl_t * egl;
   
   EGLImageKHR image = EGL_NO_IMAGE_KHR;
@@ -473,7 +473,42 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
 
   attrs[aidx++] = EGL_LINUX_DRM_FOURCC_EXT;
   attrs[aidx++] = dmabuf->fourcc;
+  
+  attrs[aidx++] = EGL_SAMPLE_RANGE_HINT_EXT;
+  if(gavl_pixelformat_is_jpeg_scaled(fmt->pixelformat))
+    attrs[aidx++] = EGL_YUV_FULL_RANGE_EXT;
+  else
+    attrs[aidx++] = EGL_YUV_NARROW_RANGE_EXT;
 
+  /* TODO: Chroma placement */
+  // 
+
+  gavl_pixelformat_chroma_sub(fmt->pixelformat, &sub_h, &sub_v);
+  
+  if((sub_h == 2) &&
+     (sub_v == 2))
+    {
+
+    if(fmt->chroma_placement == GAVL_CHROMA_PLACEMENT_DEFAULT)
+      {
+      attrs[aidx++] = EGL_YUV_CHROMA_HORIZONTAL_SITING_HINT_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_SITING_0_5_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_VERTICAL_SITING_HINT_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_SITING_0_5_EXT;
+      }
+    else
+      {
+      attrs[aidx++] = EGL_YUV_CHROMA_HORIZONTAL_SITING_HINT_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_SITING_0_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_VERTICAL_SITING_HINT_EXT;
+      attrs[aidx++] = EGL_YUV_CHROMA_SITING_0_EXT;
+      }
+    }
+  
+  // 
+  // EGL_YUV_CHROMA_SITING_0_EXT
+  // 
+  
   /* Plane 0 */
   attrs[aidx++] = EGL_DMA_BUF_PLANE0_FD_EXT;
   attrs[aidx++] = dmabuf->buffers[dmabuf->planes[0].buf_idx].fd;

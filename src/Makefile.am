@@ -7,10 +7,11 @@ libva_x11_programs =
 endif
 
 if HAVE_V4L2
-v4l2_programs = v4linfo
+v4l2_programs = v4linfo v4l_m2m_converter
 else
 v4l2_programs = 
 endif
+
 
 
 if HAVE_LIBPNG
@@ -70,6 +71,8 @@ dump_frame_table_LDADD = ../gavl/libgavl.la
 v4linfo_SOURCES = v4linfo.c
 v4linfo_LDADD = -lm ../gavl/libgavl.la
 
+v4l_m2m_converter_SOURCES = v4l_m2m_converter.c
+v4l_m2m_converter_LDADD = -lm ../gavl/libgavl.la
 
 colorspace_test_SOURCES = colorspace_test.c
 colorspace_test_LDADD = ../gavl/libgavl.la -lpng -lz

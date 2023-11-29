@@ -32,6 +32,7 @@
 #include <gavl/gavldefs.h>
 #include <gavl/gavltime.h>
 #include <gavl/timecode.h>
+#include <gavl/threadpool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,64 +104,14 @@ typedef struct gavl_video_format_s gavl_video_format_t;
  */
 
 typedef struct gavl_video_frame_s gavl_video_frame_t;
- 
-/** \defgroup mt Multithreading
- *  \brief Multithreading
- *
- *  gavl has generic multithreading support for video processing.
- *  It's done by splitting the calculations in smaller pieces (usually
- *  slices of the destination images) and calling user supplied functions,
- *  which can transfer the tasks to worker threads. Multithreading is configured with
- *  \ref gavl_video_options_set_num_threads, \ref gavl_video_options_set_run_func and
- *  \ref gavl_video_options_set_stop_func
- *  
- *  @{
- */
 
-/** \brief Prototype of a process function
- *  \param data Private data
- *  \param start Where the function should start
- *  \param end Where the function should end (exclusive)
- *
- *  This function is supplied by gavl and passed to the application,
- *  which then executes multiple instances of the functions in multiple threads
- */
-  
-typedef void (*gavl_video_process_func)(void * data, int start, int end);
 
-/** \brief Run a piece of a calculation
- *  \param func Function to execute
- *  \param gavl_data 1. Argument for func
- *  \param start 2. Argument for func
- *  \param end   3. Argument for func
- *  \param client_data Data passed with \ref gavl_video_options_set_run_func
- *  \param thread Number of processing thread (starting with 0)
- *
- *  This function supplied by the application and passed to gavl via
- *  \ref gavl_video_options_set_run_func. It should call func with the given parameters
- *  in a worker thread.
- */
-  
-typedef void (*gavl_video_run_func)(gavl_video_process_func func,
-                                    void * gavl_data,
-                                    int start, int end,
-                                    void * client_data, int thread);
-
-/** \brief Wait until a piece of a calculation finished
- *  \brief client_data Data passed with \ref gavl_video_options_set_stop_func
- *  \param thread Number of processing thread (starting with 0)
- *
- *  This function must make sure that the task started by \ref gavl_video_run_func
- *  is finished.
- */
- 
-typedef void (*gavl_video_stop_func)(void * client_data, int thread);
   
 /**
  * @}
  */
-  
 
+    
   
 /* Quality levels */
   
@@ -3136,6 +3087,14 @@ void gavl_video_frame_normalize_orientation(const gavl_video_format_t * in_forma
  */
 
 #define GAVL_RESAMPLE_CHROMA    (1<<3)
+
+/** \ingroup video_conversion_flags
+ * \brief Force software processing.
+ *
+ * 
+ */
+
+#define GAVL_FORCE_SW          (1<<4)
   
 /** \ingroup video_options
  * Alpha handling mode
@@ -3502,85 +3461,15 @@ void gavl_video_options_set_downscale_blur(gavl_video_options_t * opt,
 GAVL_PUBLIC
 float gavl_video_options_get_downscale_blur(const gavl_video_options_t * opt);
 
-/*!  \ingroup video_options
- *   \brief Set number of threads
- *   \param opt Video options
- *   \param n Number of threads
- *
- *  Since 1.1.1
- */
+/* Set an externally created thread pool. If this is not called, a private thread pool will be created if needed.
+   This function has the advantage that one thread pool can be shared among different elements of a video
+   pipeline, which will reduce the overhead */
   
 GAVL_PUBLIC
-void gavl_video_options_set_num_threads(gavl_video_options_t * opt, int n);
-
-  
-/*!  \ingroup video_options
- *   \brief Set number of threads
- *   \param opt Video options
- *   \returns Number of threads
- *
- *  Since 1.1.1
- */
-  
-GAVL_PUBLIC
-int gavl_video_options_get_num_threads(const gavl_video_options_t * opt);
-
-/*!  \ingroup video_options
- *   \brief Set function to be passed to each thread
- *   \param opt Video options
- *   \param func Function to be passed to each thread
- *   \param client_data Client data to be passed to the run function
- *
- *  Since 1.1.1
- */
+void gavl_video_options_set_thread_pool(gavl_video_options_t * opt, gavl_thread_pool_t * tp);
 
 GAVL_PUBLIC
-void gavl_video_options_set_run_func(gavl_video_options_t * opt,
-                                     gavl_video_run_func func,
-                                     void * client_data);
-
-/*!  \ingroup video_options
- *   \brief Get function to be passed to each thread
- *   \param opt Video options
- *   \param client_data Returns client data
- *   \return The function
- *
- *  Since 1.1.1
- */
-
-GAVL_PUBLIC
-gavl_video_run_func
-gavl_video_options_get_run_func(const gavl_video_options_t * opt,
-                                void ** client_data);
-
-/*!  \ingroup video_options
- *   \brief Set function to be passed to each thread
- *   \param opt Video options
- *   \param func Function to be passed to each thread
- *   \param client_data Client data to be passed to the run function
- *
- *  Since 1.1.1
- */
-
-GAVL_PUBLIC
-void gavl_video_options_set_stop_func(gavl_video_options_t * opt,
-                                      gavl_video_stop_func func, 
-                                      void * client_data);
-
-/*!  \ingroup video_options
- *   \brief Get function to be passed to each thread
- *   \param opt Video options
- *   \param client_data Returns client data
- *   \return The function
- *
- *  Since 1.1.1
- */
-
-GAVL_PUBLIC
-gavl_video_stop_func
-gavl_video_options_get_stop_func(const gavl_video_options_t * opt,
-                                 void ** client_data);
-
+gavl_thread_pool_t * gavl_video_options_get_thread_pool(const gavl_video_options_t * opt);
   
 /***************************************************
  * Create and destroy video converters
@@ -3702,6 +3591,7 @@ GAVL_PUBLIC
 void gavl_video_convert(gavl_video_converter_t * cnv,
                         const gavl_video_frame_t * input_frame,
                         gavl_video_frame_t * output_frame);
+
 
 /*! \defgroup video_scaler Scaler
  *  \ingroup video

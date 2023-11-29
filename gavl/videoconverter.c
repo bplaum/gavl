@@ -28,10 +28,19 @@
 //#ifdef DEBUG
 #include <stdio.h>  
 //#endif
+#include <config.h>
 
-#include "gavl.h"
-#include "config.h"
-#include "video.h"
+#include <gavl/gavl.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "videoconverter"
+
+#include <video.h>
+#include <gavl/connectors.h>
+
+#ifdef HAVE_V4L2
+// #include <hw.h>
+#include <gavl/hw_v4l2.h>
+#endif
 
 /***************************************************
  * Create and destroy video converters
@@ -60,6 +69,15 @@ static void video_converter_cleanup(gavl_video_converter_t* cnv)
     }
   cnv->last_context = NULL;
   cnv->num_contexts = 0;
+
+  
+  if(cnv->tp_priv)
+    {
+    gavl_thread_pool_destroy(cnv->tp_priv);
+    cnv->tp_priv = NULL;
+    cnv->options.tp = NULL;
+    }
+  
   }
 
 void gavl_video_converter_destroy(gavl_video_converter_t* cnv)
@@ -146,10 +164,11 @@ static int add_context_scale(gavl_video_converter_t * cnv,
   ctx = add_context(cnv, input_format, output_format);
 
   ctx->scaler = gavl_video_scaler_create();
-
+  
   scaler_options = gavl_video_scaler_get_options(ctx->scaler);
-
+  
   gavl_video_options_copy(scaler_options, &cnv->options);
+  
 #if 0
   fprintf(stderr, "gavl_video_scaler_init:\n");
   fprintf(stderr, "src_format:\n");
@@ -204,6 +223,7 @@ static int add_context_deinterlace(gavl_video_converter_t * cnv,
   return 1;
   }
 
+
 int gavl_video_converter_reinit(gavl_video_converter_t * cnv)
   {
   int csp_then_scale = 0;
@@ -227,6 +247,13 @@ int gavl_video_converter_reinit(gavl_video_converter_t * cnv)
 
   input_format = &cnv->input_format;
   output_format = &cnv->output_format;
+
+  if(cnv->tp_priv)
+    {
+    gavl_thread_pool_destroy(cnv->tp_priv);
+    cnv->tp_priv = NULL;
+    cnv->options.tp = NULL;
+    }
   
   // #ifdef DEBUG
 #if 0
@@ -234,7 +261,6 @@ int gavl_video_converter_reinit(gavl_video_converter_t * cnv)
           cnv->options.quality, cnv->options.accel_flags);
   gavl_video_format_dump(input_format);
   gavl_video_format_dump(output_format);
-
 #endif
   
   video_converter_cleanup(cnv);
@@ -272,7 +298,8 @@ int gavl_video_converter_reinit(gavl_video_converter_t * cnv)
     {
     do_scale = 1;
     }
-    
+
+  
   /* For quality levels above 3, we switch on scaling, if it provides a more
      accurate conversion. This is especially true if the chroma subsampling
      ratios change or when the chroma placement becomes different */
@@ -317,6 +344,15 @@ int gavl_video_converter_reinit(gavl_video_converter_t * cnv)
     else if(cnv->options.deinterlace_mode != GAVL_DEINTERLACE_NONE)
       do_deinterlace = 1;
     }
+
+  /* Now we know which operations to perform. */
+
+  if(!cnv->options.tp && do_scale)
+    {
+    cnv->tp_priv = gavl_thread_pool_create(-1);
+    cnv->options.tp = cnv->tp_priv;
+    }
+ 
   
   /* Deinterlacing must always be the first step */
 
@@ -527,3 +563,4 @@ void gavl_video_convert(gavl_video_converter_t * cnv,
     }
 
   }
+

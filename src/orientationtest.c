@@ -5,6 +5,8 @@
 
 
 #include <gavl.h>
+#include <utils.h>
+
 #include "pngutil.h"
 
 #include <log.h>

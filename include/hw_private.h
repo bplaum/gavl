@@ -78,10 +78,10 @@ typedef struct
   int (*can_import)(gavl_hw_context_t * ctx, gavl_hw_type_t t);
   int (*can_export)(gavl_hw_context_t * ctx, gavl_hw_type_t t);
 
-  int (*import_video_frame)(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+  int (*import_video_frame)(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
                             gavl_video_frame_t * src, gavl_video_frame_t * dst);
 
-  int (*export_video_frame)(gavl_hw_context_t * ctx, gavl_video_format_t * fmt,
+  int (*export_video_frame)(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
                             gavl_video_frame_t * src, gavl_video_frame_t * dst);
   
   } gavl_hw_funcs_t;

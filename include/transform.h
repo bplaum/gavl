@@ -163,6 +163,8 @@ struct gavl_image_transform_s
   {
   gavl_video_options_t opt;
   gavl_video_format_t format;
+
+  gavl_thread_pool_t * tp_priv;
   
   /*
    *  a context is obtained with contexts[field][plane].

@@ -348,7 +348,7 @@ static int export_frame(gavl_hw_context_t * ctx1,
                         gavl_hw_context_t * ctx2,
                         gavl_video_frame_t * src,
                         gavl_video_frame_t ** dst,
-                        gavl_video_format_t * fmt)
+                        const gavl_video_format_t * fmt)
   {
   if(src->buf_idx >= 0)
     {
@@ -376,7 +376,7 @@ static int import_frame(gavl_hw_context_t * ctx1,
                         gavl_hw_context_t * ctx2,
                         gavl_video_frame_t * src,
                         gavl_video_frame_t ** dst,
-                        gavl_video_format_t * fmt)
+                        const gavl_video_format_t * fmt)
   {
   if(src->buf_idx >= 0)
     {
@@ -402,7 +402,7 @@ static int import_frame(gavl_hw_context_t * ctx1,
 int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
                                      gavl_hw_context_t * ctx2,
                                      gavl_video_frame_t ** frame2,
-                                     gavl_video_format_t * fmt)
+                                     const gavl_video_format_t * fmt)
   {
   gavl_hw_context_t * ctx1 = frame1->hwctx;
   gavl_hw_type_t t = gavl_hw_ctx_get_type(ctx1);

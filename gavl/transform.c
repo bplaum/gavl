@@ -52,6 +52,10 @@ void gavl_image_transform_destroy(gavl_image_transform_t * t)
       gavl_transform_context_free(&t->contexts[i][j]);
       }
     }
+
+  if(t->tp_priv)
+    gavl_thread_pool_destroy(t->tp_priv);
+  
   free(t);
   }
 
@@ -68,6 +72,13 @@ int gavl_image_transform_init(gavl_image_transform_t * t,
   {
   int i, j;
   gavl_video_options_t opt;
+
+  if(!t->opt.tp)
+    {
+    t->tp_priv = gavl_thread_pool_create(-1);
+    t->opt.tp = t->tp_priv;
+    }
+  
   gavl_video_options_copy(&opt, &t->opt);
 
   if(opt.scale_mode == GAVL_SCALE_AUTO)

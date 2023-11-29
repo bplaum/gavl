@@ -196,6 +196,7 @@ stats.c \
 time.c \
 timecode.c \
 timer.c \
+threadpool.c \
 trackinfo.c \
 transform.c \
 transform_context.c \
