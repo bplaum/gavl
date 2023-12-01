@@ -358,9 +358,16 @@ char * gavl_url_extract_http_vars(char * url, gavl_dictionary_t * vars);
 #define GAVL_MD5_SIZE 16
 #define GAVL_MD5_LENGTH 33 // 32 + \0
 
+GAVL_PUBLIC
 void * gavl_md5_buffer(const void *buffer, int len, void *resblock);
+
+GAVL_PUBLIC
 char * gavl_md5_buffer_str(const void *buffer, int len, char * ret);
+
+GAVL_PUBLIC
 char * gavl_md5_2_string(const void * md5v, char * str);
+
+GAVL_PUBLIC
 int gavl_string_2_md5(const char * str, void * md5v);
 
 #endif // GAVL_UTILS_H_INCLUDED
