@@ -472,10 +472,21 @@ GAVL_PUBLIC
 const gavl_dictionary_t * gavl_get_track_by_id(const gavl_dictionary_t * dict, const char * id);
 
 GAVL_PUBLIC
+const gavl_dictionary_t * gavl_get_track_by_string(const gavl_dictionary_t * dict,
+                                                   const char * tag, const char * val);
+
+
+GAVL_PUBLIC
 const gavl_dictionary_t * gavl_get_track_by_id_arr(const gavl_array_t * arr, const char * id);
 
 GAVL_PUBLIC
+const gavl_dictionary_t * gavl_get_track_by_string_arr(const gavl_array_t * arr,
+                                                       const char * tag, const char * val);
+
+GAVL_PUBLIC
 int gavl_get_track_idx_by_id_arr(const gavl_array_t * arr, const char * id);
+
+
 
 GAVL_PUBLIC
 gavl_dictionary_t * gavl_get_track_by_id_arr_nc(gavl_array_t * arr, const char * id);

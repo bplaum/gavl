@@ -46,6 +46,7 @@
 
 #define GAVL_META_ID          "ID"
 #define GAVL_META_UUID        "UUID"
+#define GAVL_META_HASH        "Hash"
 
 /* Object is locked for access */
 #define GAVL_META_LOCKED      "Locked"

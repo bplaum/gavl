@@ -164,6 +164,7 @@ httpclient.c \
 interleave.c \
 language.c \
 log.c \
+md5.c \
 memalign.c \
 memcpy.c \
 metadata.c \
