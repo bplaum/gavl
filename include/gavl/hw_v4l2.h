@@ -52,7 +52,7 @@ typedef struct
  *
  */
 
-#define GAVL_V4L2_TYPE        "type"
+#define GAVL_V4L2_TYPE       "type"
 #define GAVL_V4L2_TYPE_STRING "typestr"
 #define GAVL_V4L2_CAPABILITIES "caps"
 
@@ -77,6 +77,7 @@ GAVL_PUBLIC gavl_pixelformat_t gavl_v4l2_pix_fmt_to_pixelformat(uint32_t fmt, in
 GAVL_PUBLIC uint32_t gavl_v4l2_pixelformat_to_pix_fmt(gavl_pixelformat_t fmt, int * quantization);
 
 GAVL_PUBLIC uint32_t gavl_v4l2_codec_id_to_pix_fmt(gavl_codec_id_t id);
+GAVL_PUBLIC int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev);
 
 
 // GAVL_PUBLIC gavl_packet_t * gavl_v4l2_device_get_packet_write(gavl_v4l2_device_t * dev);

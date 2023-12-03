@@ -302,7 +302,6 @@
 
 /* Images associated with media content */
 
-
 /** \brief Cover art
  */
 

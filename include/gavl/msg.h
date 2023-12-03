@@ -75,6 +75,30 @@
 
 #define GAVL_MSG_PROGRESS      101
 
+/**
+ *  \brief Ressource added
+ *
+ *  arg0: ID (string)
+ *  arg1: Added ressource (dictionary)
+ *
+ *  Dictionary must contain a string GAVL_META_ID
+ *  so we can delete it later on
+ */
+
+#define GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME   "volume:"
+#define GAVL_MSG_RESOURCE_ID_PREFIX_BACKEND  "backend:"
+#define GAVL_MSG_RESOURCE_ID_PREFIX_RECORDER "recorder:"
+
+#define GAVL_MSG_RESOURCE_ADDED    102
+
+/**
+ *  \brief Ressource deleted
+ *
+ *  arg0: ID (string)
+ */
+
+#define GAVL_MSG_RESOURCE_DELETED  103
+
 /*
  *  GAVL_MSG_NS_SRC
  */
@@ -799,6 +823,8 @@ void gavl_msg_set_last(gavl_msg_t * msg, int last);
 
 GAVL_PUBLIC 
 void gavl_msg_set_resp_for_req(gavl_msg_t * dst, const gavl_msg_t * src);
+
+
 
 /* SRC */
 
