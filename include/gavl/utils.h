@@ -370,6 +370,13 @@ char * gavl_md5_2_string(const void * md5v, char * str);
 GAVL_PUBLIC
 int gavl_string_2_md5(const char * str, void * md5v);
 
+GAVL_PUBLIC
+int gavl_fd_can_read(int fd, int milliseconds);
+
+GAVL_PUBLIC
+int gavl_fd_can_write(int fd, int milliseconds);
+
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 

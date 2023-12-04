@@ -113,14 +113,14 @@ static int do_wait(tls_t * p, int timeout)
       case WAIT_STATE_NONE:
         break;
       case WAIT_STATE_READ:
-        if(!gavl_socket_can_read(p->fd, timeout))
+        if(!gavl_fd_can_read(p->fd, timeout))
           {
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read timeout (%d ms) exceeded", timeout);
           return 0;
           }
         break;
       case WAIT_STATE_WRITE:
-        if(!gavl_socket_can_write(p->fd, timeout))
+        if(!gavl_fd_can_write(p->fd, timeout))
           {
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Write timeout (%d ms) exceeded", timeout);
           return 0;
@@ -396,7 +396,7 @@ static int poll_tls(void * priv, int timeout, int wr)
     if(p->write_buffer.len < p->buffer_size)
       return 1;
     
-    if((timeout > 0) && gavl_socket_can_write(p->fd, timeout))
+    if((timeout > 0) && gavl_fd_can_write(p->fd, timeout))
       {
       do_flush(p, 0);
       
@@ -420,7 +420,7 @@ static int poll_tls(void * priv, int timeout, int wr)
     if(read_record(p, timeout) > 0)
       return 1;
     
-    return gavl_socket_can_read(p->fd, timeout);
+    return gavl_fd_can_read(p->fd, timeout);
     }
   
   

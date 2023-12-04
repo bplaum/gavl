@@ -161,12 +161,12 @@ static int poll_socket(void * priv, int timeout, int wr)
   socket_t * s = priv;
 
   if(wr)
-    return gavl_socket_can_write(s->fd, timeout);
+    return gavl_fd_can_write(s->fd, timeout);
   
   if(s->buf.len > 0)
     return 1;
   else
-    return gavl_socket_can_read(s->fd, timeout);
+    return gavl_fd_can_read(s->fd, timeout);
   }
 
 gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)

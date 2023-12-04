@@ -741,3 +741,54 @@ int gavl_num_cpus()
 
 #undef LOG_DOMAIN
 
+
+#define LOG_DOMAIN "utils"
+
+int gavl_fd_can_read(int fd, int milliseconds)
+  {
+  int result;
+  fd_set set;
+  struct timeval timeout;
+  FD_ZERO (&set);
+  FD_SET  (fd, &set);
+
+  timeout.tv_sec  = milliseconds / 1000;
+  timeout.tv_usec = (milliseconds % 1000) * 1000;
+    
+  if((result = select(fd+1, &set, NULL, NULL, &timeout) <= 0))
+    {
+    if(result < 0 && (errno == EINVAL))
+      {
+      fprintf(stderr, "EINVAL %d\n", fd);
+      }
+    
+    if(result < 0)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Select for reading failed: %s", strerror(errno));
+    return 0;
+    }
+
+  
+  return 1;
+  }
+
+
+int gavl_fd_can_write(int fd, int milliseconds)
+  {
+  int result;
+  fd_set set;
+  struct timeval timeout;
+  FD_ZERO (&set);
+  FD_SET  (fd, &set);
+
+  timeout.tv_sec  = milliseconds / 1000;
+  timeout.tv_usec = (milliseconds % 1000) * 1000;
+    
+  if((result = select(fd+1, NULL, &set, NULL, &timeout) <= 0))
+    {
+    if(result < 0)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Select for writing failed: %s", strerror(errno));
+    // gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read timeout");
+    return 0;
+    }
+  return 1;
+  }

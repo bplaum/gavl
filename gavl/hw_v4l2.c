@@ -1873,10 +1873,16 @@ int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev)
   sink_formats = NULL;
     
   if((fd = open(path, O_RDWR /* required */ | O_NONBLOCK, 0)) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Opening %s failed: %s",
+             path, strerror(errno));
     return 0;
-    
+    }
+  
   if(my_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
     {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Getting capabilities for %s failed: %s",
+             path, strerror(errno));
     close(fd);
     return 0;
     } 

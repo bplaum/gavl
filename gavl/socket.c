@@ -707,7 +707,7 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
       if(!milliseconds)
         return ret;
       
-      if(!gavl_socket_can_write(ret, milliseconds))
+      if(!gavl_fd_can_write(ret, milliseconds))
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Connection timed out");
         return -1;
@@ -733,7 +733,7 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
 
 int gavl_socket_connect_inet_complete(int fd, int milliseconds)
   {
-  if(!gavl_socket_can_write(fd, milliseconds))
+  if(!gavl_fd_can_write(fd, milliseconds))
     {
     return 0;
     }
@@ -931,7 +931,7 @@ int gavl_listen_socket_accept(int sock, int milliseconds,
   {
   int ret;
   
-  if((milliseconds >= 0) && !gavl_socket_can_read(sock, milliseconds))
+  if((milliseconds >= 0) && !gavl_fd_can_read(sock, milliseconds))
     return -1;
 
   if(from)
@@ -977,54 +977,6 @@ void gavl_listen_socket_destroy(int sock)
   gavl_socket_close(sock);
   }
 
-int gavl_socket_can_read(int fd, int milliseconds)
-  {
-  int result;
-  fd_set set;
-  struct timeval timeout;
-  FD_ZERO (&set);
-  FD_SET  (fd, &set);
-
-  timeout.tv_sec  = milliseconds / 1000;
-  timeout.tv_usec = (milliseconds % 1000) * 1000;
-    
-  if((result = select(fd+1, &set, NULL, NULL, &timeout) <= 0))
-    {
-    if(result < 0 && (errno == EINVAL))
-      {
-      fprintf(stderr, "EINVAL %d\n", fd);
-      }
-    
-    if(result < 0)
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Select for reading failed: %s", strerror(errno));
-    return 0;
-    }
-
-  
-  return 1;
-  }
-
-
-int gavl_socket_can_write(int fd, int milliseconds)
-  {
-  int result;
-  fd_set set;
-  struct timeval timeout;
-  FD_ZERO (&set);
-  FD_SET  (fd, &set);
-
-  timeout.tv_sec  = milliseconds / 1000;
-  timeout.tv_usec = (milliseconds % 1000) * 1000;
-    
-  if((result = select(fd+1, NULL, &set, NULL, &timeout) <= 0))
-    {
-    if(result < 0)
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Select for writing failed: %s", strerror(errno));
-    // gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read timeout");
-    return 0;
-    }
-  return 1;
-  }
 
 int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
   {
@@ -1032,7 +984,7 @@ int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
   
   //  fprintf(stderr, "read_data_noblock 1\n");
   
-  if(!gavl_socket_can_read(fd, 0))
+  if(!gavl_fd_can_read(fd, 0))
     return 0;
 
   //  fprintf(stderr, "read_data_noblock 2 %d\n", len);
@@ -1053,7 +1005,7 @@ int gavl_socket_write_data_nonblock(int fd, const uint8_t * data, int len)
   {
   int result;
   
-  if(!gavl_socket_can_write(fd, 0))
+  if(!gavl_fd_can_write(fd, 0))
     {
     return 0;
     }
@@ -1080,7 +1032,7 @@ int gavl_socket_read_data(int fd, uint8_t * data, int len, int milliseconds)
   
   while(bytes_read < len)
     {
-    if((milliseconds >= 0) && !gavl_socket_can_read(fd, milliseconds))
+    if((milliseconds >= 0) && !gavl_fd_can_read(fd, milliseconds))
       {
       gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Got read timeout (t: %d, len: %d)", milliseconds, len);
       return bytes_read;
@@ -1494,7 +1446,7 @@ int gavl_socket_is_disconnected(int fd, int timeout)
   
   uint8_t buf;
   
-  if(gavl_socket_can_read(fd, 0) &&
+  if(gavl_fd_can_read(fd, 0) &&
      (recv(fd, &buf, 1, MSG_PEEK) <= 0))
     return 1;
   else
