@@ -376,6 +376,8 @@ int gavl_fd_can_read(int fd, int milliseconds);
 GAVL_PUBLIC
 int gavl_fd_can_write(int fd, int milliseconds);
 
+GAVL_PUBLIC
+int gavl_host_is_us(const char * hostname);
 
 #endif // GAVL_UTILS_H_INCLUDED
 

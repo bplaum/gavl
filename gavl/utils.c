@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
@@ -792,3 +793,17 @@ int gavl_fd_can_write(int fd, int milliseconds)
     }
   return 1;
   }
+
+int gavl_host_is_us(const char * hostname)
+  {
+  char str[HOST_NAME_MAX+1];
+
+  gethostname(str, HOST_NAME_MAX+1);
+
+  if(!strcmp(hostname, str))
+    return 1;
+  else
+    return 0;
+  }
+
+
