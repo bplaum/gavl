@@ -101,6 +101,7 @@ typedef enum
 
     /* Subtitle (some video codecs can handle subtitles also */
     GAVL_CODEC_ID_DVDSUB = 0x20000, //!< DVD subtitles, palette is in header
+    GAVL_CODEC_ID_EXTENDED = 0xffffffff, //!< Separate compression id
     
   } gavl_codec_id_t;
 
@@ -129,6 +130,7 @@ typedef struct
   int pre_skip;                //!< Samples to skip at the start
   
   int video_buffer_size;   //!< VBV buffer size for video (in BYTES)
+  uint32_t codec_tag;
   } gavl_compression_info_t;
 
 /** \brief Initialize a compression info

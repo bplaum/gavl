@@ -40,6 +40,8 @@ typedef struct
   int num_planes;
 
   int flags;
+  
+  int bytesused; // For packets
   } gavl_v4l2_buffer_t;
 
 
@@ -99,7 +101,7 @@ GAVL_PUBLIC gavl_packet_source_t * gavl_v4l2_device_get_packet_source(gavl_v4l2_
 GAVL_PUBLIC gavl_video_sink_t * gavl_v4l2_device_get_video_sink(gavl_v4l2_device_t * dev);
 GAVL_PUBLIC gavl_video_source_t * gavl_v4l2_device_get_video_source(gavl_v4l2_device_t * dev);
 
-
+GAVL_PUBLIC int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * dict);
 GAVL_PUBLIC int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
                                               gavl_packet_source_t * psrc);
 

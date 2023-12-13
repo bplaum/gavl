@@ -88,6 +88,7 @@ compression_ids[] =
     { GAVL_CODEC_ID_VP8,       NULL,       "vp8",    "VP8",           "video/x-vp8", },
     { GAVL_CODEC_ID_DIV3,      NULL,       "divx3",  "DivX 3",        NULL, },
     { GAVL_CODEC_ID_DVDSUB,    NULL,       "dvdsub", "DVD subtitles", NULL, },
+    { GAVL_CODEC_ID_EXTENDED,  NULL,       "ext",    "Extended (see codec_tag)", NULL, },
 
   };
 

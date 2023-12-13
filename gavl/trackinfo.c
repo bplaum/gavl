@@ -2251,6 +2251,7 @@ void gavl_sort_tracks_by_quality(gavl_array_t * arr)
 #define COMPRESSION_INFO_KEY_ID              "id"
 #define COMPRESSION_INFO_KEY_BITRATE         "br"
 #define COMPRESSION_INFO_KEY_PALETTE_SIZE    "ps"
+#define COMPRESSION_INFO_KEY_TAG             "tag"
 
 #define COMPRESSION_INFO_KEY_HEAD            "head"
 
@@ -2261,7 +2262,7 @@ void gavl_sort_tracks_by_quality(gavl_array_t * arr)
 int gavl_stream_get_compression_info(const gavl_dictionary_t * s,
                                      gavl_compression_info_t * ret)
   {
-  int id = GAVL_CODEC_ID_NONE;
+  int val_i = GAVL_CODEC_ID_NONE;
   const gavl_buffer_t * buf;
   const gavl_dictionary_t * cmp;
   
@@ -2271,8 +2272,11 @@ int gavl_stream_get_compression_info(const gavl_dictionary_t * s,
   if(!ret)
     return 1;
 
-  gavl_dictionary_get_int(cmp, COMPRESSION_INFO_KEY_ID, &id);
-  ret->id = id;
+  if(gavl_dictionary_get_int(cmp, COMPRESSION_INFO_KEY_ID, &val_i))
+    ret->id = val_i;
+  
+  if(gavl_dictionary_get_int(cmp, COMPRESSION_INFO_KEY_TAG, &val_i))
+    ret->codec_tag = val_i;
   
   GET_INT(COMPRESSION_INFO_KEY_FLAGS,   flags);
   GET_INT(COMPRESSION_INFO_KEY_BITRATE, bitrate);
@@ -2323,6 +2327,7 @@ void gavl_stream_set_compression_info(gavl_dictionary_t * s, const gavl_compress
   
   SET_INT(COMPRESSION_INFO_KEY_FLAGS,   flags);
   SET_INT(COMPRESSION_INFO_KEY_ID,      id);
+  SET_INT(COMPRESSION_INFO_KEY_TAG,     codec_tag);
   SET_INT(COMPRESSION_INFO_KEY_BITRATE, bitrate);
   SET_INT(COMPRESSION_INFO_KEY_PALETTE_SIZE, palette_size);
   
