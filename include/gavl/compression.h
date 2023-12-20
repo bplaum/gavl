@@ -58,6 +58,9 @@ extern "C" {
 
 /** \brief Only in uncompressed gavf streams: Specifies that multibyte numbers are big endian */
 #define GAVL_COMPRESSION_BIG_ENDIAN         (1<<4)
+
+#define GAVL_MK_FOURCC(a, b, c, d) ((a<<24)|(b<<16)|(c<<8)|d)
+
   
 /** \brief Codec ID
  *

@@ -21,8 +21,6 @@ typedef enum
 
 /* Video frames have a gavl_v4l2_buffer_t as storage */
 
-#define GAVL_V4L2_BUFFER_FLAG_QUEUED (1<<0)
-
 typedef struct
   {
   /* MMapped frame */
@@ -102,6 +100,9 @@ GAVL_PUBLIC gavl_video_sink_t * gavl_v4l2_device_get_video_sink(gavl_v4l2_device
 GAVL_PUBLIC gavl_video_source_t * gavl_v4l2_device_get_video_source(gavl_v4l2_device_t * dev);
 
 GAVL_PUBLIC int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * dict);
+GAVL_PUBLIC int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev);
+
+
 GAVL_PUBLIC int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
                                               gavl_packet_source_t * psrc);
 

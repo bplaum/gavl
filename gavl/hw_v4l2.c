@@ -60,6 +60,9 @@
 
 #define DECODER_HAVE_FRAME  (1<<3)
 
+#define GAVL_V4L2_BUFFER_FLAG_QUEUED (1<<0)
+#define GAVL_V4L2_BUFFER_FLAG_VALID  (1<<1)
+
 static gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev);
 
 static void format_gavl_to_v4l2(const gavl_video_format_t * gavl,
@@ -385,6 +388,8 @@ struct gavl_v4l2_device_s
   /* hwctx we belong to */
   gavl_hw_context_t * hwctx;
 
+  gavl_dictionary_t * s; // Stream (not owned by us)
+  
 #ifdef HAVE_DRM
   /* For importig DMA buffers */
   gavl_hw_context_t * hwctx_dmabuf;
@@ -401,7 +406,7 @@ struct gavl_v4l2_device_s
 #define IS_OUTPUT(buf_type)                                            \
   ((buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) || (buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT))
 
-static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory)
+static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * flags, gavl_time_t * timestamp)
   {
   int i;
   struct v4l2_buffer buf;
@@ -436,7 +441,20 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory)
     }
 
   if(type == dev->capture.buf_type)
+    {
     dev->capture.bufs[buf.index].bytesused = buf.bytesused;
+    dev->capture.current_buf = &dev->capture.bufs[buf.index];
+    }
+  
+  if(flags)
+    *flags = buf.flags;
+
+  if(timestamp)
+    {
+    *timestamp = buf.timestamp.tv_sec;
+    *timestamp *= GAVL_TIME_SCALE;
+    *timestamp += buf.timestamp.tv_usec;
+    }
   
   return buf.index;
   }
@@ -445,7 +463,7 @@ static gavl_v4l2_buffer_t * get_buffer_output(gavl_v4l2_device_t * dev)
   {
   int idx;
   
-  idx = dequeue_buffer(dev, dev->output.buf_type, V4L2_MEMORY_MMAP);
+  idx = dequeue_buffer(dev, dev->output.buf_type, V4L2_MEMORY_MMAP, NULL, NULL);
   
   dev->output.current_buf = &dev->output.bufs[idx];
   dev->output.current_buf->flags &= ~GAVL_V4L2_BUFFER_FLAG_QUEUED;
@@ -479,10 +497,11 @@ static int done_buffer_capture(gavl_v4l2_device_t * dev)
     
     if(my_ioctl(dev->fd, VIDIOC_QBUF, &buf) == -1)
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_QBUF failed for capture: %s", strerror(errno));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_QBUF failed for capture (index: %d): %s",
+               buf.index, strerror(errno));
       return 0;
       }
-    fprintf(stderr, "Queueing buffer %d\n", buf.index);
+    //    fprintf(stderr, "Queueing buffer %d\n", buf.index);
     }
 
   return 1;
@@ -1105,14 +1124,12 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       int idx;
       gavl_packet_t pkt;
       
-      idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP);
+      idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, NULL, NULL);
       
       if(idx < 0)
         return GAVL_SOURCE_EOF;
 
       /* Set output buffer to frame */
-
-      dev->capture.current_buf = &dev->capture.bufs[idx];
       
       buffer_to_video_frame_mmap(dev, dev->capture.current_buf, &dev->capture.fmt, dev->capture.format.pixelformat,
                                  dev->capture.buf_type);
@@ -1179,22 +1196,25 @@ void gavl_v4l2_device_resync_decoder(gavl_v4l2_device_t * dev)
   }
 #endif
 
-static int64_t get_capture_pts(gavl_v4l2_device_t * dev, int64_t * duration)
+static int64_t get_capture_pts(gavl_v4l2_device_t * dev, int flags, gavl_time_t v4l_pts)
   {
-  int64_t ret;
   
-  if(dev->capture.format.framerate_mode == GAVL_FRAMERATE_CONSTANT)
+  switch(flags & V4L2_BUF_FLAG_TIMESTAMP_MASK)
     {
-    ret = dev->pts;
-    *duration = dev->capture.format.frame_duration;
-    dev->pts += dev->capture.format.frame_duration;
-    return ret;
+    case V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC:
+    case V4L2_BUF_FLAG_TIMESTAMP_COPY:
+      return v4l_pts;
+      break;
+    default:
+      if(!dev->timer)
+        {
+        dev->timer = gavl_timer_create();
+        gavl_timer_start(dev->timer);
+        }
+      return gavl_timer_get(dev->timer);
+      break;
     }
-  else
-    {
-    *duration = -1;
-    return gavl_timer_get(dev->timer);
-    }
+  
   }
 
 static gavl_source_status_t read_packet_capture(void * priv, gavl_packet_t ** p)
@@ -1203,10 +1223,26 @@ static gavl_source_status_t read_packet_capture(void * priv, gavl_packet_t ** p)
   gavl_v4l2_device_t * dev = priv;
   int events;
   int revents;
-  
+
+  int flags;
+  gavl_time_t pts = 0;
+
+  if(dev->capture.current_buf && (dev->capture.current_buf->flags & GAVL_V4L2_BUFFER_FLAG_VALID))
+    {
+    if(p)
+      {
+      *p = &dev->capture.packet;
+      dev->capture.current_buf->flags &= ~GAVL_V4L2_BUFFER_FLAG_VALID;
+      }
+    
+    return GAVL_SOURCE_OK;
+    }
+    
   done_buffer_capture(dev);
 
   events = POLLIN;
+
+  //  fprintf(stderr, "Poll...");
   
   if(!do_poll(dev, events, &revents) ||
      !(revents & POLLIN))
@@ -1214,18 +1250,30 @@ static gavl_source_status_t read_packet_capture(void * priv, gavl_packet_t ** p)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no packet");
     return GAVL_SOURCE_EOF;
     }
+
+  //  fprintf(stderr, "Poll done\n");
   
-  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP) < 0))
+  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, &flags, &pts)) < 0)
     return GAVL_SOURCE_EOF;
 
-  dev->capture.current_buf = &dev->capture.bufs[idx];
+  gavl_packet_init(&dev->capture.packet);
   
   dev->capture.packet.buf.buf = dev->capture.current_buf->planes[0].buf;
   dev->capture.packet.buf.len = dev->capture.current_buf->bytesused;
 
-  dev->capture.packet.pts = get_capture_pts(dev, &dev->capture.packet.duration);
+  if(flags & V4L2_BUF_FLAG_KEYFRAME)
+    dev->capture.packet.flags |= GAVL_PACKET_KEYFRAME;  
+  
+  dev->capture.packet.pts = get_capture_pts(dev, flags, pts);
+  
+  //  fprintf(stderr, "Dequeued buffer %d (%d bytes)\n", idx, dev->capture.current_buf->bytesused);
+  //  gavl_packet_dump(&dev->capture.packet);
 
-  *p = &dev->capture.packet;
+  if(p)
+    *p = &dev->capture.packet;
+  else
+    dev->capture.current_buf->flags |= GAVL_V4L2_BUFFER_FLAG_VALID;
+  
   return GAVL_SOURCE_OK;
   }
 
@@ -1233,18 +1281,33 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
   {
   int idx;
   gavl_v4l2_device_t * dev = priv;
+  int flags;
+  gavl_time_t pts = 0;
+
+  if(dev->capture.current_buf && (dev->capture.current_buf->flags & GAVL_V4L2_BUFFER_FLAG_VALID))
+    {
+    if(frame)
+      {
+      *frame = dev->capture.vframe;
+      dev->capture.current_buf->flags &= ~GAVL_V4L2_BUFFER_FLAG_VALID;
+      }
+    return GAVL_SOURCE_OK;
+    }
+  
   done_buffer_capture(dev);
 
-  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP) < 0))
+  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, &flags, &pts) < 0))
     return GAVL_SOURCE_EOF;
-
+  
   buffer_to_video_frame_mmap(dev, dev->capture.current_buf, &dev->capture.fmt, dev->capture.format.pixelformat,
                              dev->capture.buf_type);
 
-  *frame = dev->capture.vframe;
+  dev->capture.vframe->timestamp = get_capture_pts(dev, flags, pts);
 
-  dev->capture.vframe->timestamp = get_capture_pts(dev, &dev->capture.vframe->duration);
-
+  if(frame)
+    *frame = dev->capture.vframe;
+  else
+    dev->capture.current_buf->flags |= GAVL_V4L2_BUFFER_FLAG_VALID;
 
   return GAVL_SOURCE_OK;
   }
@@ -1255,6 +1318,8 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
   uint32_t pixelformat;
   int ret = 0;
   int i;
+
+  dev->s = stream;
   
   if(gavl_dictionary_get_int(&dev->dev, GAVL_V4L2_CAPABILITIES, &caps) &&
      (caps & V4L2_CAP_VIDEO_CAPTURE_MPLANE))
@@ -1341,8 +1406,6 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
   for(i = 0; i < dev->capture.num_bufs; i++)
     queue_frame_capture(dev, i);
   
-  if(!stream_on(dev, dev->capture.buf_type))
-    goto fail;
 
   if(dev->capture.ci.id != GAVL_CODEC_ID_NONE)
     {
@@ -1357,16 +1420,35 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
     
     }
 
-  if(dev->capture.format.framerate_mode == GAVL_FRAMERATE_VARIABLE)
-    {
-    dev->timer = gavl_timer_create();
-    gavl_timer_start(dev->timer);
-    }
   
   ret = 1;
   fail:
   
   return ret;
+  }
+
+int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev)
+  {
+  gavl_stream_stats_t stats;
+
+  gavl_stream_stats_init(&stats);
+  
+  if(!stream_on(dev, dev->capture.buf_type))
+    return 0;
+  
+  /* Peek frames and set initial timestamps */
+  if(dev->psrc_priv)
+    {
+    read_packet_capture(dev, NULL);
+    stats.pts_start = dev->capture.packet.pts;
+    }
+  else if(dev->vsrc_priv)
+    {
+    read_frame_capture(dev, NULL);
+    stats.pts_start = dev->capture.vframe->timestamp;
+    }
+  gavl_stream_set_stats(dev->s, &stats);  
+  return 1;
   }
 
 int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
@@ -1998,7 +2080,7 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   
   if(dev->timer)
     gavl_timer_destroy(dev->timer);
-  
+
   free(dev);
   }
 
@@ -2452,9 +2534,10 @@ static void format_v4l2_to_gavl(const struct v4l2_format * v4l,
   gavl->pixel_height = 1;
   gavl->frame_width = gavl->image_width;
   gavl->frame_height = gavl->image_height;
-
+  
   if(IS_CAPTURE(type))
     {
+#if 0
     if(parm->parm.capture.capability & V4L2_CAP_TIMEPERFRAME)
       {
       gavl->framerate_mode = GAVL_FRAMERATE_CONSTANT;
@@ -2463,10 +2546,12 @@ static void format_v4l2_to_gavl(const struct v4l2_format * v4l,
       }
     else
       {
+#endif
       gavl->framerate_mode = GAVL_FRAMERATE_VARIABLE;
       gavl->timescale      = GAVL_TIME_SCALE;
+#if 0
       }
-      
+#endif
     }
   }
 

@@ -43,12 +43,12 @@ static const struct
   }
 pixelformats[] =
   {
-    { GAVL_RGB_24,     GL_RGB,  GL_RGBA,  GL_UNSIGNED_BYTE },
+    { GAVL_RGB_24,     GL_RGB,  GL_RGB,  GL_UNSIGNED_BYTE },
     { GAVL_RGBA_32,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_BYTE },
-    { GAVL_RGB_48,     GL_RGB,  GL_RGBA,  GL_UNSIGNED_SHORT },
+    { GAVL_RGB_48,     GL_RGB,  GL_RGB,  GL_UNSIGNED_SHORT },
     { GAVL_RGBA_64,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_SHORT },
-    { GAVL_RGB_FLOAT,  GL_RGB,  GL_RGBA,  GL_FLOAT },
-    { GAVL_RGBA_FLOAT, GL_RGBA, GL_FLOAT },
+    { GAVL_RGB_FLOAT,  GL_RGB,  GL_RGB,  GL_FLOAT },
+    { GAVL_RGBA_FLOAT, GL_RGBA, GL_RGBA, GL_FLOAT },
     
     { GAVL_YUV_420_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
     { GAVL_YUV_410_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
@@ -174,11 +174,6 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
   info->num_textures = gavl_pixelformat_num_planes(fmt->pixelformat);
   info->texture_target = GL_TEXTURE_2D;
   
-  if(info->num_textures > 1)
-    internalformat = GL_RED;
-  else
-    internalformat = GL_RGBA;
-  
   glGenTextures(info->num_textures, info->textures);
 
   for(i = 0; i < info->num_textures; i++)
@@ -217,6 +212,12 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
       gavl_video_format_dump(fmt);
       glGetIntegerv(GL_MAX_TEXTURE_SIZE, &val);
       fprintf(stderr, "Maximum texture size: %d\n", val);
+      
+      fprintf(stderr, "internalformat: 0x%08x\n", internalformat);
+      fprintf(stderr, "width:          %d\n", width);
+      fprintf(stderr, "height:         %d\n", height);
+      fprintf(stderr, "format:         0x%08x\n", format);
+      fprintf(stderr, "type:           0x%08x\n", type);
       }
     
     }

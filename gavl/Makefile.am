@@ -139,6 +139,7 @@ audiooptions.c \
 audiosink.c \
 audiosource.c \
 base64.c \
+bayer.c \
 blend.c \
 buffer.c \
 chapterlist.c \

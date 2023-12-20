@@ -1489,44 +1489,49 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     {
     basename = gavl_strndup(pos1+1, pos2);
     }
-
-  if(location)
+  
+  if(location && !gavl_dictionary_get(m, GAVL_META_HASH))
     {
     char hash[GAVL_MD5_LENGTH];
     gavl_md5_buffer_str(location, strlen(location), hash);
     gavl_dictionary_set_string(m, GAVL_META_HASH, hash);
     }
   
-  /* Figure out the media type */
-  if((num_audio_streams == 1) && !num_video_streams)
-    {
-    /* Audio file */
-    media_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
-    }
-  else if(!num_audio_streams && !num_video_streams && num_subtitle_streams)
-    {
-    /* Subtitle file */
-    media_class = GAVL_META_MEDIA_CLASS_SUBTITLE_FILE;
-    }
-  else if(num_video_streams >= 1)
-    {
-    const gavl_video_format_t * fmt;
+  media_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
 
-    if(!num_audio_streams &&
-       (num_video_streams == 1) &&
-       (fmt = gavl_track_get_video_format(track, 0)) && 
-       (fmt->framerate_mode == GAVL_FRAMERATE_STILL))
+  if(!media_class)
+    {
+    /* Figure out the media type */
+    if((num_audio_streams == 1) && !num_video_streams)
       {
-      /* Photo */
-      media_class = GAVL_META_MEDIA_CLASS_IMAGE;
+      /* Audio file */
+      media_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
       }
-    else
+    else if(!num_audio_streams && !num_video_streams && num_subtitle_streams)
       {
-      /* Video */
-      media_class = GAVL_META_MEDIA_CLASS_VIDEO_FILE;
+      /* Subtitle file */
+      media_class = GAVL_META_MEDIA_CLASS_SUBTITLE_FILE;
+      }
+    else if(num_video_streams >= 1)
+      {
+      const gavl_video_format_t * fmt;
+
+      if(!num_audio_streams &&
+         (num_video_streams == 1) &&
+         (fmt = gavl_track_get_video_format(track, 0)) && 
+         (fmt->framerate_mode == GAVL_FRAMERATE_STILL))
+        {
+        /* Photo */
+        media_class = GAVL_META_MEDIA_CLASS_IMAGE;
+        }
+      else
+        {
+        /* Video */
+        media_class = GAVL_META_MEDIA_CLASS_VIDEO_FILE;
+        }
       }
     }
-
+  
   gavl_track_compute_duration(track);
   
   if(media_class)

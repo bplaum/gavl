@@ -4342,6 +4342,33 @@ void gavl_video_frame_pool_destroy(gavl_video_frame_pool_t *p);
 GAVL_PUBLIC
 void gavl_video_frame_pool_reset(gavl_video_frame_pool_t *p);
 
+/* Debayer routines */
+
+#define GAVL_BAYER_GREEN_FIRST (1<<0)
+#define GAVL_BAYER_BLUE_LINE   (1<<1)
+  
+// GB
+// RG
+#define GAVL_BAYER_GBRG (GAVL_BAYER_GREEN_FIRST|GAVL_BAYER_BLUE_LINE)
+
+// GR
+// BG
+#define GAVL_BAYER_GRBG (GAVL_BAYER_GREEN_FIRST)
+
+// BG
+// GR
+#define GAVL_BAYER_BGGR (GAVL_BAYER_BLUE_LINE)
+
+// RG
+// GB
+#define GAVL_BAYER_RGGB 0
+  
+GAVL_PUBLIC
+void gavl_video_frame_debayer(gavl_video_options_t * opt,
+                              gavl_video_frame_t * src, gavl_video_frame_t * dst,
+                              int bayer_format, gavl_video_format_t * dst_format);
+  
+  
 /**
  * @}
  */
