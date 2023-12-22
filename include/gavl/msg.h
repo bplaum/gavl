@@ -77,9 +77,9 @@
 
 /**
  *  \brief Ressource added
+ *  context_id: ID (string)
  *
- *  arg0: ID (string)
- *  arg1: Added ressource (dictionary)
+ *  arg0: Added ressource (dictionary)
  *
  *  Dictionary must contain a string GAVL_META_ID
  *  so we can delete it later on
@@ -94,7 +94,7 @@
 /**
  *  \brief Ressource deleted
  *
- *  arg0: ID (string)
+ *  context_id: ID (string)
  */
 
 #define GAVL_MSG_RESOURCE_DELETED  103
