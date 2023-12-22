@@ -1405,7 +1405,7 @@ void gavl_http_client_resume(gavf_io_t * io)
     if(!reopen(io))
       fprintf(stderr, "Re-opening failed\n");
     else
-      fprintf(stderr, "Re-opened\n");
+      fprintf(stderr, "Re-opened %"PRId64"\n", c->position);
     }
   }
 
