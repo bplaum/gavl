@@ -107,9 +107,10 @@ int gavl_socket_set_block(int fd, int block)
   }
 
 void gavl_socket_address_copy(gavl_socket_address_t * dst,
-                            const gavl_socket_address_t * src)
+                              const gavl_socket_address_t * src)
   {
-  memcpy(dst, src, sizeof(*dst));
+  memcpy(&dst->addr, &src->addr, src->len);
+  dst->len = src->len;
   }
 
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
@@ -617,6 +618,99 @@ int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const cha
 #endif
   //  return gavl_socket_address_set(a, hostname, port, socktype);
   }
+
+static int addr_match(struct ifaddrs * a, int flags)
+  {
+  if((a->ifa_flags & IFF_LOOPBACK) && !(flags & GAVL_NI_LOOPBACK))
+    return 0;
+
+  if(a->ifa_addr->sa_family == AF_INET)
+    {
+    if(flags & GAVL_NI_IPV4)
+      return 1;
+    else
+      return 0;
+    }
+  
+  else if(a->ifa_addr->sa_family == AF_INET6)
+    {
+    if(flags & GAVL_NI_IPV6)
+      return 1;
+    else
+      return 0;
+    }
+
+  return 0;
+  }
+
+gavl_socket_address_t ** gavl_get_network_interfaces(int flags)
+  {
+#ifdef HAVE_IFADDRS_H  
+
+  gavl_socket_address_t ** ret;
+  int num = 0;
+  int idx;
+  struct ifaddrs * ifap = NULL;
+  struct ifaddrs * addr;
+  if(getifaddrs(&ifap))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "getifaddrs failed: %s", strerror(errno));
+    return 0;
+    }
+
+  /* Count entries */
+  
+  addr = ifap;
+  while(addr)
+    {
+    if(addr_match(addr, flags))
+      num++;
+    addr = addr->ifa_next;
+    }
+
+  ret = calloc(num+1, sizeof(*ret));
+  idx = 0;
+  
+  addr = ifap;
+  while(addr)
+    {
+    if(addr_match(addr, flags))
+      {
+      ret[idx] = gavl_socket_address_create();
+      
+      if(addr->ifa_addr->sa_family == AF_INET6)
+        ret[idx]->len = sizeof(struct sockaddr_in6);
+      else if(addr->ifa_addr->sa_family == AF_INET)
+        ret[idx]->len = sizeof(struct sockaddr_in);
+      
+      memcpy(&ret[idx]->addr, addr->ifa_addr, ret[idx]->len);
+
+      //      gavl_socket_address_to_string(ret[idx], str);
+      //      fprintf(stderr, "Got network interface: %s\n", str);
+
+      idx++;
+      }
+    addr = addr->ifa_next;
+    }
+  
+  freeifaddrs(ifap);
+  return ret;
+#else
+  return NULL;
+#endif
+  }
+
+void gavl_socket_address_destroy_array(gavl_socket_address_t ** addr)
+  {
+  int idx = 0;
+
+  while(addr[idx])
+    gavl_socket_address_destroy(addr[idx++]);
+
+  free(addr);
+  
+  }
+
 
 int gavl_socket_get_address(int sock, gavl_socket_address_t * local,
                           gavl_socket_address_t * remote)
@@ -1323,16 +1417,39 @@ int gavl_udp_socket_connect(int fd, gavl_socket_address_t * dst)
   return 1;
   }
 
-int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
+int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * interface_addr)
+  {
+  if(interface_addr->addr.ss_family == AF_INET)
+    {
+    struct sockaddr_in * a = (struct sockaddr_in *)&interface_addr->addr;
+    
+    if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &a->sin_addr, sizeof(a->sin_addr)) < 0) 
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting multicast interface failed: %s", strerror(errno));
+      return 0;
+      }
+    else
+      return 1;
+    }
+  
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set multicast interface for this address family");
+  return 0;
+  
+  }
+
+int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
+                                     gavl_socket_address_t * interface_addr)
   {
   int reuse = 1;
   int ret;
   int err;
   uint8_t loop = 1;
   
+#ifndef __linux__
   gavl_socket_address_t bind_addr;
+#endif
   
-  if((ret = create_socket(addr->addr.ss_family, SOCK_DGRAM, 0)) < 0)
+  if((ret = create_socket(multicast_addr->addr.ss_family, SOCK_DGRAM, 0)) < 0)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create UDP multicast socket: %s", strerror(errno));
     return -1;
@@ -1348,13 +1465,17 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
 
   /* Bind to proper port */
   
-  memset(&bind_addr, 0, sizeof(bind_addr));
-  
-  gavl_socket_address_set(&bind_addr, "0.0.0.0",
-                        gavl_socket_address_get_port(addr), SOCK_DGRAM);
 
-  //  err = bind(ret, (struct sockaddr*)&addr->addr, addr->len);
+  /* On linux we bind to the multicast address (that's what minidlna does) */  
+#ifdef __linux__
+  err = bind(ret, (struct sockaddr*)&multicast_addr->addr, multicast_addr->len);
+#else
+  memset(&bind_addr, 0, sizeof(bind_addr));
+  gavl_socket_address_set(&bind_addr, "0.0.0.0",
+                          gavl_socket_address_get_port(addr), SOCK_DGRAM);
   err = bind(ret, (struct sockaddr*)&bind_addr.addr, bind_addr.len);
+#endif
+  //  err = bind(ret, (struct sockaddr*)&addr->addr, addr->len);
   
   if(err)
     {
@@ -1363,14 +1484,21 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr)
     return -1;
     }
   
-  if(addr->addr.ss_family == AF_INET)
+  if(multicast_addr->addr.ss_family == AF_INET)
     {
     struct ip_mreq req;
-    struct sockaddr_in * a = (struct sockaddr_in *)(&addr->addr);
+    struct sockaddr_in * a = (struct sockaddr_in *)&multicast_addr->addr;
     memset(&req, 0, sizeof(req));
     
     memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
-    req.imr_interface.s_addr = htonl(INADDR_ANY);
+
+    if(interface_addr)
+      {
+      a = (struct sockaddr_in *)&interface_addr->addr;
+      memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
+      }
+    else
+      req.imr_interface.s_addr = htonl(INADDR_ANY);
     
     if(setsockopt(ret, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
       {

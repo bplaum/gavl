@@ -73,6 +73,18 @@ char * gavl_socket_address_to_string(const gavl_socket_address_t * addr, char * 
 GAVL_PUBLIC
 int gavl_socket_address_from_string(gavl_socket_address_t * addr, const char * str1);
 
+#define GAVL_NI_LOOPBACK (1<<0) // Return loopback interfaces
+#define GAVL_NI_IPV4     (1<<1) // Return IPV4 capable interfaces
+#define GAVL_NI_IPV6     (1<<2) // Return IPV6 capable interfaces
+
+#define GAVL_NI_ALL      (~0)
+
+GAVL_PUBLIC
+gavl_socket_address_t ** gavl_get_network_interfaces(int flags);
+
+GAVL_PUBLIC
+void gavl_socket_address_destroy_array(gavl_socket_address_t ** addr);
+
 /* Reverse DNS */
 GAVL_PUBLIC
 char * gavl_socket_address_get_hostname(gavl_socket_address_t * addr);
@@ -161,7 +173,11 @@ GAVL_PUBLIC
 int gavl_udp_socket_connect(int fd, gavl_socket_address_t * dst);
 
 GAVL_PUBLIC
-int gavl_udp_socket_create_multicast(gavl_socket_address_t * addr);
+int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
+                                     gavl_socket_address_t * interface_addr);
+
+GAVL_PUBLIC
+int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * interface_addr);
 
 GAVL_PUBLIC
 int gavl_udp_socket_receive(int fd, uint8_t * data, int data_size,

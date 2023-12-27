@@ -81,13 +81,7 @@
  *
  *  arg0: Added ressource (dictionary)
  *
- *  Dictionary must contain a string GAVL_META_ID
- *  so we can delete it later on
  */
-
-#define GAVL_MSG_RESOURCE_ID_PREFIX_VOLUME   "volume:"
-#define GAVL_MSG_RESOURCE_ID_PREFIX_BACKEND  "backend:"
-#define GAVL_MSG_RESOURCE_ID_PREFIX_RECORDER "recorder:"
 
 #define GAVL_MSG_RESOURCE_ADDED    102
 
