@@ -547,6 +547,14 @@
 /* Remote media server */
 #define GAVL_META_MEDIA_CLASS_ROOT_SERVER        "container.root.server"
 
+/* Non-media source related media classes */
+
+#define GAVL_META_MEDIA_CLASS_BACKEND_RENDERER      "backend.renderer"
+#define GAVL_META_MEDIA_CLASS_BACKEND_SERVER        "backend.server"
+
+#define GAVL_META_MEDIA_CLASS_SINK_AUDIO            "sink.audio"
+#define GAVL_META_MEDIA_CLASS_SINK_VIDEO            "sink.video"
+
 /* GUI States */
 
 // Indicate, that an error occurrent during loading of a track
