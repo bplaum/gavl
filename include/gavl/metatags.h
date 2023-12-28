@@ -551,6 +551,7 @@
 
 #define GAVL_META_MEDIA_CLASS_BACKEND_RENDERER      "backend.renderer"
 #define GAVL_META_MEDIA_CLASS_BACKEND_SERVER        "backend.server"
+#define GAVL_META_MEDIA_CLASS_BACKEND_CONTROLPANEL  "backend.controlpanel"
 
 #define GAVL_META_MEDIA_CLASS_SINK_AUDIO            "sink.audio"
 #define GAVL_META_MEDIA_CLASS_SINK_VIDEO            "sink.video"
