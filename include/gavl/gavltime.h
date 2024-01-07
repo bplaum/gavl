@@ -213,6 +213,8 @@ int gavl_time_parse(const char * str, gavl_time_t * ret);
 GAVL_PUBLIC
 int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret);
 
+GAVL_PUBLIC
+gavl_time_t gavl_time_get_monotonic(void);
 
 /* Simple software timer */
 

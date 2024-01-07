@@ -700,6 +700,83 @@ gavl_socket_address_t ** gavl_get_network_interfaces(int flags)
 #endif
   }
 
+#ifdef HAVE_IFADDRS_H
+static struct ifaddrs * iface_by_address(struct ifaddrs * addr, const gavl_socket_address_t * a1)
+  {
+  int len = 0;
+  gavl_socket_address_t * a = gavl_socket_address_create();
+  gavl_socket_address_copy(a, a1);
+  gavl_socket_address_set_port(a, 0);
+
+  while(addr)
+    {
+    if(addr->ifa_addr->sa_family == AF_INET6)
+      len = sizeof(struct sockaddr_in6);
+    else if(addr->ifa_addr->sa_family == AF_INET)
+      len = sizeof(struct sockaddr_in);
+    
+    if((len == a->len) &&
+       !memcmp(&a->addr, addr->ifa_addr, a->len))
+      {
+      break;
+      }
+    addr = addr->ifa_next;
+    }
+  gavl_socket_address_destroy(a);
+  return addr;
+  }
+#endif
+
+char * gavl_interface_name_from_address(const gavl_socket_address_t * a)
+  {
+  char * ret = NULL;
+#ifdef HAVE_IFADDRS_H
+  struct ifaddrs * ifap = NULL;
+  struct ifaddrs * addr;
+  
+  if(getifaddrs(&ifap))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "getifaddrs failed: %s", strerror(errno));
+    goto fail;
+    }
+  
+  if((addr = iface_by_address(ifap, a)))
+    ret = gavl_strdup(addr->ifa_name);
+  
+  fail:
+  
+  freeifaddrs(ifap);
+  
+#endif
+  
+  return ret;
+  }
+
+int gavl_interface_index_from_address(const gavl_socket_address_t * a)
+  {
+  int ret = 0;
+#ifdef HAVE_IFADDRS_H
+  struct ifaddrs * ifap = NULL;
+  struct ifaddrs * addr;
+  
+  if(getifaddrs(&ifap))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "getifaddrs failed: %s", strerror(errno));
+    goto fail;
+    }
+  
+  if((addr = iface_by_address(ifap, a)))
+    ret = if_nametoindex(addr->ifa_name);
+  
+  fail:
+  
+  freeifaddrs(ifap);
+  
+#endif
+  
+  return ret;
+  }
+
 void gavl_socket_address_destroy_array(gavl_socket_address_t ** addr)
   {
   int idx = 0;
@@ -1579,4 +1656,9 @@ int gavl_socket_is_disconnected(int fd, int timeout)
     return 1;
   else
     return 0;
+  }
+
+int gavl_socket_address_get_address_family(gavl_socket_address_t * addr)
+  {
+  return addr->addr.ss_family;
   }

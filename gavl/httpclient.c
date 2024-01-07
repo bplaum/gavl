@@ -200,7 +200,7 @@ static int handle_remote_close(gavl_http_client_t * c)
       goto error;
     }
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Connection closed unexpectedly, re-opening");
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Connection closed unexpectedly, reopening");
   /* Re-connect */
   c->num_redirections = 0;
   c->num_reconnects++;
@@ -218,7 +218,11 @@ static int handle_remote_close(gavl_http_client_t * c)
   
   c->state = STATE_CONNECT;
   c->fd = gavl_socket_connect_inet(c->addr, 0);
-  
+  if(c->fd < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reopening failed: %d", c->state);
+    return -1;
+    }
   return 0;
   
   error:
@@ -659,6 +663,10 @@ static void close_func(void * priv)
 
   gavl_buffer_free(&c->header_buffer);
   gavl_buffer_free(&c->chunk_header_buffer);
+
+  if(c->timer)
+    gavl_timer_destroy(c->timer);
+  
   free(c);
   }
 
@@ -1507,10 +1515,24 @@ static int async_iteration(gavf_io_t * io, int timeout)
       path = gavl_strdup("/");
     
     if(!prepare_connection(io, host, port, protocol))
+      {
+      if(protocol)
+        free(protocol);
+      if(host)
+        free(host);
+      if(path)
+        free(path);
       return -1;
-    
+      }
     prepare_header(c, &c->req, host, port, path);
 
+    if(protocol)
+      free(protocol);
+    if(host)
+      free(host);
+    if(path)
+      free(path);
+    
     if(!c->io_int)
       {
       /* Resolve */
@@ -1546,6 +1568,8 @@ static int async_iteration(gavf_io_t * io, int timeout)
       {
       c->state = STATE_CONNECT;
       c->fd = gavl_socket_connect_inet(c->addr, 0);
+      if(c->fd < 0)
+        return -1;
       }
 
     c->flags |= FLAG_WAIT;
@@ -1554,12 +1578,17 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
   if(c->state == STATE_CONNECT)
     {
-    if(!gavl_socket_connect_inet_complete(c->fd, timeout))
+    result = gavl_socket_connect_inet_complete(c->fd, timeout);
+
+    if(!result)
       {
       //      fprintf(stderr, "Waiting for connection %d\n", timeout);
       c->flags |= FLAG_WAIT;
       return 0;
       }
+    else if(result < 0)
+      return result;
+    
     if(c->flags & FLAG_USE_PROXY_TUNNEL)
       {
       gavl_dictionary_t req;

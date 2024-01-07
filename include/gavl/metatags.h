@@ -556,9 +556,11 @@
 #define GAVL_META_MEDIA_CLASS_SINK_AUDIO            "sink.audio"
 #define GAVL_META_MEDIA_CLASS_SINK_VIDEO            "sink.video"
 
+#define GAVL_META_MEDIA_CLASS_WEBPAGE               "item.webpage"
+
 /* GUI States */
 
-// Indicate, that an error occurrent during loading of a track
+// Indicate, that an error occurred during loading of a track
 #define GAVL_META_GUI_ERROR          "GUIError" 
 
 // Track is selected in a GUI

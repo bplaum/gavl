@@ -85,9 +85,19 @@ gavl_socket_address_t ** gavl_get_network_interfaces(int flags);
 GAVL_PUBLIC
 void gavl_socket_address_destroy_array(gavl_socket_address_t ** addr);
 
+GAVL_PUBLIC
+char * gavl_interface_name_from_address(const gavl_socket_address_t * a1);
+
+GAVL_PUBLIC
+int gavl_interface_index_from_address(const gavl_socket_address_t * a1);
+
 /* Reverse DNS */
 GAVL_PUBLIC
 char * gavl_socket_address_get_hostname(gavl_socket_address_t * addr);
+
+/* Returns AF_* macros */
+GAVL_PUBLIC
+int gavl_socket_address_get_address_family(gavl_socket_address_t * addr);
 
 GAVL_PUBLIC
 gavl_socket_address_t ** gavl_lookup_hostname_full(const char * hostname, int socktype);

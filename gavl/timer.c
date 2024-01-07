@@ -51,6 +51,13 @@ static void get_time(gavl_time_t * ret)
   }
 #endif
 
+gavl_time_t gavl_time_get_monotonic(void)
+  {
+  gavl_time_t t;
+  get_time(&t);
+  return t;
+  }
+
 struct gavl_timer_s
   {
   int64_t start_time_real;
