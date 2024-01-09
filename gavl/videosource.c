@@ -320,13 +320,13 @@ static gavl_source_status_t read_frame_transfer(gavl_video_source_t * s,
       fprintf(stderr, "Frame transfer failed\n");
       ret = GAVL_SOURCE_EOF;
       }
-    }
 
-  if((tmp_frame->timestamp != GAVL_TIME_UNDEFINED) &&
-     (s->pts == GAVL_TIME_UNDEFINED))
-    s->pts = gavl_time_rescale(s->src_format.timescale,
-                               s->dst_format.timescale,
-                               tmp_frame->timestamp);
+    if((tmp_frame->timestamp != GAVL_TIME_UNDEFINED) &&
+       (s->pts == GAVL_TIME_UNDEFINED))
+      s->pts = gavl_time_rescale(s->src_format.timescale,
+                                 s->dst_format.timescale,
+                                 tmp_frame->timestamp);
+    }
   
   if(s->unlock_func)
     s->unlock_func(s->lock_priv);
