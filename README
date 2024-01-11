@@ -1,50 +1,39 @@
-This is gavl, a library for handling uncompressed audio- and video data.
+This is gavl, a common support library for other packages of the gmerlin project.
 
 Read the file INSTALL for detailed installation instructions.
 
-Gavl defines generic types for audio and video formats,
-which are applicable to a wide range of multimedia applications.
-In addition, it provides conversion functions from all possible formats
-to all other formats.
+The original purpose was to provide datastructures and routines for handling
+uncompressed audio- and video data. Over the years it became a central
+repository for code, which is shared by the gmerlin package and the
+gmerlin-avdecoder library. It's main purpose is to make the gmerlin-avdecoder
+library independent from the (huge) gmerlin package.
 
-If you want to write a multimedia application, gavl will help you a lot:
-You don't have to mess around with the large varieties of pixelformats,
-interleaving modes, audio sample formats and so on.
+In the future, more stuff might get moved from libgmerlin to libgavl.
 
-Current features:
+Below is (probably incomplete) list of contained modules:
 
-- Support for the following pixelformats:
-  15 bpp RGB, 15 bpp BGR, 16 bpp RGB, 16 bpp BGR, 24 bpp RGB, 24 bpp BGR
-  32 bpp RGB, 32 bpp BGR, 32 bpp RGBA, YUV 422 (YUY2), YUV 420 Planar,
-  YUV 422 Planar (mpeg and jpeg), YUV 444 Planar (mpeg and jpeg)
-  Conversions from all pixelformat to all others (NO multistep conversions,
-  each conversion has it's own function)
+- Handling of uncompressed audio and video data (gavl.h)
 
-- Audio samples can be 8 bit and 16 PCM (signed and unsigned),
-  32 bit signed and floating point.
+- Handling of compressed audio and video data (compression.h)
 
-- High quality samplerate conversion using the Secret Rabbit Code
+- Handling of A/V data stored in special ways for hardware accelleration (hw*.h)
 
-- Video frames will allocated with memory aligned scanlines for faster
-  processing.
+- Connectors (source and sink) for compressed and uncompressed A/V data. They
+  usually work in zero-copy mode but can also do implicit A/V conversions when
+  necessary (connectors.h)
+  
+- Polymorphic data containers with high-level types like arrays and dictionaries.
+  These are used throughout the whole gmerlin project for non A/V data like
+  metadata or configuration data (value.h).
+  Libgmerlin contains serialisations for xml and json so complex data structures
+  can be saved to or loaded from files in one function call.
+      
+- Generic socket support code (gavlsocket.h)
 
-See the header file include/gavl.h and the sample files
-src/colorspace_test.c and src/colorspace_time.c for
-information and how to use this thing.
+- An experimental A/V container format for internal usage, currently unused and
+  probably not functional (gavf/gavf.h)
 
-For testing the library, the src directory contains
-some test programs.
-
-colorspace_test:
-Makes your current directory full of pngs, one test file
-for each colorspace and one for each conversion.
-Ideally, all these pictures should look the same.
-
-colorspace_time:
-Makes all defined conversions 20 times and prints, how long
-it needed. Good for making C <-> MMX speed comparisons.
-
-Every programmer, who agrees to this kind of API is welcome to
-integrate gavl into his/her project so we can save some
-energy while writing/searching the best and fastest
-conversion routines.
+- A message structure used throughout the whole gmerlin project for
+  communication, both inside the applications and between them.
+  libgmerlin contains a serialization for json and a message queue for robust
+  inter-thread communicaiton.
