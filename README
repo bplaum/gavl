@@ -30,6 +30,13 @@ Below is (probably incomplete) list of contained modules:
       
 - Generic socket support code (gavlsocket.h)
 
+- An http-client with support for:
+  * Non-blocking I/O for background downloading without a separate thread
+  * Redirection
+  * https (via gnutls)
+  * Seeking
+  (httpclient.h)
+
 - An experimental A/V container format for internal usage, currently unused and
   probably not functional (gavf/gavf.h)
 
