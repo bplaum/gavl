@@ -8,6 +8,7 @@ audio.h \
 blend.h \
 bswap.h \
 colorspace.h \
+countrycodes.h \
 deinterlace.h \
 dsp.h \
 float_cast.h \

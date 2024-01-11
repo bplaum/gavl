@@ -1,4 +1,9 @@
 This is gavl, a common support library for other packages of the gmerlin project.
+It is developed in Linux (PC and Raspberry Pi 4).
+
+Porting it to non-linux platforms might cause major headaches. Since it's a
+one-man project, I gave up on not using the great Linux/glibc/gcc features only
+because other OSes (which I never use) don't have them.
 
 Read the file INSTALL for detailed installation instructions.
 
