@@ -43,7 +43,7 @@ Below is (probably incomplete) list of contained modules:
 - A message structure used throughout the whole gmerlin project for
   communication, both inside the applications and between them.
   libgmerlin contains a serialization for json and a message queue for robust
-  inter-thread communicaiton.
+  inter-thread communication.
 
 - Logging support (log.h)
 
