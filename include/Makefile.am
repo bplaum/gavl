@@ -15,8 +15,8 @@ float_cast.h \
 gavfprivate.h \
 gavlshm.h \
 hw_private.h \
-vaapi.h \
 interleave.h \
+language_table.h \
 macros.h \
 memalign.h \
 mix.h \
@@ -24,6 +24,7 @@ sampleformat.h \
 samplerate.h \
 scale.h \
 transform.h \
+vaapi.h \
 video.h \
 volume.h
 
