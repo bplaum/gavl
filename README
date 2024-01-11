@@ -1,13 +1,13 @@
 This is gavl, a common support library for other packages of the gmerlin project.
 It is developed in Linux (PC and Raspberry Pi 4).
 
-Porting it to non-linux platforms might cause major headaches. Since it's a
+Porting it to non-Linux platforms might cause major headaches. Since it's a
 one-man project, I gave up on not using the great Linux/glibc/gcc features only
 because other OSes (which I never use) don't have them.
 
 Read the file INSTALL for detailed installation instructions.
 
-The original purpose was to provide datastructures and routines for handling
+The original purpose was to provide data structures and routines for handling
 uncompressed audio- and video data. Over the years it became a central
 repository for code, which is shared by the gmerlin package and the
 gmerlin-avdecoder library. It's main purpose is to make the gmerlin-avdecoder
@@ -21,7 +21,7 @@ Below is (probably incomplete) list of contained modules:
 
 - Handling of compressed audio and video data (compression.h)
 
-- Handling of A/V data stored in special ways for hardware accelleration (hw*.h)
+- Handling of A/V data stored in special ways for hardware acceleration (hw*.h)
 
 - Connectors (source and sink) for compressed and uncompressed A/V data. They
   usually work in zero-copy mode but can also do implicit A/V conversions when
@@ -30,7 +30,7 @@ Below is (probably incomplete) list of contained modules:
 - Polymorphic data containers with high-level types like arrays and dictionaries.
   These are used throughout the whole gmerlin project for non A/V data like
   metadata or configuration data (value.h).
-  Libgmerlin contains serialisations for xml and json so complex data structures
+  Libgmerlin contains serializations for XML and JSON so complex data structures
   can be saved to or loaded from files in one function call.
       
 - Generic socket support code (gavlsocket.h)
@@ -47,9 +47,9 @@ Below is (probably incomplete) list of contained modules:
 
 - A message structure used throughout the whole gmerlin project for
   communication, both inside the applications and between them.
-  libgmerlin contains a serialization for json and a message queue for robust
+  libgmerlin contains a serialization for JSON and a message queue for robust
   inter-thread communication.
 
 - Logging support (log.h)
 
-- Lots of utility functios (util.h)
+- Lots of utility functions (util.h)
