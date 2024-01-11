@@ -44,3 +44,7 @@ Below is (probably incomplete) list of contained modules:
   communication, both inside the applications and between them.
   libgmerlin contains a serialization for json and a message queue for robust
   inter-thread communicaiton.
+
+- Logging support (log.h)
+
+- Lots of utility functios (util.h)
