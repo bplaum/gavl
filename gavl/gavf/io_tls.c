@@ -328,7 +328,7 @@ static int do_write(void * priv, const uint8_t * data, int len, int block)
       if(p->write_buffer.len == p->buffer_size)
         {
         if(!bytes_sent && !block)
-          fprintf(stderr, "write_nonblock retured 0 [1] buffer_size: %d wait_state: %d\n",
+          fprintf(stderr, "write_nonblock returned 0 [1] buffer_size: %d wait_state: %d\n",
                   p->buffer_size, p->wait_state);
         
         return bytes_sent;
@@ -348,7 +348,7 @@ static int do_write(void * priv, const uint8_t * data, int len, int block)
     bytes_sent += bytes_to_copy;
     }
   if(!bytes_sent && !block)
-    fprintf(stderr, "write_nonblock retured 0 [2]\n");
+    fprintf(stderr, "write_nonblock returned 0 [2]\n");
   return bytes_sent;
   }
 
