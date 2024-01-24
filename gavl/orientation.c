@@ -266,7 +266,7 @@ static scanline_func_t get_scanline_func(int bytes)
       return scanline_func_floatx4;
       break;
     }
-  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No scanline fuction for %d bytes found", bytes);
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No scanline function for %d bytes found", bytes);
   return NULL;
   }
   

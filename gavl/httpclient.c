@@ -1839,7 +1839,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     if(!c->res_body)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-               "BUG: Asyncronous reading requested but no buffer of the body given");
+               "BUG: Asynchronous reading requested but no buffer of the body given");
       return -1;
       }
     
