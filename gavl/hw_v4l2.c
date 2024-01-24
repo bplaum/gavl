@@ -1283,7 +1283,8 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
   gavl_v4l2_device_t * dev = priv;
   int flags;
   gavl_time_t pts = 0;
-
+  int events, revents = 0;
+  
   if(dev->capture.current_buf && (dev->capture.current_buf->flags & GAVL_V4L2_BUFFER_FLAG_VALID))
     {
     if(frame)
@@ -1296,6 +1297,17 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
   
   done_buffer_capture(dev);
 
+  events = POLLIN;
+
+  //  fprintf(stderr, "Poll...");
+  
+  if(!do_poll(dev, events, &revents) ||
+     !(revents & POLLIN))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no frame");
+    return GAVL_SOURCE_EOF;
+    }
+  
   if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, &flags, &pts) < 0))
     return GAVL_SOURCE_EOF;
   
@@ -1420,6 +1432,7 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
     
     }
 
+  dev->capture.vframe = gavl_video_frame_create(NULL);
   
   ret = 1;
   fail:
@@ -1444,7 +1457,8 @@ int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev)
     }
   else if(dev->vsrc_priv)
     {
-    read_frame_capture(dev, NULL);
+    if(!read_frame_capture(dev, NULL))
+      return 0;
     stats.pts_start = dev->capture.vframe->timestamp;
     }
   gavl_stream_set_stats(dev->s, &stats);  
