@@ -550,7 +550,7 @@
 /* Non-media source related media classes */
 
 #define GAVL_META_MEDIA_CLASS_BACKEND_RENDERER      "backend.renderer"
-#define GAVL_META_MEDIA_CLASS_BACKEND_SERVER        "backend.server"
+#define GAVL_META_MEDIA_CLASS_BACKEND_MDB           "backend.mdb"
 #define GAVL_META_MEDIA_CLASS_BACKEND_CONTROLPANEL  "backend.controlpanel"
 
 #define GAVL_META_MEDIA_CLASS_SINK_AUDIO            "sink.audio"
