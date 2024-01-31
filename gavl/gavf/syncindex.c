@@ -31,48 +31,48 @@ void gavf_sync_index_add(gavf_t * g, uint64_t pos)
   idx->num_entries++;
   }
 
-int gavf_sync_index_read(gavf_io_t * io, gavf_sync_index_t * idx)
+int gavf_sync_index_read(gavl_io_t * io, gavf_sync_index_t * idx)
   {
   uint64_t i;
   int j;
   
-  if(!gavf_io_read_uint64v(io, &idx->num_entries))
+  if(!gavl_io_read_uint64v(io, &idx->num_entries))
     return 0;
   idx->entries = malloc(idx->num_entries * sizeof(*idx->entries));
 
   for(i = 0; i < idx->num_entries; i++)
     {
-    if(!gavf_io_read_uint64v(io, &idx->entries[i].pos))
+    if(!gavl_io_read_uint64v(io, &idx->entries[i].pos))
       return 0;
     
     idx->entries[i].pts = malloc(idx->pts_len);
     for(j = 0; j < idx->num_streams; j++)
       {
-      if(!gavf_io_read_int64v(io, &idx->entries[i].pts[j]))
+      if(!gavl_io_read_int64v(io, &idx->entries[i].pts[j]))
         return 0;
       }
     }
   return 1;
   }
 
-int gavf_sync_index_write(gavf_io_t * io, const gavf_sync_index_t * idx)
+int gavf_sync_index_write(gavl_io_t * io, const gavf_sync_index_t * idx)
   {
   uint64_t i;
   int j;
 
-  if(gavf_io_write_data(io, (uint8_t*)GAVF_TAG_SYNC_INDEX, 8) < 8)
+  if(gavl_io_write_data(io, (uint8_t*)GAVF_TAG_SYNC_INDEX, 8) < 8)
     return 0;
   
-  if(!gavf_io_write_uint64v(io, idx->num_entries))
+  if(!gavl_io_write_uint64v(io, idx->num_entries))
     return 0;
 
   for(i = 0; i < idx->num_entries; i++)
     {
-    if(!gavf_io_write_uint64v(io, idx->entries[i].pos))
+    if(!gavl_io_write_uint64v(io, idx->entries[i].pos))
       return 0;
     for(j = 0; j < idx->num_streams; j++)
       {
-      if(!gavf_io_write_int64v(io, idx->entries[i].pts[j]))
+      if(!gavl_io_write_int64v(io, idx->entries[i].pts[j]))
         return 0;
       }
     }

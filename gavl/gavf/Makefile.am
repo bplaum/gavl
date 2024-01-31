@@ -10,13 +10,6 @@ footer.c        \
 gavfoptions.c   \
 gavi.c          \
 gavlstructs.c   \
-io.c            \
-io_buffer.c     \
-io_cipher.c     \
-io_mem.c        \
-io_socket.c     \
-io_stdio.c      \
-io_tls.c        \
 packetbuffer.c  \
 packetindex.c   \
 pconn.c

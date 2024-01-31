@@ -17,7 +17,7 @@ typedef void (*decrypt_block_func)(cipher_t*);
 
 struct cipher_s
   {
-  gavf_io_t * src;
+  gavl_io_t * src;
   void * ctx;
 
   uint8_t * next_buf_in;
@@ -55,11 +55,11 @@ static int next_block(cipher_t * c)
   
   if(!c->in_bufs)
     {
-    if(gavf_io_read_data(c->src, c->buf_in, c->cipher->block_size) < c->cipher->block_size)
+    if(gavl_io_read_data(c->src, c->buf_in, c->cipher->block_size) < c->cipher->block_size)
       {
-      if(gavf_io_got_eof(c->src))
+      if(gavl_io_got_eof(c->src))
         return 0;
-      else if(gavf_io_got_error(c->src))
+      else if(gavl_io_got_error(c->src))
         return -1;
       }
     c->in_bufs++;
@@ -67,11 +67,11 @@ static int next_block(cipher_t * c)
     }
   if(c->in_bufs == 1)
     {
-    if(gavf_io_read_data(c->src, c->next_buf_in, c->cipher->block_size) < c->cipher->block_size)
+    if(gavl_io_read_data(c->src, c->next_buf_in, c->cipher->block_size) < c->cipher->block_size)
       {
-      if(gavf_io_got_eof(c->src))
+      if(gavl_io_got_eof(c->src))
         c->last_block = 1;
-      else if(gavf_io_got_error(c->src))
+      else if(gavl_io_got_error(c->src))
         return -1;
       }
     else
@@ -212,11 +212,11 @@ static void close_cipher(void * priv)
   free(c);
   }
 
-gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
+gavl_io_t * gavl_io_create_cipher(gavl_cipher_algo_t algo,
                                   gavl_cipher_mode_t mode,
                                   gavl_cipher_padding_t padding, int wr)
   {
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   cipher_t * priv = calloc(1, sizeof(*priv));
 
   switch(algo)
@@ -248,7 +248,7 @@ gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
       break;
     }
 
-  ret = gavf_io_create(read_cipher,
+  ret = gavl_io_create(read_cipher,
                        NULL,
                        NULL,
                        close_cipher,
@@ -259,8 +259,8 @@ gavf_io_t * gavf_io_create_cipher(gavl_cipher_algo_t algo,
   return ret;
   }
 
-void gavf_io_cipher_init(gavf_io_t * io,
-                         gavf_io_t * src,
+void gavl_io_cipher_init(gavl_io_t * io,
+                         gavl_io_t * src,
                          const uint8_t * key,
                          const uint8_t * iv)
   {
@@ -273,12 +273,12 @@ void gavf_io_cipher_init(gavf_io_t * io,
   c->in_bufs = 0;
   c->last_block = 0;
   c->src = src;
-  gavf_io_clear_error(io);
-  gavf_io_clear_eof(io);
+  gavl_io_clear_error(io);
+  gavl_io_clear_eof(io);
   }
 
-void gavf_io_cipher_set_src(gavf_io_t * io,
-                            gavf_io_t * src)
+void gavl_io_cipher_set_src(gavl_io_t * io,
+                            gavl_io_t * src)
   {
   cipher_t * c = io->priv;
   c->src = src;

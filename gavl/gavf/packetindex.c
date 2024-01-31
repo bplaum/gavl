@@ -19,41 +19,41 @@ void gavf_packet_index_add(gavf_packet_index_t * idx,
   idx->num_entries++;
   }
 
-int gavf_packet_index_read(gavf_io_t * io, gavf_packet_index_t * idx)
+int gavf_packet_index_read(gavl_io_t * io, gavf_packet_index_t * idx)
   {
   uint64_t i;
 
-  if(!gavf_io_read_uint64v(io, &idx->num_entries))
+  if(!gavl_io_read_uint64v(io, &idx->num_entries))
     return 0;
 
   idx->entries = malloc(idx->num_entries * sizeof(*idx->entries));
   
   for(i = 0; i < idx->num_entries; i++)
     {
-    if(!gavf_io_read_uint32v(io, &idx->entries[i].id) ||
-       !gavf_io_read_uint32v(io, &idx->entries[i].flags) ||
-       !gavf_io_read_uint64v(io, &idx->entries[i].pos) ||
-       !gavf_io_read_int64v(io, &idx->entries[i].pts))
+    if(!gavl_io_read_uint32v(io, &idx->entries[i].id) ||
+       !gavl_io_read_uint32v(io, &idx->entries[i].flags) ||
+       !gavl_io_read_uint64v(io, &idx->entries[i].pos) ||
+       !gavl_io_read_int64v(io, &idx->entries[i].pts))
       return 0;
     }
   return 1;
   }
 
-int gavf_packet_index_write(gavf_io_t * io, const gavf_packet_index_t * idx)
+int gavf_packet_index_write(gavl_io_t * io, const gavf_packet_index_t * idx)
   {
   uint64_t i;
-  if(gavf_io_write_data(io, (uint8_t*)GAVF_TAG_PACKET_INDEX, 8) < 8)
+  if(gavl_io_write_data(io, (uint8_t*)GAVF_TAG_PACKET_INDEX, 8) < 8)
     return 0;
 
-  if(!gavf_io_write_uint64v(io, idx->num_entries))
+  if(!gavl_io_write_uint64v(io, idx->num_entries))
     return 0;
 
   for(i = 0; i < idx->num_entries; i++)
     {
-    if(!gavf_io_write_uint32v(io, idx->entries[i].id) ||
-       !gavf_io_write_uint32v(io, idx->entries[i].flags) ||
-       !gavf_io_write_uint64v(io, idx->entries[i].pos) ||
-       !gavf_io_write_int64v(io, idx->entries[i].pts))
+    if(!gavl_io_write_uint32v(io, idx->entries[i].id) ||
+       !gavl_io_write_uint32v(io, idx->entries[i].flags) ||
+       !gavl_io_write_uint64v(io, idx->entries[i].pos) ||
+       !gavl_io_write_int64v(io, idx->entries[i].pts))
       return 0;
     }
   return 1;

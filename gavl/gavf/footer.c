@@ -75,11 +75,11 @@ int gavf_footer_write(gavf_t * g)
   gavf_chunk_finish(g->io, &footer, 1);
   
   /* Write final tag */
-  if((gavf_io_write_data(g->io, (uint8_t*)GAVF_TAG_TAIL, 8) < 8) ||
-     !gavf_io_write_uint64f(g->io, footer.start))
+  if((gavl_io_write_data(g->io, (uint8_t*)GAVF_TAG_TAIL, 8) < 8) ||
+     !gavl_io_write_uint64f(g->io, footer.start))
     return 0;
 
-  if(!gavf_io_write_uint64f(g->io, gavf_io_position(g->io) + 8))
+  if(!gavl_io_write_uint64f(g->io, gavl_io_position(g->io) + 8))
     return 0;
   
   return 1;

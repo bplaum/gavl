@@ -426,11 +426,11 @@ static int poll_tls(void * priv, int timeout, int wr)
   
   }
 
-gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, int socket_flags)
+gavl_io_t * gavl_io_create_tls_client_async(int fd, const char * server_name, int socket_flags)
   {
   tls_t * p;
   //  int result;
-  gavf_io_t * io;
+  gavl_io_t * io;
   int flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
 
   tls_global_init();
@@ -463,7 +463,7 @@ gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, in
   //  gnutls_handshake_set_timeout(p->session,
   //                               GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
-  io = gavf_io_create(read_tls,
+  io = gavl_io_create(read_tls,
                       write_tls,
                       NULL,
                       close_tls,
@@ -471,14 +471,14 @@ gavf_io_t * gavf_io_create_tls_client_async(int fd, const char * server_name, in
                       flags,
                       p);
   
-  gavf_io_set_nonblock_read(io, read_nonblock_tls);
-  gavf_io_set_nonblock_write(io, write_nonblock_tls);
-  gavf_io_set_poll_func(io, poll_tls);
+  gavl_io_set_nonblock_read(io, read_nonblock_tls);
+  gavl_io_set_nonblock_write(io, write_nonblock_tls);
+  gavl_io_set_poll_func(io, poll_tls);
   
   return io;
   }
 
-int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout)
+int gavl_io_create_tls_client_async_done(gavl_io_t * io, int timeout)
   {
   int result;
   
@@ -488,7 +488,7 @@ int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout)
     {
     if(!do_wait(p, timeout))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavf_io_create_tls_client_async: Got timeout");
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_io_create_tls_client_async: Got timeout");
       return 0;
       }
     result = gnutls_handshake(p->session);
@@ -546,17 +546,17 @@ int gavf_io_create_tls_client_async_done(gavf_io_t * io, int timeout)
     }
   }
 
-gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int socket_flags)
+gavl_io_t * gavl_io_create_tls_client(int fd, const char * server_name, int socket_flags)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   int ret = 0;
   int result;
   
-  io = gavf_io_create_tls_client_async(fd, server_name, socket_flags);
+  io = gavl_io_create_tls_client_async(fd, server_name, socket_flags);
 
   while(1)
     {
-    result = gavf_io_create_tls_client_async_done(io, 3000);
+    result = gavl_io_create_tls_client_async_done(io, 3000);
 
     if(result == 1)
       break;
@@ -564,7 +564,7 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
       goto fail;
     else
       {
-      fprintf(stderr, "gavf_io_create_tls_client_async_done failed %d\n", result);
+      fprintf(stderr, "gavl_io_create_tls_client_async_done failed %d\n", result);
       goto fail;
       }
     }
@@ -573,7 +573,7 @@ gavf_io_t * gavf_io_create_tls_client(int fd, const char * server_name, int sock
   fail:
   if(!ret)
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     return NULL;
     }
   else

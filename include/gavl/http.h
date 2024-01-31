@@ -22,7 +22,7 @@
 /* Request */
 
 GAVL_PUBLIC
-int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf);
+int gavl_http_read_body(gavl_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf);
 
 GAVL_PUBLIC
 void gavl_http_request_init(gavl_dictionary_t * req,
@@ -31,20 +31,20 @@ void gavl_http_request_init(gavl_dictionary_t * req,
                             const char * protocol);
 
 GAVL_PUBLIC
-int gavl_http_request_read(gavf_io_t * io,
+int gavl_http_request_read(gavl_io_t * io,
                            gavl_dictionary_t * req);
 
 GAVL_PUBLIC
-int gavl_http_request_write(gavf_io_t * io,
+int gavl_http_request_write(gavl_io_t * io,
                             const gavl_dictionary_t * req);
 
 GAVL_PUBLIC
-int gavl_http_request_write_async(gavf_io_t * io,
+int gavl_http_request_write_async(gavl_io_t * io,
                                   const gavl_dictionary_t * req,
                                   gavl_buffer_t * buf);
 
 GAVL_PUBLIC
-int gavl_http_request_write_async_done(gavf_io_t * io,
+int gavl_http_request_write_async_done(gavl_io_t * io,
                                        gavl_buffer_t * buf, int timeout);
 
 
@@ -78,16 +78,16 @@ void gavl_http_response_init(gavl_dictionary_t * res,
 
 
 GAVL_PUBLIC
-int gavl_http_response_read(gavf_io_t * io,
+int gavl_http_response_read(gavl_io_t * io,
                             gavl_dictionary_t * res);
 
 GAVL_PUBLIC
-int gavl_http_response_read_async(gavf_io_t * io,
+int gavl_http_response_read_async(gavl_io_t * io,
                                   gavl_buffer_t * buf,
                                   gavl_dictionary_t * res, int timeout);
 
 GAVL_PUBLIC
-int gavl_http_response_write(gavf_io_t * io,
+int gavl_http_response_write(gavl_io_t * io,
                              const gavl_dictionary_t * res);
 
 
@@ -130,18 +130,18 @@ void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 /* http client */
 
 GAVL_PUBLIC
-gavf_io_t * gavl_http_client_create();
+gavl_io_t * gavl_http_client_create();
 
 GAVL_PUBLIC int
-gavl_http_client_read_body(gavf_io_t *,
+gavl_http_client_read_body(gavl_io_t *,
                            gavl_buffer_t * buf);
 
 /* Call before gavl_http_client_open() to specify a byte range */
 GAVL_PUBLIC void
-gavl_http_client_set_range(gavf_io_t * io, int64_t start, int64_t end);
+gavl_http_client_set_range(gavl_io_t * io, int64_t start, int64_t end);
 
 GAVL_PUBLIC
-int gavl_http_client_get_state(gavf_io_t * io);
+int gavl_http_client_get_state(gavl_io_t * io);
 
 /*
  *  Call before gavl_http_client_open() to specify extra header
@@ -149,46 +149,46 @@ int gavl_http_client_get_state(gavf_io_t * io);
  */
 
 GAVL_PUBLIC void
-gavl_http_client_set_req_vars(gavf_io_t * io,
+gavl_http_client_set_req_vars(gavl_io_t * io,
                               const gavl_dictionary_t * vars);
 
 /* Set request and response bodies */
 GAVL_PUBLIC void
-gavl_http_client_set_request_body(gavf_io_t * io,
+gavl_http_client_set_request_body(gavl_io_t * io,
                                   gavl_buffer_t * buf);
 
 GAVL_PUBLIC void
-gavl_http_client_set_response_body(gavf_io_t * io,
+gavl_http_client_set_response_body(gavl_io_t * io,
                                    gavl_buffer_t * buf);
 
 
 GAVL_PUBLIC const gavl_dictionary_t *
-gavl_http_client_get_response(gavf_io_t * io);
+gavl_http_client_get_response(gavl_io_t * io);
 
 /* Open a connection, send a request and read the response.
    Handles redirections (300 codes), proxies, https */
 
 GAVL_PUBLIC int
-gavl_http_client_open(gavf_io_t * io,
+gavl_http_client_open(gavl_io_t * io,
                       const char * method,
                       const char * uri1);
 
 GAVL_PUBLIC int
-gavl_http_client_can_pause(gavf_io_t * io);
+gavl_http_client_can_pause(gavl_io_t * io);
 
 GAVL_PUBLIC void
-gavl_http_client_pause(gavf_io_t * io);
+gavl_http_client_pause(gavl_io_t * io);
 
 GAVL_PUBLIC void
-gavl_http_client_resume(gavf_io_t * io);
+gavl_http_client_resume(gavl_io_t * io);
 
 /* Asynchronous operation */
 
 GAVL_PUBLIC int
-gavl_http_client_run_async(gavf_io_t * io, const char * method, const char * uri);
+gavl_http_client_run_async(gavl_io_t * io, const char * method, const char * uri);
 
 GAVL_PUBLIC int
-gavl_http_client_run_async_done(gavf_io_t * io, int timeout);
+gavl_http_client_run_async_done(gavl_io_t * io, int timeout);
 
 
 GAVL_PUBLIC

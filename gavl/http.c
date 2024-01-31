@@ -39,12 +39,12 @@ int gavl_http_parse_vars_line(gavl_dictionary_t * m, char * line)
   return 1;
   }
 
-static int read_vars(gavf_io_t * io, char ** line, int * line_alloc,
+static int read_vars(gavl_io_t * io, char ** line, int * line_alloc,
                      gavl_dictionary_t * m)
   {
   while(1)
     {
-    if(!gavf_io_read_line(io, line, line_alloc, 1024))
+    if(!gavl_io_read_line(io, line, line_alloc, 1024))
       return 0;
     
     //     fprintf(stderr, "Got line: %s\n", *line);
@@ -58,15 +58,15 @@ static int read_vars(gavf_io_t * io, char ** line, int * line_alloc,
   return 1;
   }
 
-static void put_string(gavf_io_t * io, const char * str)
+static void put_string(gavl_io_t * io, const char * str)
   {
-  gavf_io_write_data(io, (const uint8_t *)str, strlen(str));
+  gavl_io_write_data(io, (const uint8_t *)str, strlen(str));
   }
 
 static void write_vars_func(void * priv, const char * name, const gavl_value_t * val)
   {
   char * buf = NULL;
-  gavf_io_t * io;
+  gavl_io_t * io;
   io = priv;
 
   if(*name == '$')
@@ -113,7 +113,7 @@ static void write_vars_func(void * priv, const char * name, const gavl_value_t *
   
   }
 
-static void write_vars(gavf_io_t * io, const gavl_dictionary_t * m)
+static void write_vars(gavl_io_t * io, const gavl_dictionary_t * m)
   {
   gavl_dictionary_foreach(m, write_vars_func, io);
   }
@@ -159,14 +159,14 @@ static int parse_request_line(gavl_dictionary_t * req, char * line)
   return 1;
   }
 
-int gavl_http_request_read(gavf_io_t * io,
+int gavl_http_request_read(gavl_io_t * io,
                            gavl_dictionary_t * req)
   {
   int result = 0;
   char * line = NULL;
   int line_alloc = 0;
   
-  if(!gavf_io_read_line(io, &line, &line_alloc, 1024))
+  if(!gavl_io_read_line(io, &line, &line_alloc, 1024))
     goto fail;
 
   //  fprintf(stderr, "Got line: %s\n", line);
@@ -193,7 +193,7 @@ int gavl_http_request_read(gavf_io_t * io,
 
   }
 
-static int http_request_write(gavf_io_t * io,
+static int http_request_write(gavl_io_t * io,
                                    const gavl_dictionary_t * req)
   {
   const char * method;
@@ -214,27 +214,27 @@ static int http_request_write(gavf_io_t * io,
   
   write_vars(io, req);
   put_string(io, "\r\n");
-  gavf_io_flush(io);
+  gavl_io_flush(io);
   return 1;
   }
 
 
 char * gavl_http_request_to_string(const gavl_dictionary_t * req, int * lenp)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   uint8_t * buf;
   char * ret;
   int len;
   
-  io = gavf_io_create_mem_write();
+  io = gavl_io_create_mem_write();
 
   if(!http_request_write(io, req))
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     return NULL;
     }
   
-  buf = gavf_io_mem_get_buf(io, &len);
+  buf = gavl_io_mem_get_buf(io, &len);
   
   ret = malloc(len + 1);
   memcpy(ret, buf, len);
@@ -244,26 +244,26 @@ char * gavl_http_request_to_string(const gavl_dictionary_t * req, int * lenp)
     *lenp = len;
 
   free(buf);
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
   return ret;
   }
 
 int gavl_http_request_to_buffer(const gavl_dictionary_t * req, gavl_buffer_t * ret)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   uint8_t * buf;
   int len;
   
-  io = gavf_io_create_mem_write();
+  io = gavl_io_create_mem_write();
 
   if(!http_request_write(io, req))
     {
-    gavf_io_destroy(io);
+    gavl_io_destroy(io);
     return 0;
     }
   
-  buf = gavf_io_mem_get_buf(io, &len);
+  buf = gavl_io_mem_get_buf(io, &len);
 
   gavl_buffer_alloc(ret, len+1);
   memcpy(ret->buf, buf, len);
@@ -271,12 +271,12 @@ int gavl_http_request_to_buffer(const gavl_dictionary_t * req, gavl_buffer_t * r
   ret->len = len;
   
   free(buf);
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
   return 1;
   }
 
-int gavl_http_request_write(gavf_io_t * io,
+int gavl_http_request_write(gavl_io_t * io,
                             const gavl_dictionary_t * req)
   {
   char * buf;
@@ -286,7 +286,7 @@ int gavl_http_request_write(gavf_io_t * io,
   if(!(buf = gavl_http_request_to_string(req, &len)))
     return 0;
 
-  ret = gavf_io_write_data(io, (uint8_t*)buf, len);
+  ret = gavl_io_write_data(io, (uint8_t*)buf, len);
   
   free(buf);
   
@@ -352,7 +352,7 @@ void gavl_http_response_init(gavl_dictionary_t * res,
 
 #define BYTES_TO_READ 1024
 
-int gavl_http_response_read_async(gavf_io_t * io,
+int gavl_http_response_read_async(gavl_io_t * io,
                                   gavl_buffer_t * buf,
                                   gavl_dictionary_t * res, int timeout)
   {
@@ -362,7 +362,7 @@ int gavl_http_response_read_async(gavf_io_t * io,
   char * pos2;
   int result;
   int ret = -1;
-  if(!gavf_io_can_read(io, timeout))
+  if(!gavl_io_can_read(io, timeout))
     {
     if(timeout > 0)
       {
@@ -373,7 +373,7 @@ int gavl_http_response_read_async(gavf_io_t * io,
       return 0;
     }
   gavl_buffer_alloc(buf, buf->len + BYTES_TO_READ + 1);
-  result = gavf_io_read_data_nonblock(io, buf->buf + buf->len, BYTES_TO_READ);
+  result = gavl_io_read_data_nonblock(io, buf->buf + buf->len, BYTES_TO_READ);
 
 #if 1
   if(!result && (timeout > 0))
@@ -456,10 +456,10 @@ int gavl_http_response_read_async(gavf_io_t * io,
 
   if(buf->len > (pos - (char*)buf->buf))
     {
-    //    fprintf(stderr, "gavf_io_unread_data\n");
+    //    fprintf(stderr, "gavl_io_unread_data\n");
     //    gavl_hexdump((uint8_t*)pos, buf->len - (pos - (char*)buf->buf), 16);
     
-    gavf_io_unread_data(io, (uint8_t*)pos, buf->len - (pos - (char*)buf->buf));
+    gavl_io_unread_data(io, (uint8_t*)pos, buf->len - (pos - (char*)buf->buf));
     }
   
   ret = 1;
@@ -474,14 +474,14 @@ int gavl_http_response_read_async(gavf_io_t * io,
   }
 
 
-int gavl_http_response_read(gavf_io_t * io,
+int gavl_http_response_read(gavl_io_t * io,
                             gavl_dictionary_t * res)
   {
   int result = 0;
   char * line = NULL;
   int line_alloc = 0;
   
-  if(!gavf_io_read_line(io, &line, &line_alloc, 1024))
+  if(!gavl_io_read_line(io, &line, &line_alloc, 1024))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Reading http status line failed"); 
     goto fail;
@@ -505,7 +505,7 @@ int gavl_http_response_read(gavf_io_t * io,
   return result;
   }
 
-int gavl_http_response_write(gavf_io_t * io,
+int gavl_http_response_write(gavl_io_t * io,
                              const gavl_dictionary_t * res)
   {
   int status_int;
@@ -540,16 +540,16 @@ int gavl_http_response_write(gavf_io_t * io,
 
 char * gavl_http_response_to_string(const gavl_dictionary_t * res, int * lenp)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   uint8_t * buf;
   char * ret;
   int len;
   
-  io = gavf_io_create_mem_write();
+  io = gavl_io_create_mem_write();
 
   gavl_http_response_write(io, res);
   
-  buf = gavf_io_mem_get_buf(io, &len);
+  buf = gavl_io_mem_get_buf(io, &len);
   
   ret = malloc(len + 1);
   memcpy(ret, buf, len);
@@ -559,7 +559,7 @@ char * gavl_http_response_to_string(const gavl_dictionary_t * res, int * lenp)
     *lenp = len;
 
   free(buf);
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   
   return ret;
 
@@ -689,7 +689,7 @@ int gavl_http_request_from_string(gavl_dictionary_t * req, const char * buf)
   return result;
   }
 
-int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf)
+int gavl_http_read_body(gavl_io_t * io, const gavl_dictionary_t * res, gavl_buffer_t * buf)
   {
   char * length_str = NULL;
   int length_alloc = 0;
@@ -721,7 +721,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
     while(1)
       {
       /* Read length */
-      if(!gavf_io_read_line(io, &length_str,
+      if(!gavl_io_read_line(io, &length_str,
                             &length_alloc, 10000) ||
          (sscanf(length_str, "%x", &chunk_len) < 1))
         {
@@ -739,7 +739,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
 
         gavl_buffer_alloc(buf, buf->len + chunk_len + 1);
         
-        result = gavf_io_read_data(io, buf->buf + buf->len, chunk_len);
+        result = gavl_io_read_data(io, buf->buf + buf->len, chunk_len);
         
         if(result < chunk_len)
           {
@@ -751,7 +751,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
         }
         
       /* Read trailing \r\n */
-      if((gavf_io_read_data(io, crlf, 2) < 2) ||
+      if((gavl_io_read_data(io, crlf, 2) < 2) ||
          (crlf[0] != '\r') ||
          (crlf[1] != '\n'))
         goto fail;
@@ -774,7 +774,7 @@ int gavl_http_read_body(gavf_io_t * io, const gavl_dictionary_t * res, gavl_buff
 
     gavl_buffer_alloc(buf, buf->len+1);
     
-    result = gavf_io_read_data(io, buf->buf, buf->len);
+    result = gavl_io_read_data(io, buf->buf, buf->len);
     
     if(result < buf->len)
       {

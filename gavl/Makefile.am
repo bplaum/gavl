@@ -163,6 +163,13 @@ hw_shm.c \
 http.c \
 httpclient.c \
 interleave.c \
+io_buffer.c \
+io.c \
+io_cipher.c \
+io_mem.c \
+io_socket.c \
+io_stdio.c \
+io_tls.c \
 language.c \
 log.c \
 md5.c \

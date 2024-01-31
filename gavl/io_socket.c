@@ -28,7 +28,7 @@ typedef struct
 
   gavl_buffer_t buf;
 
-  gavf_io_t * io; // Parent
+  gavl_io_t * io; // Parent
   } socket_t;
 
 static void do_buffer(socket_t * s)
@@ -104,7 +104,7 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
       }
     else
       {
-      gavf_io_set_error(s->io);
+      gavl_io_set_error(s->io);
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got socket error: %d [%s]\n", err, strerror(err));
       }
     }
@@ -169,9 +169,9 @@ static int poll_socket(void * priv, int timeout, int wr)
     return gavl_fd_can_read(s->fd, timeout);
   }
 
-gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)
+gavl_io_t * gavl_io_create_socket(int fd, int read_timeout, int socket_flags)
   {
-  gavf_io_t * ret = NULL;
+  gavl_io_t * ret = NULL;
   int flags;
   socket_t * s = calloc(1, sizeof(*s));
 
@@ -188,23 +188,23 @@ gavf_io_t * gavf_io_create_socket(int fd, int read_timeout, int socket_flags)
   
   gavl_buffer_alloc(&s->buf, BUFFER_SIZE);
   
-  ret = gavf_io_create(read_socket, write_socket,
+  ret = gavl_io_create(read_socket, write_socket,
                        NULL, // seek
                        close_socket,
                        NULL, // flush
                        flags,
                        s);
 
-  gavf_io_set_poll_func(ret, poll_socket);
-  gavf_io_set_nonblock_read(ret, read_socket_nonblock);
-  gavf_io_set_nonblock_write(ret, write_socket_nonblock);
+  gavl_io_set_poll_func(ret, poll_socket);
+  gavl_io_set_nonblock_read(ret, read_socket_nonblock);
+  gavl_io_set_nonblock_write(ret, write_socket_nonblock);
   
   s->io = ret;
   return ret;
   }
 
-int gavf_io_get_socket(gavf_io_t * io)
+int gavl_io_get_socket(gavl_io_t * io)
   {
-  socket_t * s = gavf_io_get_priv(io);
+  socket_t * s = gavl_io_get_priv(io);
   return s->fd;
   }

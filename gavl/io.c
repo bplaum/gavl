@@ -15,7 +15,7 @@
 // #define DUMP_MSG_WRITE
 // #define DUMP_MSG_READ
 
-void gavf_io_init(gavf_io_t * ret,
+void gavl_io_init(gavl_io_t * ret,
                   gavf_read_func  r,
                   gavf_write_func w,
                   gavf_seek_func  s,
@@ -34,32 +34,32 @@ void gavf_io_init(gavf_io_t * ret,
   ret->flags = flags;
   }
 
-void gavf_io_set_nonblock_read(gavf_io_t * io, gavf_read_func read_nonblock)
+void gavl_io_set_nonblock_read(gavl_io_t * io, gavf_read_func read_nonblock)
   {
   io->read_func_nonblock = read_nonblock;
   }
 
-void gavf_io_set_nonblock_write(gavf_io_t * io, gavf_write_func write_nonblock)
+void gavl_io_set_nonblock_write(gavl_io_t * io, gavf_write_func write_nonblock)
   {
   io->write_func_nonblock = write_nonblock;
   }
 
-void * gavf_io_get_priv(gavf_io_t * io)
+void * gavl_io_get_priv(gavl_io_t * io)
   {
   return io->priv;
   }
 
-int gavf_io_can_seek(gavf_io_t * io)
+int gavl_io_can_seek(gavl_io_t * io)
   {
   return (io->seek_func && (io->flags & GAVF_IO_CAN_SEEK)) ? 1 : 0;
   }
 
-int gavf_io_can_read(gavf_io_t * io, int timeout)
+int gavl_io_can_read(gavl_io_t * io, int timeout)
   {
   if(io->get_buf.len > 0)
     return 1;
 
-  if(gavf_io_got_eof(io))
+  if(gavl_io_got_eof(io))
     return 1;
   
   if(io->poll_func)
@@ -68,7 +68,7 @@ int gavf_io_can_read(gavf_io_t * io, int timeout)
     return 1;
   }
 
-int gavf_io_can_write(gavf_io_t * io, int timeout)
+int gavl_io_can_write(gavl_io_t * io, int timeout)
   {
   if(io->poll_func)
     return io->poll_func(io->priv, timeout, 1);
@@ -78,7 +78,7 @@ int gavf_io_can_write(gavf_io_t * io, int timeout)
 
 
 
-gavf_io_t * gavf_io_create(gavf_read_func  r,
+gavl_io_t * gavl_io_create(gavf_read_func  r,
                            gavf_write_func w,
                            gavf_seek_func  s,
                            gavf_close_func c,
@@ -86,15 +86,15 @@ gavf_io_t * gavf_io_create(gavf_read_func  r,
                            int flags,
                            void * priv)
   {
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   ret = malloc(sizeof(*ret));
   if(!ret)
     return NULL;
-  gavf_io_init(ret, r, w, s, c, f, flags, priv);
+  gavl_io_init(ret, r, w, s, c, f, flags, priv);
   return ret;
   }
 
-void gavf_io_cleanup(gavf_io_t * io)
+void gavl_io_cleanup(gavl_io_t * io)
   {
   if(io->flush_func)
     io->flush_func(io->priv);
@@ -106,13 +106,13 @@ void gavf_io_cleanup(gavf_io_t * io)
   gavl_buffer_free(&io->get_buf);
   }
 
-void gavf_io_destroy(gavf_io_t * io)
+void gavl_io_destroy(gavl_io_t * io)
   {
-  gavf_io_cleanup(io);
+  gavl_io_cleanup(io);
   free(io);
   }
 
-void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
+void gavl_io_set_info(gavl_io_t * io, int64_t total_bytes,
                       const char * filename, const char * mimetype, int flags)
   {
   if(total_bytes > 0)
@@ -132,91 +132,91 @@ void gavf_io_set_info(gavf_io_t * io, int64_t total_bytes,
                          GAVF_IO_CAN_READ|
                          GAVF_IO_CAN_WRITE));
   
-  //  fprintf(stderr, "gavf_io_set_info %s\n", filename);
+  //  fprintf(stderr, "gavl_io_set_info %s\n", filename);
   
   }
 
-void gavf_io_set_poll_func(gavf_io_t * io, gavf_poll_func f)
+void gavl_io_set_poll_func(gavl_io_t * io, gavf_poll_func f)
   {
   io->poll_func = f;
   }
 
 
-int64_t gavf_io_total_bytes(gavf_io_t * io)
+int64_t gavl_io_total_bytes(gavl_io_t * io)
   {
   return io->total_bytes;
   }
 
-const char * gavf_io_filename(gavf_io_t * io)
+const char * gavl_io_filename(gavl_io_t * io)
   {
   return gavl_dictionary_get_string(&io->info, GAVL_META_URI);
   }
 
-const char * gavf_io_mimetype(gavf_io_t * io)
+const char * gavl_io_mimetype(gavl_io_t * io)
   {
   return gavl_dictionary_get_string(&io->info, GAVL_META_MIMETYPE);
   }
 
-gavl_dictionary_t * gavf_io_info(gavf_io_t * io)
+gavl_dictionary_t * gavl_io_info(gavl_io_t * io)
   {
   return &io->info;
   }
 
-int gavf_io_flush(gavf_io_t * io)
+int gavl_io_flush(gavl_io_t * io)
   {
   int ret = 1;
-  if(gavf_io_got_error(io))
+  if(gavl_io_got_error(io))
     return 0;
   
   if(io->flush_func)
     ret = io->flush_func(io->priv);
   if(!ret)
-    gavf_io_set_error(io);
+    gavl_io_set_error(io);
   return ret;
   }
 
-int gavf_io_got_error(gavf_io_t * io)
+int gavl_io_got_error(gavl_io_t * io)
   {
   return io->flags & GAVF_IO_ERROR;
   }
 
-int gavf_io_got_eof(gavf_io_t * io)
+int gavl_io_got_eof(gavl_io_t * io)
   {
   return io->flags & GAVF_IO_EOF;
   }
 
-void gavf_io_set_error(gavf_io_t * io)
+void gavl_io_set_error(gavl_io_t * io)
   {
   io->flags |= GAVF_IO_ERROR;
   }
 
-void gavf_io_clear_error(gavf_io_t * io)
+void gavl_io_clear_error(gavl_io_t * io)
   {
   io->flags &= ~GAVF_IO_ERROR;
   }
 
-void gavf_io_set_eof(gavf_io_t * io)
+void gavl_io_set_eof(gavl_io_t * io)
   {
   io->flags |= GAVF_IO_EOF;
   }
 
-void gavf_io_clear_eof(gavf_io_t * io)
+void gavl_io_clear_eof(gavl_io_t * io)
   {
   io->flags &= ~GAVF_IO_EOF;
   }
 
-int64_t gavf_io_position(gavf_io_t * io)
+int64_t gavl_io_position(gavl_io_t * io)
   {
   return io->position;
   }
 
-void gavf_io_reset_position(gavf_io_t * io)
+void gavl_io_reset_position(gavl_io_t * io)
   {
   io->position = 0;
   }
 
 
-static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
+static int io_read_data(gavl_io_t * io, uint8_t * buf, int len, int block)
   {
   int ret = 0;
   int result;
@@ -225,7 +225,7 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
   if(!io->read_func)
     return 0;
   
-  if(gavf_io_got_eof(io))
+  if(gavl_io_got_eof(io))
     return 0;
   
   if(io->get_buf.len > 0)
@@ -258,7 +258,7 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
     if(result < 0)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Read returned %d (block: %d)", result, block);
-      gavf_io_set_error(io);
+      gavl_io_set_error(io);
       }
     if(result > 0)
       {
@@ -268,20 +268,20 @@ static int io_read_data(gavf_io_t * io, uint8_t * buf, int len, int block)
     
     if(((io->total_bytes > 0) && (io->position == io->total_bytes)) ||
        (!result && block))
-      gavf_io_set_eof(io);
+      gavl_io_set_eof(io);
     }
   
   return ret;
   }
 
-int gavf_io_read_data(gavf_io_t * io, uint8_t * buf, int len)
+int gavl_io_read_data(gavl_io_t * io, uint8_t * buf, int len)
   {
   if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
     return 0;
   return io_read_data(io, buf, len, 1);
   }
 
-int gavf_io_read_data_nonblock(gavf_io_t * io, uint8_t * buf, int len)
+int gavl_io_read_data_nonblock(gavl_io_t * io, uint8_t * buf, int len)
   {
   if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
     return 0;
@@ -290,14 +290,14 @@ int gavf_io_read_data_nonblock(gavf_io_t * io, uint8_t * buf, int len)
 
 
 
-void gavf_io_unread_data(gavf_io_t * io, const uint8_t * buf, int len)
+void gavl_io_unread_data(gavl_io_t * io, const uint8_t * buf, int len)
   {
   gavl_buffer_prepend_data(&io->get_buf, buf, len);
   io->position -= len;
   }
 
 
-int gavf_io_get_data(gavf_io_t * io, uint8_t * buf, int len)
+int gavl_io_get_data(gavl_io_t * io, uint8_t * buf, int len)
   {
   int ret;
   if(!io->read_func)
@@ -324,10 +324,10 @@ int gavf_io_get_data(gavf_io_t * io, uint8_t * buf, int len)
   }
 
 
-int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
+int gavl_io_write_data(gavl_io_t * io, const uint8_t * buf, int len)
   {
   int ret;
-  if(gavf_io_got_error(io))
+  if(gavl_io_got_error(io))
     return -1;
 
   if(!io->write_func)
@@ -337,14 +337,14 @@ int gavf_io_write_data(gavf_io_t * io, const uint8_t * buf, int len)
     io->position += ret;
 
   if(ret < len)
-    gavf_io_set_error(io);
+    gavl_io_set_error(io);
   return ret;
   }
 
-int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len)
+int gavl_io_write_data_nonblock(gavl_io_t * io, const uint8_t * buf, int len)
   {
   int ret;
-  if(gavf_io_got_error(io))
+  if(gavl_io_got_error(io))
     return -1;
 
   if(io->write_func_nonblock)
@@ -357,7 +357,7 @@ int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len)
 #if 0
   if(!ret)
     {
-    fprintf(stderr, "gavf_io_write_data_nonblock: write returned null %p %p\n",
+    fprintf(stderr, "gavl_io_write_data_nonblock: write returned null %p %p\n",
             io->write_func_nonblock, io->write_func);
     } 
 #endif
@@ -370,7 +370,7 @@ int gavf_io_write_data_nonblock(gavf_io_t * io, const uint8_t * buf, int len)
 
 
 
-void gavf_io_skip(gavf_io_t * io, int bytes)
+void gavl_io_skip(gavl_io_t * io, int bytes)
   {
   if(io->get_buf.len > 0)
     {
@@ -397,14 +397,14 @@ void gavf_io_skip(gavf_io_t * io, int bytes)
     uint8_t c;
     for(i = 0; i < bytes; i++)
       {
-      if(gavf_io_read_data(io, &c, 1) < 1)
+      if(gavl_io_read_data(io, &c, 1) < 1)
         break;
       io->position++;
       }
     }
   }
 
-int64_t gavf_io_seek(gavf_io_t * io, int64_t pos, int whence)
+int64_t gavl_io_seek(gavl_io_t * io, int64_t pos, int whence)
   {
   if(!io->seek_func)
     return -1;
@@ -415,39 +415,39 @@ int64_t gavf_io_seek(gavf_io_t * io, int64_t pos, int whence)
 
 /* Fixed size integers (BE) */
 
-int gavf_io_write_uint64f(gavf_io_t * io, uint64_t num)
+int gavl_io_write_uint64f(gavl_io_t * io, uint64_t num)
  {
   uint8_t buf[8];
   GAVL_64BE_2_PTR(num, buf);
-  return (gavf_io_write_data(io, buf, 8) < 8) ? 0 : 1;
+  return (gavl_io_write_data(io, buf, 8) < 8) ? 0 : 1;
   }
 
-int gavf_io_read_uint64f(gavf_io_t * io, uint64_t * num)
+int gavl_io_read_uint64f(gavl_io_t * io, uint64_t * num)
   {
   uint8_t buf[8];
-  if(gavf_io_read_data(io, buf, 8) < 8)
+  if(gavl_io_read_data(io, buf, 8) < 8)
     return 0;
   *num = GAVL_PTR_2_64BE(buf);
   return 1;
   }
 
-int gavf_io_write_int64f(gavf_io_t * io, int64_t num)
+int gavl_io_write_int64f(gavl_io_t * io, int64_t num)
   {
   uint8_t buf[8];
   GAVL_64BE_2_PTR(num, buf);
-  return (gavf_io_write_data(io, buf, 8) < 8) ? 0 : 1;
+  return (gavl_io_write_data(io, buf, 8) < 8) ? 0 : 1;
   }
 
-int gavf_io_read_int64f(gavf_io_t * io, int64_t * num)
+int gavl_io_read_int64f(gavl_io_t * io, int64_t * num)
   {
   uint8_t buf[8];
-  if(gavf_io_read_data(io, buf, 8) < 8)
+  if(gavl_io_read_data(io, buf, 8) < 8)
     return 0;
   *num = GAVL_PTR_2_64BE(buf);
   return 1;
   }
 
-static int write_uint32f(gavf_io_t * io, uint32_t num)
+static int write_uint32f(gavl_io_t * io, uint32_t num)
   {
   uint8_t buf[4];
 
@@ -456,13 +456,13 @@ static int write_uint32f(gavf_io_t * io, uint32_t num)
   //  fprintf(stderr, "write_uint32f\n");
   //  gavl_hexdump(buf, 4, 4);
 
-  return (gavf_io_write_data(io, buf, 4) < 4) ? 0 : 1;
+  return (gavl_io_write_data(io, buf, 4) < 4) ? 0 : 1;
   }
 
-static int read_uint32f(gavf_io_t * io, uint32_t * num)
+static int read_uint32f(gavl_io_t * io, uint32_t * num)
   {
   uint8_t buf[4];
-  if(gavf_io_read_data(io, buf, 4) < 4)
+  if(gavl_io_read_data(io, buf, 4) < 4)
     return 0;
 
   //  fprintf(stderr, "read_uint32f\n");
@@ -562,7 +562,7 @@ static int get_len_read(uint8_t num)
   return 9;
   }
 
-static int write_uint64v(gavf_io_t * io, uint64_t num, int len)
+static int write_uint64v(gavl_io_t * io, uint64_t num, int len)
   {
   int idx;
   uint8_t buf[9];
@@ -582,15 +582,15 @@ static int write_uint64v(gavf_io_t * io, uint64_t num, int len)
   if(len < 8)
     buf[0] |= (num & (0xff >> len));
   
-  return (gavf_io_write_data(io, buf, len) < len) ? 0 : 1;
+  return (gavl_io_write_data(io, buf, len) < len) ? 0 : 1;
   }
 
-int gavf_io_write_uint64v(gavf_io_t * io, uint64_t num)
+int gavl_io_write_uint64v(gavl_io_t * io, uint64_t num)
   {
   return write_uint64v(io, num, get_len_uint(num));
   }
 
-int gavf_io_write_int64v(gavf_io_t * io, int64_t num)
+int gavl_io_write_int64v(gavl_io_t * io, int64_t num)
   {
   uint64_t num_u;
   int len = get_len_int(num);
@@ -602,19 +602,19 @@ int gavf_io_write_int64v(gavf_io_t * io, int64_t num)
   return write_uint64v(io, num_u, len);
   }
 
-static int read_uint64v(gavf_io_t * io, uint64_t * num, int * len)
+static int read_uint64v(gavl_io_t * io, uint64_t * num, int * len)
   {
   int i;
   int len1;
   uint8_t buf[9];
 
-  if(!gavf_io_read_data(io, buf, 1))
+  if(!gavl_io_read_data(io, buf, 1))
     return 0;
   len1 = get_len_read(buf[0]);
   
   if(len1 > 1)
     {
-    if(gavf_io_read_data(io, &buf[1], len1 - 1) < len1 - 1)
+    if(gavl_io_read_data(io, &buf[1], len1 - 1) < len1 - 1)
       return 0;
     }
   
@@ -630,7 +630,7 @@ static int read_uint64v(gavf_io_t * io, uint64_t * num, int * len)
   return 1;
   }
   
-int gavf_io_read_int64v(gavf_io_t * io, int64_t * num)
+int gavl_io_read_int64v(gavl_io_t * io, int64_t * num)
   {
   int len;
   if(!read_uint64v(io, (uint64_t*)num, &len))
@@ -645,35 +645,35 @@ int gavf_io_read_int64v(gavf_io_t * io, int64_t * num)
   }
 
 
-int gavf_io_read_uint64v(gavf_io_t * io, uint64_t * num)
+int gavl_io_read_uint64v(gavl_io_t * io, uint64_t * num)
   {
   return read_uint64v(io, num, NULL);
   }
 
-int gavf_io_write_uint32v(gavf_io_t * io, uint32_t num)
+int gavl_io_write_uint32v(gavl_io_t * io, uint32_t num)
   {
-  return gavf_io_write_uint64v(io, num);
+  return gavl_io_write_uint64v(io, num);
   }
 
-int gavf_io_read_uint32v(gavf_io_t * io, uint32_t * num)
+int gavl_io_read_uint32v(gavl_io_t * io, uint32_t * num)
   {
   uint64_t ret;
 
-  if(!gavf_io_read_uint64v(io, &ret))
+  if(!gavl_io_read_uint64v(io, &ret))
     return 0;
   *num = ret;
   return 1;
   }
 
-int gavf_io_write_int32v(gavf_io_t * io, int32_t num)
+int gavl_io_write_int32v(gavl_io_t * io, int32_t num)
   {
-  return gavf_io_write_int64v(io, num);
+  return gavl_io_write_int64v(io, num);
   }
 
-int gavf_io_read_int32v(gavf_io_t * io, int32_t * num)
+int gavl_io_read_int32v(gavl_io_t * io, int32_t * num)
   {
   int64_t ret = 0;
-  if(!gavf_io_read_int64v(io, &ret))
+  if(!gavl_io_read_int64v(io, &ret))
     return 0;
   *num = ret;
   return 1;
@@ -681,84 +681,84 @@ int gavf_io_read_int32v(gavf_io_t * io, int32_t * num)
 
 /* Fixed size LE/BE I/O */
 
-int gavf_io_read_8(gavf_io_t * ctx, uint8_t * ret)
+int gavl_io_read_8(gavl_io_t * ctx, uint8_t * ret)
   {
-  if(gavf_io_read_data(ctx, ret, 1) < 1)
+  if(gavl_io_read_data(ctx, ret, 1) < 1)
     return 0;
   return 1;
   }
 
-int gavf_io_read_16_le(gavf_io_t * ctx,uint16_t * ret)
+int gavl_io_read_16_le(gavl_io_t * ctx,uint16_t * ret)
   {
   uint8_t data[2];
-  if(gavf_io_read_data(ctx, data, 2) < 2)
+  if(gavl_io_read_data(ctx, data, 2) < 2)
     return 0;
   *ret = GAVL_PTR_2_16LE(data);
   
   return 1;
   }
 
-int gavf_io_read_32_le(gavf_io_t * ctx,uint32_t * ret)
+int gavl_io_read_32_le(gavl_io_t * ctx,uint32_t * ret)
   {
   uint8_t data[4];
-  if(gavf_io_read_data(ctx, data, 4) < 4)
+  if(gavl_io_read_data(ctx, data, 4) < 4)
     return 0;
   *ret = GAVL_PTR_2_32LE(data);
   return 1;
   }
 
-int gavf_io_read_24_le(gavf_io_t * ctx,uint32_t * ret)
+int gavl_io_read_24_le(gavl_io_t * ctx,uint32_t * ret)
   {
   uint8_t data[3];
-  if(gavf_io_read_data(ctx, data, 3) < 3)
+  if(gavl_io_read_data(ctx, data, 3) < 3)
     return 0;
   *ret = GAVL_PTR_2_24LE(data);
   return 1;
   }
 
-int gavf_io_read_64_le(gavf_io_t * ctx,uint64_t * ret)
+int gavl_io_read_64_le(gavl_io_t * ctx,uint64_t * ret)
   {
   uint8_t data[8];
-  if(gavf_io_read_data(ctx, data, 8) < 8)
+  if(gavl_io_read_data(ctx, data, 8) < 8)
     return 0;
   *ret = GAVL_PTR_2_64LE(data);
   return 1;
   }
 
-int gavf_io_read_16_be(gavf_io_t * ctx,uint16_t * ret)
+int gavl_io_read_16_be(gavl_io_t * ctx,uint16_t * ret)
   {
   uint8_t data[2];
-  if(gavf_io_read_data(ctx, data, 2) < 2)
+  if(gavl_io_read_data(ctx, data, 2) < 2)
     return 0;
 
   *ret = GAVL_PTR_2_16BE(data);
   return 1;
   }
 
-int gavf_io_read_24_be(gavf_io_t * ctx,uint32_t * ret)
+int gavl_io_read_24_be(gavl_io_t * ctx,uint32_t * ret)
   {
   uint8_t data[3];
-  if(gavf_io_read_data(ctx, data, 3) < 3)
+  if(gavl_io_read_data(ctx, data, 3) < 3)
     return 0;
   *ret = GAVL_PTR_2_24BE(data);
   return 1;
   }
 
 
-int gavf_io_read_32_be(gavf_io_t * ctx,uint32_t * ret)
+int gavl_io_read_32_be(gavl_io_t * ctx,uint32_t * ret)
   {
   uint8_t data[4];
-  if(gavf_io_read_data(ctx, data, 4) < 4)
+  if(gavl_io_read_data(ctx, data, 4) < 4)
     return 0;
 
   *ret = GAVL_PTR_2_32BE(data);
   return 1;
   }
     
-int gavf_io_read_64_be(gavf_io_t * ctx, uint64_t * ret)
+int gavl_io_read_64_be(gavl_io_t * ctx, uint64_t * ret)
   {
   uint8_t data[8];
-  if(gavf_io_read_data(ctx, data, 8) < 8)
+  if(gavl_io_read_data(ctx, data, 8) < 8)
     return 0;
   
   *ret = GAVL_PTR_2_64BE(data);
@@ -767,87 +767,87 @@ int gavf_io_read_64_be(gavf_io_t * ctx, uint64_t * ret)
 
 /* Write */
 
-int gavf_io_write_8(gavf_io_t * ctx, uint8_t val)
+int gavl_io_write_8(gavl_io_t * ctx, uint8_t val)
   {
-  if(gavf_io_write_data(ctx, &val, 1) < 1)
+  if(gavl_io_write_data(ctx, &val, 1) < 1)
     return 0;
   return 1;
   }
 
-int gavf_io_write_16_le(gavf_io_t * ctx, uint16_t val)
+int gavl_io_write_16_le(gavl_io_t * ctx, uint16_t val)
   {
   uint8_t data[2];
   GAVL_16LE_2_PTR(val, data);
 
-  if(gavf_io_write_data(ctx, data, 2) < 2)
+  if(gavl_io_write_data(ctx, data, 2) < 2)
     return 0;
 
   return 1;
   }
 
-int gavf_io_write_32_le(gavf_io_t * ctx,uint32_t val)
+int gavl_io_write_32_le(gavl_io_t * ctx,uint32_t val)
   {
   uint8_t data[4];
   GAVL_32LE_2_PTR(val, data);
 
 
-  if(gavf_io_write_data(ctx, data, 4) < 4)
+  if(gavl_io_write_data(ctx, data, 4) < 4)
     return 0;
   return 1;
   }
 
-int gavf_io_write_24_le(gavf_io_t * ctx,uint32_t val)
+int gavl_io_write_24_le(gavl_io_t * ctx,uint32_t val)
   {
   uint8_t data[3];
   GAVL_24LE_2_PTR(val, data);
 
-  if(gavf_io_write_data(ctx, data, 3) < 3)
+  if(gavl_io_write_data(ctx, data, 3) < 3)
     return 0;
   return 1;
   }
 
-int gavf_io_write_64_le(gavf_io_t * ctx,uint64_t val)
+int gavl_io_write_64_le(gavl_io_t * ctx,uint64_t val)
   {
   uint8_t data[8];
   GAVL_64LE_2_PTR(val, data);
-  if(gavf_io_write_data(ctx, data, 8) < 8)
+  if(gavl_io_write_data(ctx, data, 8) < 8)
     return 0;
   return 1;
   }
 
-int gavf_io_write_16_be(gavf_io_t * ctx,uint16_t val)
+int gavl_io_write_16_be(gavl_io_t * ctx,uint16_t val)
   {
   uint8_t data[2];
   GAVL_16BE_2_PTR(val, data);
-  if(gavf_io_write_data(ctx, data, 2) < 2)
+  if(gavl_io_write_data(ctx, data, 2) < 2)
     return 0;
   return 1;
   }
 
-int gavf_io_write_24_be(gavf_io_t * ctx,uint32_t val)
+int gavl_io_write_24_be(gavl_io_t * ctx,uint32_t val)
   {
   uint8_t data[3];
   GAVL_24BE_2_PTR(val, data);
-  if(gavf_io_write_data(ctx, data, 3) < 3)
+  if(gavl_io_write_data(ctx, data, 3) < 3)
     return 0;
   return 1;
   }
 
 
-int gavf_io_write_32_be(gavf_io_t * ctx,uint32_t val)
+int gavl_io_write_32_be(gavl_io_t * ctx,uint32_t val)
   {
   uint8_t data[4];
   GAVL_32BE_2_PTR(val, data);
-  if(gavf_io_write_data(ctx, data, 4) < 4)
+  if(gavl_io_write_data(ctx, data, 4) < 4)
     return 0;
   return 1;
   }
     
-int gavf_io_write_64_be(gavf_io_t * ctx, uint64_t val)
+int gavl_io_write_64_be(gavl_io_t * ctx, uint64_t val)
   {
   uint8_t data[8];
   GAVL_64BE_2_PTR(val, data);
-  if(gavf_io_write_data(ctx, data, 8) < 8)
+  if(gavl_io_write_data(ctx, data, 8) < 8)
     return 0;
   return 1;
   }
@@ -895,7 +895,7 @@ static uint64_t dbl2int(double f)
   return v.i;
   }
 
-int gavf_io_read_float(gavf_io_t * io, float * num)
+int gavl_io_read_float(gavl_io_t * io, float * num)
   {
   uint32_t val;
   if(!read_uint32f(io, &val))
@@ -904,33 +904,33 @@ int gavf_io_read_float(gavf_io_t * io, float * num)
   return 1;
   }
 
-int gavf_io_write_float(gavf_io_t * io, float num)
+int gavl_io_write_float(gavl_io_t * io, float num)
   {
   uint32_t val = flt2int(num);
   return write_uint32f(io, val);
   }
 
-int gavf_io_read_double(gavf_io_t * io, double * num)
+int gavl_io_read_double(gavl_io_t * io, double * num)
   {
   uint64_t val;
-  if(!gavf_io_read_uint64f(io, &val))
+  if(!gavl_io_read_uint64f(io, &val))
     return 0;
   *num = int2dbl(val);
   return 1;
   }
 
-int gavf_io_write_double(gavf_io_t * io, double num)
+int gavl_io_write_double(gavl_io_t * io, double num)
   {
   uint64_t val = dbl2int(num);
-  return gavf_io_write_uint64f(io, val);
+  return gavl_io_write_uint64f(io, val);
   }
 
 
-int gavf_io_read_string(gavf_io_t * io, char ** ret)
+int gavl_io_read_string(gavl_io_t * io, char ** ret)
   {
   uint32_t len = 0;
   
-  if(!gavf_io_read_uint32v(io, &len))
+  if(!gavl_io_read_uint32v(io, &len))
     return 0;
 
   if(!len)
@@ -942,7 +942,7 @@ int gavf_io_read_string(gavf_io_t * io, char ** ret)
     return 0;
 
   *ret = malloc(len + 1);
-  if(gavf_io_read_data(io, (uint8_t*)(*ret), len) < len)
+  if(gavl_io_read_data(io, (uint8_t*)(*ret), len) < len)
     return 0;
 
   /* Zero terminate */
@@ -950,25 +950,25 @@ int gavf_io_read_string(gavf_io_t * io, char ** ret)
   return 1;
   }
 
-int gavf_io_write_string(gavf_io_t * io, const char * str)
+int gavl_io_write_string(gavl_io_t * io, const char * str)
   {
   uint32_t len;
 
   if(!str)
-    return gavf_io_write_uint32v(io, 0);
+    return gavl_io_write_uint32v(io, 0);
   
   len = strlen(str);
-  if(!gavf_io_write_uint32v(io, len) ||
-     gavf_io_write_data(io, (const uint8_t*)str, len) < len)
+  if(!gavl_io_write_uint32v(io, len) ||
+     gavl_io_write_data(io, (const uint8_t*)str, len) < len)
     return 0;
   return 1;
   }
 
-int gavf_io_read_buffer(gavf_io_t * io, gavl_buffer_t * ret)
+int gavl_io_read_buffer(gavl_io_t * io, gavl_buffer_t * ret)
   {
   uint32_t len;
   
-  if(!gavf_io_read_uint32v(io, &len))
+  if(!gavl_io_read_uint32v(io, &len))
     return 0;
 
   if(!len)
@@ -977,16 +977,16 @@ int gavf_io_read_buffer(gavf_io_t * io, gavl_buffer_t * ret)
     gavl_buffer_init(ret);
     }
   else if(!gavl_buffer_alloc(ret, len) ||
-          (gavf_io_read_data(io, ret->buf, len) < len))
+          (gavl_io_read_data(io, ret->buf, len) < len))
     return 0;
   ret->len = len;
   return 1;
   }
 
-int gavf_io_write_buffer(gavf_io_t * io, const gavl_buffer_t * buf)
+int gavl_io_write_buffer(gavl_io_t * io, const gavl_buffer_t * buf)
   {
-  if(!gavf_io_write_uint32v(io, buf->len) ||
-     (gavf_io_write_data(io, buf->buf, buf->len) < buf->len))
+  if(!gavl_io_write_uint32v(io, buf->len) ||
+     (gavl_io_write_data(io, buf->buf, buf->len) < buf->len))
     return 0;
   return 1;
   }
@@ -996,7 +996,7 @@ int gavf_io_write_buffer(gavf_io_t * io, const gavl_buffer_t * buf)
 /* */
 
 
-int gavl_msg_read(gavl_msg_t * ret, gavf_io_t * io)
+int gavl_msg_read(gavl_msg_t * ret, gavl_io_t * io)
   {
   int i;
   
@@ -1012,7 +1012,7 @@ int gavl_msg_read(gavl_msg_t * ret, gavf_io_t * io)
   
   /* Number of arguments */
 
-  if(!gavf_io_read_int32v(io, &val_i))
+  if(!gavl_io_read_int32v(io, &val_i))
     return 0;
   
   ret->num_args = val_i;
@@ -1029,7 +1029,7 @@ int gavl_msg_read(gavl_msg_t * ret, gavf_io_t * io)
   return 1;
   }
 
-int gavl_msg_write(const gavl_msg_t * msg, gavf_io_t * io)
+int gavl_msg_write(const gavl_msg_t * msg, gavl_io_t * io)
   {
   int i;
 
@@ -1042,7 +1042,7 @@ int gavl_msg_write(const gavl_msg_t * msg, gavf_io_t * io)
   
   /* Number of arguments */
 
-  if(!gavf_io_write_int32v(io, msg->num_args))
+  if(!gavl_io_write_int32v(io, msg->num_args))
     return 0;
   
   /* Arguments */
@@ -1055,11 +1055,11 @@ int gavl_msg_write(const gavl_msg_t * msg, gavf_io_t * io)
 
 /* */
 
-int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
+int gavl_value_read(gavl_io_t * io, gavl_value_t * v)
   {
   gavl_type_t gavl_type;
 
-  if(!gavf_io_read_int32v(io, (int32_t*)&gavl_type))
+  if(!gavl_io_read_int32v(io, (int32_t*)&gavl_type))
     return 0;
 
   gavl_value_set_type(v, gavl_type);
@@ -1069,24 +1069,24 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
     case GAVL_TYPE_UNDEFINED:
       break;
     case GAVL_TYPE_INT:
-      if(!gavf_io_read_int32v(io, &v->v.i))
+      if(!gavl_io_read_int32v(io, &v->v.i))
         return 0;
       break;
     case GAVL_TYPE_LONG:
-      if(!gavf_io_read_int64v(io, &v->v.l))
+      if(!gavl_io_read_int64v(io, &v->v.l))
         return 0;
       break;
     case GAVL_TYPE_FLOAT:
-      if(!gavf_io_read_double(io, &v->v.d))
+      if(!gavl_io_read_double(io, &v->v.d))
         return 0;
       break;
     case GAVL_TYPE_STRING:
-      if(!gavf_io_read_string(io, &v->v.str))
+      if(!gavl_io_read_string(io, &v->v.str))
         return 0;
       break;
     case GAVL_TYPE_BINARY:
       {
-      if(!gavf_io_read_buffer(io, v->v.buffer))
+      if(!gavl_io_read_buffer(io, v->v.buffer))
         return 0;
       }
       break;
@@ -1098,7 +1098,7 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
 
       afmt = gavl_value_set_audio_format(v);
       
-      if(!gavf_io_read_buffer(io, &buf) ||
+      if(!gavl_io_read_buffer(io, &buf) ||
          !gavl_audio_format_from_buffer(buf.buf, buf.len, afmt))
         {
         gavl_buffer_free(&buf);
@@ -1114,7 +1114,7 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
       gavl_buffer_init(&buf);
       vfmt = gavl_value_set_video_format(v);
 
-      if(!gavf_io_read_buffer(io, &buf) ||
+      if(!gavl_io_read_buffer(io, &buf) ||
          !gavl_video_format_from_buffer(buf.buf, buf.len, vfmt))
         {
         gavl_buffer_free(&buf);
@@ -1124,21 +1124,21 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
-      if(!gavf_io_read_double(io, &v->v.color[0]) ||
-         !gavf_io_read_double(io, &v->v.color[1]) ||
-         !gavf_io_read_double(io, &v->v.color[2]))
+      if(!gavl_io_read_double(io, &v->v.color[0]) ||
+         !gavl_io_read_double(io, &v->v.color[1]) ||
+         !gavl_io_read_double(io, &v->v.color[2]))
         return 0;
       break;
     case GAVL_TYPE_COLOR_RGBA:
-      if(!gavf_io_read_double(io, &v->v.color[0]) ||
-         !gavf_io_read_double(io, &v->v.color[1]) ||
-         !gavf_io_read_double(io, &v->v.color[2]) ||
-         !gavf_io_read_double(io, &v->v.color[3]))
+      if(!gavl_io_read_double(io, &v->v.color[0]) ||
+         !gavl_io_read_double(io, &v->v.color[1]) ||
+         !gavl_io_read_double(io, &v->v.color[2]) ||
+         !gavl_io_read_double(io, &v->v.color[3]))
         return 0;
       break;
     case GAVL_TYPE_POSITION:
-      if(!gavf_io_read_double(io, &v->v.position[0]) ||
-         !gavf_io_read_double(io, &v->v.position[1]))
+      if(!gavl_io_read_double(io, &v->v.position[0]) ||
+         !gavl_io_read_double(io, &v->v.position[1]))
         return 0;
       break;
     case GAVL_TYPE_DICTIONARY:
@@ -1149,7 +1149,7 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
     case GAVL_TYPE_ARRAY:
       {
       int i;
-      if(!gavf_io_read_int32v(io, &v->v.array->num_entries))
+      if(!gavl_io_read_int32v(io, &v->v.array->num_entries))
         return 0;
 
       v->v.array->entries_alloc = v->v.array->num_entries;
@@ -1168,24 +1168,24 @@ int gavl_value_read(gavf_io_t * io, gavl_value_t * v)
   return 1;
   }
 
-int gavl_dictionary_write(gavf_io_t * io, const gavl_dictionary_t * dict)
+int gavl_dictionary_write(gavl_io_t * io, const gavl_dictionary_t * dict)
   {
   int i;
-  if(!gavf_io_write_int32v(io, dict->num_entries))
+  if(!gavl_io_write_int32v(io, dict->num_entries))
     return 0;
   for(i = 0; i < dict->num_entries; i++)
     {
-    if(!gavf_io_write_string(io, dict->entries[i].name) ||
+    if(!gavl_io_write_string(io, dict->entries[i].name) ||
        !gavl_value_write(io, &dict->entries[i].v))
       return 0;
     }
   return 1;
   }
 
-int gavl_dictionary_read(gavf_io_t * io, gavl_dictionary_t * dict)
+int gavl_dictionary_read(gavl_io_t * io, gavl_dictionary_t * dict)
   {
   int i;
-  if(!gavf_io_read_int32v(io, &dict->num_entries))
+  if(!gavl_io_read_int32v(io, &dict->num_entries))
     return 0;
   
   dict->entries_alloc = dict->num_entries;
@@ -1193,16 +1193,16 @@ int gavl_dictionary_read(gavf_io_t * io, gavl_dictionary_t * dict)
   
   for(i = 0; i < dict->num_entries; i++)
     {
-    if(!gavf_io_read_string(io, &dict->entries[i].name) ||
+    if(!gavl_io_read_string(io, &dict->entries[i].name) ||
        !gavl_value_read(io, &dict->entries[i].v))
       return 0;
     }
   return 1;
   }
 
-int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
+int gavl_value_write(gavl_io_t * io, const gavl_value_t * v)
   {
-  if(!gavf_io_write_int32v(io, v->type))
+  if(!gavl_io_write_int32v(io, v->type))
     return 0;
   
   switch(v->type)
@@ -1210,23 +1210,23 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
     case GAVL_TYPE_UNDEFINED:
       break;
     case GAVL_TYPE_INT:
-      if(!gavf_io_write_int32v(io, v->v.i))
+      if(!gavl_io_write_int32v(io, v->v.i))
         return 0;
       break;
     case GAVL_TYPE_LONG:
-      if(!gavf_io_write_int64v(io, v->v.l))
+      if(!gavl_io_write_int64v(io, v->v.l))
         return 0;
       break;
     case GAVL_TYPE_FLOAT:
-      if(!gavf_io_write_double(io, v->v.d))
+      if(!gavl_io_write_double(io, v->v.d))
         return 0;
       break;
     case GAVL_TYPE_STRING:
-      if(!gavf_io_write_string(io, v->v.str))
+      if(!gavl_io_write_string(io, v->v.str))
         return 0;
       break;
     case GAVL_TYPE_BINARY:
-      if(!gavf_io_write_buffer(io, v->v.buffer))
+      if(!gavl_io_write_buffer(io, v->v.buffer))
         return 0;
       break;
     case GAVL_TYPE_AUDIOFORMAT:
@@ -1235,7 +1235,7 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
       gavl_buffer_init(&buf);
       
       if(!(buf.buf = gavl_audio_format_to_buffer(&buf.len, v->v.audioformat)) ||
-         !gavf_io_write_buffer(io, &buf))
+         !gavl_io_write_buffer(io, &buf))
         {
         gavl_buffer_free(&buf);
         return 0;
@@ -1249,7 +1249,7 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
       gavl_buffer_init(&buf);
       
       if(!(buf.buf = gavl_video_format_to_buffer(&buf.len, v->v.videoformat)) ||
-         !gavf_io_write_buffer(io, &buf))
+         !gavl_io_write_buffer(io, &buf))
         {
         gavl_buffer_free(&buf);
         return 0;
@@ -1258,21 +1258,21 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
-      if(!gavf_io_write_double(io, v->v.color[0]) ||
-         !gavf_io_write_double(io, v->v.color[1]) ||
-         !gavf_io_write_double(io, v->v.color[2]))
+      if(!gavl_io_write_double(io, v->v.color[0]) ||
+         !gavl_io_write_double(io, v->v.color[1]) ||
+         !gavl_io_write_double(io, v->v.color[2]))
         return 0;
       break;
     case GAVL_TYPE_COLOR_RGBA:
-      if(!gavf_io_write_double(io, v->v.color[0]) ||
-         !gavf_io_write_double(io, v->v.color[1]) ||
-         !gavf_io_write_double(io, v->v.color[2]) ||
-         !gavf_io_write_double(io, v->v.color[3]))
+      if(!gavl_io_write_double(io, v->v.color[0]) ||
+         !gavl_io_write_double(io, v->v.color[1]) ||
+         !gavl_io_write_double(io, v->v.color[2]) ||
+         !gavl_io_write_double(io, v->v.color[3]))
         return 0;
       break;
     case GAVL_TYPE_POSITION:
-      if(!gavf_io_write_double(io, v->v.position[0]) ||
-         !gavf_io_write_double(io, v->v.position[1]))
+      if(!gavl_io_write_double(io, v->v.position[0]) ||
+         !gavl_io_write_double(io, v->v.position[1]))
         return 0;
       break;
     case GAVL_TYPE_DICTIONARY:
@@ -1282,7 +1282,7 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
     case GAVL_TYPE_ARRAY:
       {
       int i;
-      if(!gavf_io_write_int32v(io, v->v.array->num_entries))
+      if(!gavl_io_write_int32v(io, v->v.array->num_entries))
         return 0;
       for(i = 0; i < v->v.array->num_entries; i++)
         {
@@ -1298,22 +1298,22 @@ int gavl_value_write(gavf_io_t * io, const gavl_value_t * v)
 uint8_t * gavl_msg_to_buffer(int * len, const gavl_msg_t * msg)
   {
   uint8_t * ret;
-  gavf_io_t * io = gavf_io_create_mem_write();
+  gavl_io_t * io = gavl_io_create_mem_write();
   gavl_msg_write(msg, io);
-  ret = gavf_io_mem_get_buf(io, len);
-  gavf_io_destroy(io);
+  ret = gavl_io_mem_get_buf(io, len);
+  gavl_io_destroy(io);
   return ret;
   }
 
 int gavl_msg_from_buffer(const uint8_t * buf, int len, gavl_msg_t * msg)
   {
   int result;
-  gavf_io_t * io = gavf_io_create_mem_read(buf, len);
+  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
   result = gavl_msg_read(msg, io);
   
-  //  fprintf(stderr, "bg_msg_from_buffer: %"PRId64"/%d\n", gavf_io_position(io), len);
+  //  fprintf(stderr, "bg_msg_from_buffer: %"PRId64"/%d\n", gavl_io_position(io), len);
   
-  gavf_io_destroy(io);
+  gavl_io_destroy(io);
   return result;
   }
 
@@ -1335,7 +1335,7 @@ int gavf_packet_to_msg(const gavl_packet_t * src,
   }
 
 #if 0
-void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data)
+void gavl_io_set_msg_cb(gavl_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data)
   {
   io->msg_callback = msg_callback;
   io->msg_data = msg_data;
@@ -1346,7 +1346,7 @@ void gavf_io_set_msg_cb(gavf_io_t * io, gavl_handle_msg_func msg_callback, void 
 
 typedef struct
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   int64_t offset;
   int64_t size;
   int64_t pos;
@@ -1363,7 +1363,7 @@ static int read_sub(void * priv, uint8_t * data, int len)
   if(len < 0)
     return 0;
   
-  ret = gavf_io_read_data(s->io, data, len);
+  ret = gavl_io_read_data(s->io, data, len);
   s->pos += ret;
 
   return ret;
@@ -1391,7 +1391,7 @@ static int64_t seek_sub(void * priv, int64_t pos, int whence)
   if(s->pos > s->size)
     s->pos = s->size;
   
-  s->pos = gavf_io_seek(s->io, s->offset + s->pos, SEEK_SET) - s->offset;
+  s->pos = gavl_io_seek(s->io, s->offset + s->pos, SEEK_SET) - s->offset;
   return s->pos;
   }
 
@@ -1400,11 +1400,11 @@ static void close_sub(void * priv)
   free(priv);
   }
 
-gavf_io_t * gavf_io_create_sub_read(gavf_io_t * io, int64_t offset, int64_t len)
+gavl_io_t * gavl_io_create_sub_read(gavl_io_t * io, int64_t offset, int64_t len)
   {
   int64_t (*seek_func)(void * priv, int64_t pos, int whence);
   
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   sub_io_t * s = calloc(1, sizeof(*s));
 
   s->offset = offset;
@@ -1412,15 +1412,15 @@ gavf_io_t * gavf_io_create_sub_read(gavf_io_t * io, int64_t offset, int64_t len)
   s->io = io;
 
   
-  if(gavf_io_can_seek(io))
+  if(gavl_io_can_seek(io))
     {
-    gavf_io_seek(s->io, s->offset, SEEK_SET);
+    gavl_io_seek(s->io, s->offset, SEEK_SET);
     seek_func = seek_sub;
     }
   else
     seek_func = NULL;
 
-  ret = gavf_io_create(read_sub,
+  ret = gavl_io_create(read_sub,
                        NULL,
                        seek_func,
                        close_sub,
@@ -1435,7 +1435,7 @@ static int write_sub(void * priv, const uint8_t * data, int len)
   {
   int ret;
   sub_io_t * s = priv;
-  ret = gavf_io_write_data(s->io, data, len);
+  ret = gavl_io_write_data(s->io, data, len);
   s->pos += ret;
   return ret;
   }
@@ -1443,26 +1443,26 @@ static int write_sub(void * priv, const uint8_t * data, int len)
 static int flush_sub(void * priv)
   {
   sub_io_t * s = priv;
-  return gavf_io_flush(s->io);
+  return gavl_io_flush(s->io);
   }
 
-gavf_io_t * gavf_io_create_sub_write(gavf_io_t * io)
+gavl_io_t * gavl_io_create_sub_write(gavl_io_t * io)
   {
   int64_t (*seek_func)(void * priv, int64_t pos, int whence);
   
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   sub_io_t * s = calloc(1, sizeof(*s));
 
   s->offset = io->position;
   s->size = 0;
   s->io = io;
   
-  if(gavf_io_can_seek(io))
+  if(gavl_io_can_seek(io))
     seek_func = seek_sub;
   else
     seek_func = NULL;
 
-  ret = gavf_io_create(NULL,
+  ret = gavl_io_create(NULL,
                        write_sub,
                        seek_func,
                        close_sub,
@@ -1472,14 +1472,14 @@ gavf_io_t * gavf_io_create_sub_write(gavf_io_t * io)
   return ret;
   }
 
-int gavf_io_align_write(gavf_io_t * io)
+int gavl_io_align_write(gavl_io_t * io)
   {
   int rest;
   int64_t position;
   uint8_t buf[8] = { 0x00, 0x00, 0x00, 0x00, 
                      0x00, 0x00, 0x00, 0x00 };
   
-  position = gavf_io_position(io);
+  position = gavl_io_position(io);
 
   rest = position % 8;
   
@@ -1487,21 +1487,21 @@ int gavf_io_align_write(gavf_io_t * io)
     {
     rest = 8 - rest;
     
-    if(gavf_io_write_data(io, (const uint8_t*)buf, rest) < rest)
+    if(gavl_io_write_data(io, (const uint8_t*)buf, rest) < rest)
       return 0;
 
     }
-  gavf_io_flush(io);
+  gavl_io_flush(io);
   return 1;
   }
 
-int gavf_io_align_read(gavf_io_t * io)
+int gavl_io_align_read(gavl_io_t * io)
   {
   int rest;
   int64_t position;
   uint8_t buf[8];
   
-  position = gavf_io_position(io);
+  position = gavl_io_position(io);
 
   rest = position % 8;
   
@@ -1509,7 +1509,7 @@ int gavf_io_align_read(gavf_io_t * io)
     {
     rest = 8 - rest;
     
-    if(gavf_io_read_data(io, buf, rest) < rest)
+    if(gavl_io_read_data(io, buf, rest) < rest)
       return 0;
     }
   return 1;
@@ -1517,7 +1517,7 @@ int gavf_io_align_read(gavf_io_t * io)
 
 #define BYTES_TO_ALLOC 1024
 
-int gavf_io_read_line(gavf_io_t * io, char ** ret, int * ret_alloc, int max_len)
+int gavl_io_read_line(gavl_io_t * io, char ** ret, int * ret_alloc, int max_len)
   {
   char * pos;
   char c;
@@ -1533,7 +1533,7 @@ int gavf_io_read_line(gavf_io_t * io, char ** ret, int * ret_alloc, int max_len)
   while(1)
     {
     c = 0;
-    if(!gavf_io_read_data(io, (uint8_t*)(&c), 1))
+    if(!gavl_io_read_data(io, (uint8_t*)(&c), 1))
       {
       //  bg_log(BG_LOG_ERROR, LOG_DOMAIN, "Reading line failed: %s", strerror(errno));
 
@@ -1580,7 +1580,7 @@ int gavf_io_read_line(gavf_io_t * io, char ** ret, int * ret_alloc, int max_len)
 
   }
 
-int gavf_io_get_flags(gavf_io_t * io)
+int gavl_io_get_flags(gavl_io_t * io)
   {
   return io->flags;
   }

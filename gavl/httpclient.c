@@ -57,10 +57,10 @@
 
 typedef struct
   {
-  gavf_io_t * io_int;
-  gavf_io_t * io_proxy; // Plain http connection for sending the CONNECT request to a proxy
+  gavl_io_t * io_int;
+  gavl_io_t * io_proxy; // Plain http connection for sending the CONNECT request to a proxy
 
-  gavf_io_t * io; // External handle
+  gavl_io_t * io; // External handle
   
   char * host;
   char * protocol;
@@ -124,7 +124,7 @@ static gavl_array_t no_proxy;
 static int no_tunnel = 0;
 
 static int
-reopen(gavf_io_t * io);
+reopen(gavl_io_t * io);
 
 static void do_reset_connection(gavl_http_client_t * c)
   {
@@ -133,7 +133,7 @@ static void do_reset_connection(gavl_http_client_t * c)
 
   if(c->io_proxy)
     {
-    gavf_io_destroy(c->io_proxy);
+    gavl_io_destroy(c->io_proxy);
     c->io_proxy = NULL;
     }
 
@@ -147,8 +147,8 @@ static void do_reset_connection(gavl_http_client_t * c)
   c->state        = STATE_START;
   c->num_redirections = 0;
   
-  gavf_io_clear_eof(c->io);
-  gavf_io_clear_error(c->io);
+  gavl_io_clear_eof(c->io);
+  gavl_io_clear_error(c->io);
 
   c->flags &= ~(FLAG_KEEPALIVE|
                 FLAG_CHUNKED|
@@ -188,7 +188,7 @@ static int handle_remote_close(gavl_http_client_t * c)
       if(c->total_bytes <= 0)
         goto error;
       
-      if(gavf_io_can_seek(c->io))
+      if(gavl_io_can_seek(c->io))
         gavl_http_client_set_range(c->io, c->pos, -1);
       else
         {
@@ -207,12 +207,12 @@ static int handle_remote_close(gavl_http_client_t * c)
   
   if(c->io_int)
     {
-    gavf_io_destroy(c->io_int);
+    gavl_io_destroy(c->io_int);
     c->io_int = NULL;
     }
   if(c->io_proxy)
     {
-    gavf_io_destroy(c->io_proxy);
+    gavl_io_destroy(c->io_proxy);
     c->io_proxy = NULL;
     }
   
@@ -240,7 +240,7 @@ static void close_connection(gavl_http_client_t * c)
   
   if(c->io_int)
     {
-    gavf_io_destroy(c->io_int);
+    gavl_io_destroy(c->io_int);
     c->io_int = NULL;
     }
 
@@ -255,9 +255,9 @@ static void close_connection(gavl_http_client_t * c)
   c->num_reconnects = 0;
   }
 
-int gavl_http_client_get_state(gavf_io_t * io)
+int gavl_http_client_get_state(gavl_io_t * io)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   return c->state;
   }
 
@@ -336,7 +336,7 @@ static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
   
   while(1)
     {
-    if(!gavf_io_can_read(c->io_int, timeout))
+    if(!gavl_io_can_read(c->io_int, timeout))
       {
       if(!timeout)
         return 0;
@@ -348,7 +348,7 @@ static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
       }
     gavl_buffer_alloc(&c->chunk_header_buffer, c->chunk_header_buffer.len + CHUNK_HEADER_BYTES + 1);
     
-    result = gavf_io_read_data_nonblock(c->io_int, c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
+    result = gavl_io_read_data_nonblock(c->io_int, c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
                                         CHUNK_HEADER_BYTES);
       
     if(result <= 0)
@@ -383,7 +383,7 @@ static int read_chunk_header_async(gavl_http_client_t * c, int timeout)
     {
     //    fprintf(stderr, "Unreading data\n");
     //    gavl_hexdump((uint8_t*)pos, rest, 16);
-    gavf_io_unread_data(c->io_int, (uint8_t*)pos, rest);
+    gavl_io_unread_data(c->io_int, (uint8_t*)pos, rest);
     }
   gavl_buffer_reset(&c->chunk_header_buffer);
   
@@ -395,7 +395,7 @@ static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
   {
   int result;
   
-  if(!gavf_io_can_read(c->io_int, timeout))
+  if(!gavl_io_can_read(c->io_int, timeout))
     {
     if(!timeout)
       return 0;
@@ -405,7 +405,7 @@ static int read_chunk_tail_async(gavl_http_client_t * c, int timeout)
       return -1;
       }
     }
-  result = gavf_io_read_data_nonblock(c->io_int,
+  result = gavl_io_read_data_nonblock(c->io_int,
                                       c->chunk_header_buffer.buf + c->chunk_header_buffer.len,
                                       2 - c->chunk_header_buffer.len);
   
@@ -436,7 +436,7 @@ static int read_chunk_length(gavl_http_client_t * c)
   int length_alloc = 0;
   
   /* Read length */
-  if(!gavf_io_read_line(c->io_int, &length_str,
+  if(!gavl_io_read_line(c->io_int, &length_str,
                         &length_alloc, 10000) ||
      (sscanf(length_str, "%x", &c->chunk_length) < 1))
     {
@@ -457,7 +457,7 @@ static int read_chunk_tail(gavl_http_client_t * c)
   {
   uint8_t crlf[2];
   
-  if((gavf_io_read_data(c->io_int, crlf, 2) < 2) ||
+  if((gavl_io_read_data(c->io_int, crlf, 2) < 2) ||
      (crlf[0] != '\r') ||
      (crlf[1] != '\n'))
     return 0;
@@ -523,13 +523,13 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
         
         if(!block)
           {
-          result = gavf_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
+          result = gavl_io_read_data_nonblock(c->io_int, data + bytes_read, bytes_to_read);
           if(result < 0)
             return -1;
           }
         else
           {
-          result = gavf_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
+          result = gavl_io_read_data(c->io_int, data + bytes_read, bytes_to_read);
           if(result < bytes_to_read)
             return -1;
           }
@@ -559,13 +559,13 @@ static int read_normal(void * priv, uint8_t * data, int len, int block)
   
   if(len)
     {
-    if(!block && !gavf_io_can_read(c->io_int, 0))
+    if(!block && !gavl_io_can_read(c->io_int, 0))
       return 0;
 
     if(block)
-      result = gavf_io_read_data(c->io_int, data, len);
+      result = gavl_io_read_data(c->io_int, data, len);
     else
-      result = gavf_io_read_data_nonblock(c->io_int, data, len);
+      result = gavl_io_read_data_nonblock(c->io_int, data, len);
   
     if(result < 0)
       {
@@ -613,10 +613,10 @@ static int read_func(void * priv, uint8_t * data, int len)
   else
     result = read_normal(priv, data, len, 1);
 
-  if((result < len) && (gavf_io_got_error(c->io_int)))
+  if((result < len) && (gavl_io_got_error(c->io_int)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got read error");
-    gavf_io_set_error(c->io);
+    gavl_io_set_error(c->io);
     }
   return result;
   }
@@ -641,9 +641,9 @@ static int poll_func(void * priv, int timeout, int wr)
   gavl_http_client_t * c = priv;
 
   if(wr)
-    return c->io_int ? gavf_io_can_write(c->io_int, timeout) : 0;
+    return c->io_int ? gavl_io_can_write(c->io_int, timeout) : 0;
   else
-    return c->io_int ? gavf_io_can_read(c->io_int, timeout) : 0;
+    return c->io_int ? gavl_io_can_read(c->io_int, timeout) : 0;
   }
 
 static void close_func(void * priv)
@@ -709,7 +709,7 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
       {
       close_connection(c);
 
-      //      gavf_io_destroy(c->io_int);
+      //      gavl_io_destroy(c->io_int);
       //      c->io_int = NULL;
 
       //      fprintf(stderr, "reopen 1 %p\n", c->io_int);
@@ -727,16 +727,16 @@ static int64_t seek_http(void * priv, int64_t pos1, int whence)
   return pos;
   }
 
-gavf_io_t * gavl_http_client_create()
+gavl_io_t * gavl_http_client_create()
   {
   gavl_http_client_t * c;
-  gavf_io_t * ret;
+  gavl_io_t * ret;
   
   c = calloc(1, sizeof(*c));
   c->addr = gavl_socket_address_create();
 
   ret = 
-    gavf_io_create(read_func,
+    gavl_io_create(read_func,
                    write_func,
                    seek_http,
                    close_func,
@@ -746,8 +746,8 @@ gavf_io_t * gavl_http_client_create()
   
   c->io = ret;
   
-  gavf_io_set_poll_func(ret, poll_func);
-  gavf_io_set_nonblock_read(ret, read_nonblock_func);
+  gavl_io_set_poll_func(ret, poll_func);
+  gavl_io_set_nonblock_read(ret, read_nonblock_func);
   
   c->port         = -1;
   c->proxy_port   = -1;
@@ -755,7 +755,7 @@ gavf_io_t * gavl_http_client_create()
   return ret;
   }
 
-static int prepare_connection(gavf_io_t * io,
+static int prepare_connection(gavl_io_t * io,
                               const char * host,
                               int port,
                               const char * protocol)
@@ -772,14 +772,14 @@ static int prepare_connection(gavf_io_t * io,
   char * proxy_user = NULL;
   char * proxy_password = NULL;
   
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   /* Check if we close the old connection */
   
-  if(gavf_io_got_error(io))
+  if(gavl_io_got_error(io))
     {
     do_close = 1;
-    gavf_io_clear_error(io);
+    gavl_io_clear_error(io);
     }
   else if(c->io_int && !(c->flags & FLAG_KEEPALIVE))
     {
@@ -953,10 +953,10 @@ static int prepare_connection(gavf_io_t * io,
   
   }
 
-static void setup_connect_header(gavf_io_t * io, gavl_dictionary_t * ret)
+static void setup_connect_header(gavl_io_t * io, gavl_dictionary_t * ret)
   {
   char * dst_host;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   dst_host = gavl_sprintf("%s:%d", c->host, c->port);
         
@@ -1045,11 +1045,11 @@ static void prepare_header(gavl_http_client_t * c,
 #endif
   }
 
-static int handle_response(gavf_io_t * io)
+static int handle_response(gavl_io_t * io)
   {
   int ret = 0;
   int status;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   c->flags &= ~(FLAG_GOT_REDIRECTION|FLAG_RESPONSE_BODY_DONE);
   
@@ -1141,7 +1141,7 @@ static int handle_response(gavf_io_t * io)
 
       if(!strcmp(c->method, "GET") || !strcmp(c->method, "PUT"))
         {
-        gavf_io_set_info(io, c->total_bytes, c->uri,
+        gavl_io_set_info(io, c->total_bytes, c->uri,
                          gavl_dictionary_get_string_i(&c->resp, "Content-Type"),
                          flags);
         }
@@ -1185,7 +1185,7 @@ static int handle_response(gavf_io_t * io)
     c->real_uri = c->redirect_uri;
     c->flags |= FLAG_GOT_REDIRECTION;
     
-    gavl_dictionary_set_string(gavf_io_info(c->io), GAVL_META_REAL_URI, c->real_uri);
+    gavl_dictionary_set_string(gavl_io_info(c->io), GAVL_META_REAL_URI, c->real_uri);
 
     if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
       check_keepalive(c);
@@ -1219,43 +1219,43 @@ static int handle_response(gavf_io_t * io)
 
 
 void
-gavl_http_client_set_req_vars(gavf_io_t * io,
+gavl_http_client_set_req_vars(gavl_io_t * io,
                               const gavl_dictionary_t * vars)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   gavl_dictionary_reset(&c->vars);
   gavl_dictionary_copy(&c->vars, vars);
   }
 
 void
-gavl_http_client_set_request_body(gavf_io_t * io,
+gavl_http_client_set_request_body(gavl_io_t * io,
                                   gavl_buffer_t * buf)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   c->req_body = buf;
   }
 
 void
-gavl_http_client_set_response_body(gavf_io_t * io,
+gavl_http_client_set_response_body(gavl_io_t * io,
                                    gavl_buffer_t * buf)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   c->res_body = buf;
   }
 
 const gavl_dictionary_t *
-gavl_http_client_get_response(gavf_io_t * io)
+gavl_http_client_get_response(gavl_io_t * io)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   return &c->resp;
   }
 
 static int
-reopen(gavf_io_t * io)
+reopen(gavl_io_t * io)
   {
   int result;
 
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   c->real_uri = c->uri;
   
@@ -1274,18 +1274,18 @@ reopen(gavf_io_t * io)
 
 
 int
-gavl_http_client_open(gavf_io_t * io,
+gavl_http_client_open(gavl_io_t * io,
                       const char * method,
                       const char * uri1)
   {
   int result;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   c->flags &= ~FLAG_GOT_REDIRECTION;
   c->num_redirections = 0;
 
-  gavf_io_clear_eof(io);
-  gavf_io_clear_error(io);
+  gavl_io_clear_eof(io);
+  gavl_io_clear_error(io);
   
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
@@ -1301,12 +1301,12 @@ gavl_http_client_open(gavf_io_t * io,
   }
 
 int
-gavl_http_client_read_body(gavf_io_t * io,
+gavl_http_client_read_body(gavl_io_t * io,
                            gavl_buffer_t * buf)
   {
   int ret = 0;
   int bytes_read;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
   
   if(c->flags & FLAG_CHUNKED)
     {
@@ -1318,7 +1318,7 @@ gavl_http_client_read_body(gavf_io_t * io,
         {
         gavl_buffer_alloc(buf, buf->len + c->chunk_length + 1);
 
-        bytes_read = gavf_io_read_data(c->io_int, buf->buf + buf->len, 
+        bytes_read = gavl_io_read_data(c->io_int, buf->buf + buf->len, 
                                        c->chunk_length);
 
         if(bytes_read < c->chunk_length)
@@ -1340,7 +1340,7 @@ gavl_http_client_read_body(gavf_io_t * io,
   else if(c->total_bytes > 0)
     {
     gavl_buffer_alloc(buf, buf->len + c->total_bytes + 1);
-    bytes_read = gavf_io_read_data(c->io_int, buf->buf + buf->len, 
+    bytes_read = gavl_io_read_data(c->io_int, buf->buf + buf->len, 
                                    c->total_bytes);
     if(bytes_read < c->total_bytes)
       {
@@ -1365,42 +1365,42 @@ gavl_http_client_read_body(gavf_io_t * io,
   
   if(!ret)
     {
-    gavf_io_set_error(io);
+    gavl_io_set_error(io);
     }
   
   return ret;
   }
 
 void
-gavl_http_client_set_range(gavf_io_t * io, int64_t start, int64_t end)
+gavl_http_client_set_range(gavl_io_t * io, int64_t start, int64_t end)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   c->range_start = start;
   c->range_end   = end;
   
   }
 
-int gavl_http_client_can_pause(gavf_io_t * io)
+int gavl_http_client_can_pause(gavl_io_t * io)
   {
-  return gavf_io_can_seek(io);
+  return gavl_io_can_seek(io);
   }
 
-void gavl_http_client_pause(gavf_io_t * io)
+void gavl_http_client_pause(gavl_io_t * io)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   //  fprintf(stderr, "gavl_http_client_pause %"PRId64"\n", c->position);
 
   close_connection(c);
   
-  //  gavf_io_destroy(c->io_int);
+  //  gavl_io_destroy(c->io_int);
   //  c->io_int = NULL;
   }
 
-void gavl_http_client_resume(gavf_io_t * io)
+void gavl_http_client_resume(gavl_io_t * io)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   fprintf(stderr, "gavl_http_client_resume %d\n", c->state);
 
@@ -1420,18 +1420,18 @@ void gavl_http_client_resume(gavf_io_t * io)
 /* Asynchronous states */
 
 
-static int send_buffer_async(gavf_io_t * io,
+static int send_buffer_async(gavl_io_t * io,
                              gavl_buffer_t * buf, int timeout)
   {
   int result;
 
   //  fprintf(stderr, "send_buffer_async 1  %d\n", timeout);
   
-  if((timeout > 0) && !gavf_io_can_write(io, timeout))
+  if((timeout > 0) && !gavl_io_can_write(io, timeout))
     return 0;
   
   //  fprintf(stderr, "send_buffer_async 2 %d\n", buf->len - buf->pos);
-  result = gavf_io_write_data_nonblock(io, buf->buf + buf->pos, buf->len - buf->pos);
+  result = gavl_io_write_data_nonblock(io, buf->buf + buf->pos, buf->len - buf->pos);
   
   if(result <= 0)
     {
@@ -1450,11 +1450,11 @@ static int send_buffer_async(gavf_io_t * io,
   return 0;
   }
 
-int gavl_http_client_run_async(gavf_io_t * io,
+int gavl_http_client_run_async(gavl_io_t * io,
                                const char * method,
                                const char * uri)
   {
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   /* Clear earlier redirections */
   c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
@@ -1481,10 +1481,10 @@ int gavl_http_client_run_async(gavf_io_t * io,
   return 1;
   }
 
-static int async_iteration(gavf_io_t * io, int timeout)
+static int async_iteration(gavl_io_t * io, int timeout)
   {
   int result;
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   c->flags &= ~FLAG_WAIT;
   
@@ -1594,7 +1594,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
       gavl_dictionary_t req;
       gavl_dictionary_init(&req);
 
-      c->io_proxy = gavf_io_create_socket(c->fd, 5000, 0);
+      c->io_proxy = gavl_io_create_socket(c->fd, 5000, 0);
       
       setup_connect_header(io, &req);
 
@@ -1615,12 +1615,12 @@ static int async_iteration(gavf_io_t * io, int timeout)
 
       if(c->flags & FLAG_USE_TLS)
         {
-        c->io_int = gavf_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+        c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
         c->state = STATE_TLS_HANDSHAKE;
         }
       else
         {
-        c->io_int = gavf_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE);
+        c->io_int = gavl_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE);
         c->state = STATE_SEND_REQUEST;
         }
       c->fd = -1;
@@ -1659,7 +1659,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     if(result <= 0)
       return result;
 
-    gavf_io_destroy(c->io_proxy);
+    gavl_io_destroy(c->io_proxy);
     c->io_proxy = NULL;
 
 #ifdef DUMP_HEADERS
@@ -1678,7 +1678,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
       return -1;
       }
     
-    c->io_int = gavf_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+    c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
     c->state = STATE_TLS_HANDSHAKE;
     
     c->fd = -1;
@@ -1689,7 +1689,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
   
   if(c->state == STATE_TLS_HANDSHAKE)
     {
-    result = gavf_io_create_tls_client_async_done(c->io_int, timeout);
+    result = gavl_io_create_tls_client_async_done(c->io_int, timeout);
 
     if(!result)
       c->flags |= FLAG_WAIT;
@@ -1826,7 +1826,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
         }
       }
 
-    /* Body will be read with gavf_io_read_data() or gavf_io_read_data_nonblock() */
+    /* Body will be read with gavl_io_read_data() or gavl_io_read_data_nonblock() */
     if(!c->res_body)
       return (c->flags & FLAG_ERROR) ? -1 : 1;
     
@@ -1845,7 +1845,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     
     if(timeout >= 0)
       {
-      if(!gavf_io_can_read(c->io_int, timeout))
+      if(!gavl_io_can_read(c->io_int, timeout))
         {
         if(!timeout)
           {
@@ -1860,7 +1860,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
         }
       }
     
-    result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
+    result = gavl_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
                                         c->total_bytes - c->res_body->len);
 
     // fprintf(stderr, "Got result: %d %"PRId64" %d (timeout: %d)\n", result, c->total_bytes, c->res_body->len, timeout);
@@ -1916,7 +1916,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     {
     int tries = 0;
     
-    if(!gavf_io_can_read(c->io_int, timeout))
+    if(!gavl_io_can_read(c->io_int, timeout))
       {
       if(!timeout)
         {
@@ -1932,7 +1932,7 @@ static int async_iteration(gavf_io_t * io, int timeout)
     
     while(1)
       {
-      result = gavf_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
+      result = gavl_io_read_data_nonblock(c->io_int, c->res_body->buf + c->res_body->len,
                                           c->chunk_length - c->pos);
 
       //      fprintf(stderr, "Read chunk %d %"PRId64" %"PRId64" %d\n",
@@ -1996,13 +1996,13 @@ static int async_iteration(gavf_io_t * io, int timeout)
   return -1;
   }
 
-int gavl_http_client_run_async_done(gavf_io_t * io, int timeout)
+int gavl_http_client_run_async_done(gavl_io_t * io, int timeout)
   {
   int result;
   gavl_time_t timeout_remaining = 0;
   gavl_time_t time_cur;
   
-  gavl_http_client_t * c = gavf_io_get_priv(io);
+  gavl_http_client_t * c = gavl_io_get_priv(io);
 
   //  fprintf(stderr, "gavl_http_client_run_async_done %d\n", c->state);
   

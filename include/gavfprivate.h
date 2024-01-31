@@ -35,7 +35,7 @@ struct gavl_io_s
   int flags;
   };
 
-void gavf_io_init(gavf_io_t * ret,
+void gavl_io_init(gavl_io_t * ret,
                   gavf_read_func  r,
                   gavf_write_func w,
                   gavf_seek_func  s,
@@ -46,13 +46,13 @@ void gavf_io_init(gavf_io_t * ret,
 
 
 
-void gavf_io_skip(gavf_io_t * io, int bytes);
+void gavl_io_skip(gavl_io_t * io, int bytes);
 
-void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf);
-void gavf_io_init_buf_write(gavf_io_t * io, gavl_buffer_t * buf);
+void gavl_io_init_buf_read(gavl_io_t * io, gavl_buffer_t * buf);
+void gavl_io_init_buf_write(gavl_io_t * io, gavl_buffer_t * buf);
 
-void gavf_io_set_nonblock_read(gavf_io_t * io, gavf_read_func read_nonblock);
-void gavf_io_set_nonblock_write(gavf_io_t * io, gavf_write_func write_nonblock);
+void gavl_io_set_nonblock_read(gavl_io_t * io, gavf_read_func read_nonblock);
+void gavl_io_set_nonblock_write(gavl_io_t * io, gavf_write_func write_nonblock);
 
 /* Packetbuffer */
 
@@ -115,7 +115,7 @@ typedef struct
   gavl_video_sink_t * vsink;
 
   gavl_hw_context_t * hwctx; // For importing frames sent off-band
-  gavf_io_t * io; // Streams can have separate IO
+  gavl_io_t * io; // Streams can have separate IO
   int server_fd;
   
   gavf_t * g;
@@ -158,7 +158,7 @@ gavf_stream_t * gavf_find_stream_by_id(gavf_t * g, int32_t id);
 // #define GAVF_PACKET_WRITE_DURATION  (1<<1)
 // #define GAVF_PACKET_WRITE_FIELD2    (1<<2)
 
-int gavf_write_gavl_packet_header(gavf_io_t * io,
+int gavf_write_gavl_packet_header(gavl_io_t * io,
                                   int default_duration,
                                   int packet_flags,
                                   const gavl_packet_t * p);
@@ -178,8 +178,8 @@ typedef struct
   uint32_t len;
   } gavl_extension_header_t;
 
-int gavf_extension_header_read(gavf_io_t * io, gavl_extension_header_t * eh);
-int gavf_extension_write(gavf_io_t * io, uint32_t key, uint32_t len,
+int gavf_extension_header_read(gavl_io_t * io, gavl_extension_header_t * eh);
+int gavf_extension_write(gavl_io_t * io, uint32_t key, uint32_t len,
                          uint8_t * data);
 
 /* Known extensions */
@@ -247,12 +247,12 @@ void gavf_packet_index_add(gavf_packet_index_t * idx,
                            uint32_t id, uint32_t flags, uint64_t pos,
                            int64_t pts);
 
-int gavf_packet_index_read(gavf_io_t * io, gavf_packet_index_t * idx);
-int gavf_packet_index_write(gavf_io_t * io, const gavf_packet_index_t * idx);
+int gavf_packet_index_read(gavl_io_t * io, gavf_packet_index_t * idx);
+int gavf_packet_index_write(gavl_io_t * io, const gavf_packet_index_t * idx);
 void gavf_packet_index_free(gavf_packet_index_t * idx);
 void gavf_packet_index_dump(gavf_packet_index_t * idx);
 
-void gavf_io_cleanup(gavf_io_t * io);
+void gavl_io_cleanup(gavl_io_t * io);
 
 
 /* Global gavf structure */
@@ -275,8 +275,8 @@ struct gavf_s
   {
   int flags;
   
-  gavf_io_t * io_orig;
-  gavf_io_t * io;
+  gavl_io_t * io_orig;
+  gavl_io_t * io;
   
   gavl_dictionary_t cur;
   
@@ -295,7 +295,7 @@ struct gavf_s
   
   gavf_options_t opt;
   
-  gavf_io_t * pkt_io;
+  gavl_io_t * pkt_io;
   
   //  uint64_t first_sync_pos;
   
@@ -320,16 +320,16 @@ int gavf_program_header_write(gavf_t * g);
 
 /* Packet */
 
-int gavf_read_gavl_packet(gavf_io_t * io,
+int gavf_read_gavl_packet(gavl_io_t * io,
                           gavl_packet_t * p);
 
-int gavf_skip_gavl_packet(gavf_io_t * io,
+int gavf_skip_gavl_packet(gavl_io_t * io,
                           gavl_packet_t * p);
 
-int gavf_read_gavl_packet_header(gavf_io_t * io,
+int gavf_read_gavl_packet_header(gavl_io_t * io,
                                  gavl_packet_t * p);
 
-int gavf_write_gavl_packet(gavf_io_t * io,
+int gavf_write_gavl_packet(gavl_io_t * io,
                            const gavf_stream_t * s,
                            const gavl_packet_t * p);
 

@@ -23,7 +23,7 @@
 
 int main(int argc, char ** argv)
   {
-  gavf_io_t * io;
+  gavl_io_t * io;
   gavf_t * dec;
   gavf_options_t * opt;
   FILE * f;
@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
     return 0;
     }
 
-  io = gavf_io_create_file(f, 0, 1, 1);
+  io = gavl_io_create_file(f, 0, 1, 1);
   
   if(!gavf_open_read(dec, io))
     {

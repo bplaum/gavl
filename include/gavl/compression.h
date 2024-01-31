@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-typedef struct gavl_io_s gavf_io_t;
+typedef struct gavl_io_s gavl_io_t;
 
 
   
@@ -696,10 +696,10 @@ GAVL_PUBLIC
 int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf);
 
 GAVL_PUBLIC
-int gavl_seek_index_read(gavl_seek_index_t * idx, gavf_io_t * io);
+int gavl_seek_index_read(gavl_seek_index_t * idx, gavl_io_t * io);
 
 GAVL_PUBLIC
-void gavl_seek_index_write(const gavl_seek_index_t * idx, gavf_io_t * io);
+void gavl_seek_index_write(const gavl_seek_index_t * idx, gavl_io_t * io);
 
   
 /**

@@ -87,7 +87,7 @@ static void close_mem(void * priv)
   }
 
 GAVL_PUBLIC
-uint8_t * gavf_io_mem_get_buf(gavf_io_t * io, int * len)
+uint8_t * gavl_io_mem_get_buf(gavl_io_t * io, int * len)
   {
   uint8_t * ret;
   mem_t * m = io->priv;
@@ -101,18 +101,18 @@ uint8_t * gavf_io_mem_get_buf(gavf_io_t * io, int * len)
   }
 
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_mem_read(const uint8_t * ptr, int len)
+gavl_io_t * gavl_io_create_mem_read(const uint8_t * ptr, int len)
   {
   mem_t * m = calloc(1, sizeof(*m));
   m->buf_const = ptr;
   m->len = len;
-  return gavf_io_create(read_mem, NULL, seek_mem, close_mem, NULL, GAVF_IO_CAN_READ | GAVF_IO_CAN_SEEK, m);
+  return gavl_io_create(read_mem, NULL, seek_mem, close_mem, NULL, GAVF_IO_CAN_READ | GAVF_IO_CAN_SEEK, m);
   }
 
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_mem_write()
+gavl_io_t * gavl_io_create_mem_write()
   {
   mem_t * m = calloc(1, sizeof(*m));
-  return gavf_io_create(NULL, write_mem, seek_mem, close_mem, NULL, GAVF_IO_CAN_WRITE | GAVF_IO_CAN_SEEK, m);
+  return gavl_io_create(NULL, write_mem, seek_mem, close_mem, NULL, GAVF_IO_CAN_WRITE | GAVF_IO_CAN_SEEK, m);
   }
 

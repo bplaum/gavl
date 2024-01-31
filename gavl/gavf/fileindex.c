@@ -10,17 +10,17 @@ void gavf_file_index_init(gavf_file_index_t * fi, int num_entries)
   fi->entries = calloc(fi->entries_alloc, sizeof(*fi->entries));
   }
 
-int gavf_file_index_read(gavf_io_t * io, gavf_file_index_t * fi)
+int gavf_file_index_read(gavl_io_t * io, gavf_file_index_t * fi)
   {
   int i;
-  if(!gavf_io_read_uint32v(io, &fi->entries_alloc))
+  if(!gavl_io_read_uint32v(io, &fi->entries_alloc))
     return 0;
   fi->entries = calloc(fi->entries_alloc, sizeof(*fi->entries));
 
   for(i = 0; i < fi->entries_alloc; i++)
     {
-    if((gavf_io_read_data(io, fi->entries[i].tag, 8) < 8) ||
-       !gavf_io_read_uint64f(io, &fi->entries[i].position))
+    if((gavl_io_read_data(io, fi->entries[i].tag, 8) < 8) ||
+       !gavl_io_read_uint64f(io, &fi->entries[i].position))
       return 0;
     }
 
@@ -36,20 +36,20 @@ int gavf_file_index_read(gavf_io_t * io, gavf_file_index_t * fi)
   return 1;
   }
 
-int gavf_file_index_write(gavf_io_t * io, const gavf_file_index_t * fi)
+int gavf_file_index_write(gavl_io_t * io, const gavf_file_index_t * fi)
   {
   int i;
 
-  if(gavf_io_write_data(io, (uint8_t*)GAVF_TAG_FILE_INDEX, 8) < 8)
+  if(gavl_io_write_data(io, (uint8_t*)GAVF_TAG_FILE_INDEX, 8) < 8)
     return 0;
 
-  if(!gavf_io_write_uint32v(io, fi->entries_alloc))
+  if(!gavl_io_write_uint32v(io, fi->entries_alloc))
     return 0;
 
   for(i = 0; i < fi->entries_alloc; i++)
     {
-    if((gavf_io_write_data(io, fi->entries[i].tag, 8) < 8) ||
-       !gavf_io_write_uint64f(io, fi->entries[i].position))
+    if((gavl_io_write_data(io, fi->entries[i].tag, 8) < 8) ||
+       !gavl_io_write_uint64f(io, fi->entries[i].position))
       return 0;
     }
   return 1;

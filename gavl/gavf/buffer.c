@@ -70,11 +70,11 @@ static void close_buf(void * priv)
   free(priv);
   }
 
-gavf_io_t * gavf_io_create_buf_read()
+gavl_io_t * gavl_io_create_buf_read()
   {
   gavl_buffer_t * buf = calloc(1, sizeof(*buf));
   
-  return gavf_io_create(read_buf,
+  return gavl_io_create(read_buf,
                         NULL,
                         seek_buf,
                         close_buf,
@@ -83,11 +83,11 @@ gavf_io_t * gavf_io_create_buf_read()
                         buf);
   }
 
-gavf_io_t * gavf_io_create_buf_write()
+gavl_io_t * gavl_io_create_buf_write()
   {
   gavl_buffer_t * buf = calloc(1, sizeof(*buf));
 
-  return gavf_io_create(NULL,
+  return gavl_io_create(NULL,
                         write_buf,
                         seek_buf,
                         close_buf,
@@ -97,20 +97,20 @@ gavf_io_t * gavf_io_create_buf_write()
   
   }
 
-gavl_buffer_t * gavf_io_buf_get(gavf_io_t * io)
+gavl_buffer_t * gavl_io_buf_get(gavl_io_t * io)
   {
   return io->priv;
   }
 
-void gavf_io_buf_reset(gavf_io_t * io)
+void gavl_io_buf_reset(gavl_io_t * io)
   {
   gavl_buffer_reset(io->priv);
   io->position = 0;
   }
 
-void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf)
+void gavl_io_init_buf_read(gavl_io_t * io, gavl_buffer_t * buf)
   {
-  gavf_io_init(io,
+  gavl_io_init(io,
                read_buf,
                NULL,
                seek_buf,
@@ -120,9 +120,9 @@ void gavf_io_init_buf_read(gavf_io_t * io, gavl_buffer_t * buf)
                buf);
   }
 
-void gavf_io_init_buf_write(gavf_io_t * io, gavl_buffer_t * buf)
+void gavl_io_init_buf_write(gavl_io_t * io, gavl_buffer_t * buf)
   {
-  gavf_io_init(io,
+  gavl_io_init(io,
                NULL,
                write_buf,
                seek_buf,

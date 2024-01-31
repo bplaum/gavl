@@ -10,7 +10,7 @@
 
 int main(int argc, char ** argv)
   {
-  gavf_io_t * c;
+  gavl_io_t * c;
   gavl_buffer_t buf;
   
   if(argc == 1)

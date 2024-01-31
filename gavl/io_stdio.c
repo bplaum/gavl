@@ -58,7 +58,7 @@ static void close_file(void * priv)
   }
 
 GAVL_PUBLIC
-gavf_io_t * gavf_io_create_file(FILE * f, int wr, int can_seek, int close)
+gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   {
   gavf_read_func rf;
   gavf_write_func wf;
@@ -113,5 +113,5 @@ gavf_io_t * gavf_io_create_file(FILE * f, int wr, int can_seek, int close)
   else
     sf = NULL;
 
-  return gavf_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
+  return gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
   }
