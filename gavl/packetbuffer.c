@@ -323,13 +323,82 @@ static void pts_from_duration_b_frames(gavl_packet_buffer_t * buf)
 
 /* TODO: Get duration from PTS for a stream with B-frames */
 
+static int get_next_by_pts(gavl_packet_buffer_t * buf, int64_t pts, int start, int end)
+  {
+  int ret = -1;
+  int i;
+  if(end < 0)
+    end = buf->buf.num;
+
+  for(i = start; i < end; i++)
+    {
+    if(buf->buf.packets[i]->pts <= pts)
+      continue;
+
+    if((ret == -1) || (buf->buf.packets[i]->pts < buf->buf.packets[ret]->pts))
+      ret = i;
+    }
+  return ret;
+  }
+
 static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
   {
   int ip1 = -1;
   int ip2 = -1;
   int ip3 = -1;
+  int next_idx;
+  int i;
+  
+  /* Get remaining durations with a brute force method */
+  if(buf->flags & FLAG_FLUSH)
+    {
+    int last_idx;
+    int64_t duration;
+    
+    for(i = 0; i < buf->buf.num; i++)
+      {
+      if(buf->buf.packets[i]->duration > 0)
+        continue;
+
+      next_idx = get_next_by_pts(buf, buf->buf.packets[i]->pts, 0, -1);
+      if(next_idx < 0)
+        last_idx = i;
+      else
+        duration = buf->buf.packets[next_idx]->pts - buf->buf.packets[i]->pts;
+      }
+    buf->buf.packets[last_idx]->duration = duration;
+    return;
+    }
+  
+  /* Get the first non B-frame with no duration */
+  ip1 = get_next_ip_idx(buf, 0);
+  while(buf->buf.packets[ip1]->duration > 0)
+    {
+    ip1 = get_next_ip_idx(buf, ip1+1);
+
+    if(ip1 < 0)
+      return; // Nothing to do
+    }
+
+  if((ip2 = get_next_ip_idx(buf, ip1 + 1)) < 0)
+    return; // Nothing to do
+
+  if((ip3 = get_next_ip_idx(buf, ip2 + 1)) < 0)
+    return; // Nothing to do
 
   
+  for(i = ip1; i < ip2; i++)
+    {
+    if(buf->buf.packets[i]->duration > 0)
+      continue;
+    
+    next_idx = get_next_by_pts(buf, buf->buf.packets[i]->pts, ip1+1, ip3);
+    
+    if(next_idx < 0)
+      fprintf(stderr, "Buuuug\n");
+    else
+      buf->buf.packets[i]->duration = buf->buf.packets[next_idx]->pts - buf->buf.packets[i]->pts;
+    }
   
   }
 
@@ -360,12 +429,12 @@ static void update_timestamps_b_frames(gavl_packet_buffer_t * buf)
     pts_from_duration_b_frames(buf);
     }
   
-  /* TODO: Duration from PTS */
-
-  if((buf->flags & FLAG_CALC_FRAME_DURATIONS) &
+  /* Duration from PTS */
+  
+  if((buf->flags & FLAG_CALC_FRAME_DURATIONS) &&
      (buf->buf.packets[buf->buf.num-1]->duration < 0))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Getting frame duration from PTS not supported for B-Frames yet");
+    duration_from_pts_b_frames(buf);
     }
   
   }
