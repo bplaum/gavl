@@ -24,6 +24,7 @@
 
 #include <gavl/compression.h>
 
+
 /* Stream information */
 
 /* Stream types except GAVL_STREAM_NONE can be ORed */

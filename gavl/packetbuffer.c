@@ -48,7 +48,6 @@
 
 // #define COUNT_PACKETS
 
-#define NEW_PTS
 
 // #define MAX_PACKETS 200
 
@@ -195,7 +194,6 @@ static gavl_packet_t * sink_get_func(void * priv)
 /* The following functions are, where pretty much of the A/V synchronization in the whole
    gmerlin architecture is done */
 
-#ifdef NEW_PTS
 static void pts_from_duration(gavl_packet_buffer_t * buf, gavl_packet_t * p)
   {
   /* Initialize first timestamp */
@@ -323,6 +321,18 @@ static void pts_from_duration_b_frames(gavl_packet_buffer_t * buf)
   
   }
 
+/* TODO: Get duration from PTS for a stream with B-frames */
+
+static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
+  {
+  int ip1 = -1;
+  int ip2 = -1;
+  int ip3 = -1;
+
+  
+  
+  }
+
 static void update_timestamps_b_frames(gavl_packet_buffer_t * buf)
   {
   int i;
@@ -393,254 +403,6 @@ static void update_timestamps(gavl_packet_buffer_t * buf)
   else
     update_timestamps_low_delay(buf);
   }
-#endif
-
-
-#ifndef NEW_PTS
-
-/*
- *  Timestamp generation modes:
- *
- *  1. PTS from frame duration (needs inititial pts from PES packet)
- *  2. PTS from DTS: Get durations from DTS and synchronize first frame from DTS
- *  3. Duration from PTS (like in Matroska)
- */
-
-static void update_timestamps_write(gavl_packet_buffer_t * buf)
-  {
-  gavl_packet_t * last_p, * last2_p;
-
-  if(buf->buf.num < 1)
-    return;
-  
-  if((buf->buf.packets[buf->buf.num-1]->pts != GAVL_TIME_UNDEFINED) &&
-     (buf->buf.packets[buf->buf.num-1]->duration > 0))
-    return;
-
-  if((buf->buf.num >= 2) &&
-     (buf->buf.packets[buf->buf.num-2]->duration < 0))
-    {
-    last_p  = buf->buf.packets[buf->buf.num-1];
-    last2_p = buf->buf.packets[buf->buf.num-2];
-    
-    /* Set duration from DTS */
-    if((last_p->dts != GAVL_TIME_UNDEFINED) &&
-       (last2_p->dts != GAVL_TIME_UNDEFINED))
-      {
-      last2_p->duration = last_p->dts - last2_p->dts;
-      buf->last_duration = last2_p->duration;
-      }
-
-    /* Set duration from PTS (low delay case) */
-    if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES) &&
-       (last_p->pts != GAVL_TIME_UNDEFINED) &&
-       (last2_p->pts != GAVL_TIME_UNDEFINED) &&
-       (buf->flags & FLAG_CALC_FRAME_DURATIONS))
-      {
-      last2_p->duration = last_p->pts - last2_p->pts;
-      buf->last_duration = last2_p->duration;
-      }
-    }
-  }
-
-/* Get next IP index *after* idx or -1 */
-
-static int get_next_ip_index(gavl_packet_buffer_t * buf, int idx)
-  {
-  int ret = idx+1;
-
-  while(ret < buf->buf.num)
-    {
-    if((buf->buf.packets[ret]->flags & GAVL_PACKET_TYPE_MASK) != GAVL_PACKET_TYPE_B)
-      return ret;
-    ret++;
-    }
-  
-  return -1;
-  }
-
-static gavl_packet_t * find_next(gavl_packet_buffer_t * buf,
-                                 int start_idx,
-                                 int end_idx,
-                                 int64_t pts)
-  {
-  int i;
-  gavl_packet_t * p = NULL;
-  
-  for(i = start_idx; i < end_idx; i++)
-    {
-    if((pts != GAVL_TIME_UNDEFINED) && buf->buf.packets[i]->pts <= pts)
-      continue;
-    
-    if(!p || (p->pts > buf->buf.packets[i]->pts))
-      p = buf->buf.packets[i];
-    }
-  return p;
-  }
-                                 
-static void update_timestamps_read(gavl_packet_buffer_t * buf)
-  {
-  if((buf->buf.packets[0]->pts != GAVL_TIME_UNDEFINED) &&
-     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) || (buf->buf.packets[0]->duration > 0)))
-    return;
-  
-  /* Set pts from duration */
-  if(buf->buf.packets[0]->pts == GAVL_TIME_UNDEFINED)
-    {
-    if(buf->buf.packets[0]->duration >= 0) // Need to allow 0 here (e.g. for the first Vorbis packet)
-      {
-      /* Get start PTS */
-      if(buf->pts == GAVL_TIME_UNDEFINED)
-        {
-        /* 1st choice: pes packet */
-        if(buf->buf.packets[0]->pes_pts != GAVL_TIME_UNDEFINED)
-          buf->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
-                                       buf->buf.packets[0]->pes_pts);
-        /* 2nd choice: DTS */
-        else if(buf->buf.packets[0]->dts != GAVL_TIME_UNDEFINED)
-          buf->pts = buf->buf.packets[0]->dts;
-        else
-          /* 3rd choice: Zero */
-          {
-          buf->pts = 0;
-          if(buf->ci.pre_skip)
-            buf->pts -= buf->ci.pre_skip;
-          }
-        }
-    
-      /* Low delay */
-      if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
-        {
-        buf->buf.packets[0]->pts = buf->pts;
-        buf->pts += buf->buf.packets[0]->duration;
-        }
-      else
-        {
-        int ip_idx2;
-
-        if(buf->buf.num < 2)
-          return;
-      
-        if((buf->buf.packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
-          {
-          /* Bug!! */
-          fprintf(stderr, "BUUUG 1!!\n");
-          fprintf(stderr, "Valid packets: %d\n", buf->buf.num);
-          
-          return;
-          }
-
-        ip_idx2 = get_next_ip_index(buf, 0);
-        //      fprintf(stderr, "IP Index: %d\n", ip_idx2);
-        if(ip_idx2 < 0)
-          {
-          if(buf->flags & FLAG_FLUSH)
-            {
-            int i;
-            /* Flush PBB <EOS> */
-            for(i = 1; i < buf->buf.num; i++)
-              {
-              buf->buf.packets[i]->pts = buf->pts;
-              buf->pts += buf->buf.packets[i]->duration;
-              }
-            buf->buf.packets[0]->pts = buf->pts;
-            buf->pts += buf->buf.packets[0]->duration;
-            }
-          return;
-          }
-      
-        if(ip_idx2 == 1)
-          {
-          /* Two consecutive non-B-frames: Flush first one */
-          buf->buf.packets[0]->pts = buf->pts;
-          buf->pts += buf->buf.packets[0]->duration;
-          }
-        else
-          {
-          int i;
-          /* Flush sequence PBB(P) */
-          for(i = 1; i < ip_idx2; i++)
-            {
-            buf->buf.packets[i]->pts = buf->pts;
-            buf->pts += buf->buf.packets[i]->duration;
-            }
-          buf->buf.packets[0]->pts = buf->pts;
-          buf->pts += buf->buf.packets[0]->duration;
-          }
-        }
-      }
-    else // duration < 0
-      {
-      if(buf->buf.packets[0]->pes_pts >= 0)
-        {
-        buf->buf.packets[0]->pts = gavl_time_rescale(buf->packet_scale, buf->sample_scale,
-                                                     buf->buf.packets[0]->pes_pts);
-        }
-      }
-    }
-
-  
-  /* Set duration from PTS (B-frame case) */
-  if((buf->buf.packets[0]->pts != GAVL_TIME_UNDEFINED) &&
-     (buf->buf.packets[0]->duration < 0) &&
-     (buf->flags & FLAG_CALC_FRAME_DURATIONS))
-    {
-    int ip_idx2;
-    int ip_idx3;
-
-    if((buf->buf.packets[0]->flags & GAVL_PACKET_TYPE_MASK) == GAVL_PACKET_TYPE_B)
-      {
-      /* Bug!! */
-      fprintf(stderr, "BUUUG 2!!\n");
-      return;
-      }
-
-    if(buf->flags & FLAG_FLUSH)
-      {
-      int i;
-      gavl_packet_t * p1;
-      gavl_packet_t * p2;
-      int64_t last_duration = GAVL_TIME_UNDEFINED;
-
-      p1 = find_next(buf, 0, buf->buf.num,
-                     GAVL_TIME_UNDEFINED);
-      if(!p1)
-        return;
-      
-      for(i = 0; i < buf->buf.num; i++)
-        {
-        p2 = find_next(buf, 0, buf->buf.num,
-                       p1->pts);
-        if(!p2)
-          {
-          p1->duration = last_duration;
-          }
-        }
-      }
-    
-    if((ip_idx2 = get_next_ip_index(buf, 0)) < 0)
-      return;
-    
-    else if((ip_idx3 = get_next_ip_index(buf, ip_idx2)) < 0)
-      {
-      if(buf->flags & FLAG_FLUSH)
-        {
-        // flush PBBPBB
-        
-        }
-      return;
-      }
-    else
-      {
-      //      int i, num;
-
-      /* Flush */
-      // PBBPBBP -> PBBP
-      //      for
-      }
-    }
-  }
-#endif
 
 
 static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
@@ -798,11 +560,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   //  else // No P-frames
   //    buf->valid_packets++;
 
-#ifdef NEW_PTS
   update_timestamps(buf);
-#else  
-  update_timestamps_write(buf);
-#endif
   return GAVL_SINK_OK;
   }
 
@@ -844,9 +602,6 @@ source_func(void * priv, gavl_packet_t ** p)
   
   if(!(buf->flags & FLAG_NON_CONTINUOUS)) // If stream is continuous...
     {
-#ifndef NEW_PTS
-    update_timestamps_read(buf);
-#endif
     if((buf->buf.packets[0]->pts == GAVL_TIME_UNDEFINED) ||
        ((buf->buf.packets[0]->duration < 0) && (buf->flags & FLAG_CALC_FRAME_DURATIONS)))
       return GAVL_SOURCE_AGAIN;
@@ -891,9 +646,7 @@ void gavl_packet_buffer_flush(gavl_packet_buffer_t * buf)
     if(buf->flags & FLAG_MARK_LAST)
       buf->buf.packets[buf->buf.num-1]->flags |= GAVL_PACKET_LAST;
     }
-#ifdef NEW_PTS
   update_timestamps(buf);
-#endif
   }
 
 void gavl_packet_buffer_clear(gavl_packet_buffer_t * buf)

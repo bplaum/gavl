@@ -87,12 +87,10 @@ void gavl_seek_index_free(gavl_seek_index_t * idx)
 
 /* Serialize */
 
-void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf)
+void gavl_seek_index_write(const gavl_seek_index_t * idx, gavf_io_t * io)
   {
   int i;
   
-  gavf_io_t * io = gavf_io_create_buffer_write(buf);
-
   gavf_io_write_int32v(io, idx->num_entries);
 
   for(i = 0; i < idx->num_entries; i++)
@@ -100,19 +98,21 @@ void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * bu
     gavf_io_write_int64v(io, idx->entries[i].position);
     gavf_io_write_int64v(io, idx->entries[i].pts);
     }
-  
-  gavf_io_destroy(io);
-  
   }
 
-int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf)
+void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf)
+  {
+  gavf_io_t * io = gavf_io_create_buffer_write(buf);
+  gavl_seek_index_write(idx, io);
+  gavf_io_destroy(io);
+  }
+
+int gavl_seek_index_read(gavl_seek_index_t * idx, gavf_io_t * io)
   {
   int i;
-  int ret = 0;
-  gavf_io_t * io = gavf_io_create_buffer_read(buf);
-
+  
   if(!gavf_io_read_int32v(io, &idx->num_entries))
-    goto fail;
+    return 0;
 
   idx->entries_alloc = idx->num_entries;
   idx->entries = calloc(idx->entries_alloc, sizeof(*idx->entries));
@@ -121,9 +121,19 @@ int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * b
     {
     if(!gavf_io_read_int64v(io, &idx->entries[i].position) ||
        !gavf_io_read_int64v(io, &idx->entries[i].pts))
-      goto fail;
+      return 0;
     }
+  return 1;
+  }
 
+int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf)
+  {
+  int ret = 0;
+  gavf_io_t * io = gavf_io_create_buffer_read(buf);
+
+  if(!gavl_seek_index_read(idx, io))
+    goto fail;
+  
   ret = 1;
   
   fail:

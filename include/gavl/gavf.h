@@ -54,6 +54,7 @@
 #define GAVF_IO_EOF               (1<<16)
 #define GAVF_IO_ERROR             (1<<17)
 
+
 /* Crypto I/O */
 typedef enum
   {
@@ -841,15 +842,6 @@ int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t 
   
 GAVL_PUBLIC
 uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
-
-
-#if 0
-GAVL_PUBLIC
-int gavl_compression_info_from_buffer(const uint8_t * buf, int len, gavl_compression_info_t * fmt);
- 
-GAVL_PUBLIC
-uint8_t * gavl_compression_info_to_buffer(int * len, const gavl_compression_info_t * fmt);
-#endif
 
 GAVL_PUBLIC
 uint8_t * gavl_msg_to_buffer(int * len, const gavl_msg_t * msg);

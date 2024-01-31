@@ -25,10 +25,15 @@
 #include <gavl/gavldefs.h>
 #include <gavl/value.h>
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct gavl_io_s gavf_io_t;
+
+
+  
 /** \defgroup compression Compressed stream support
  *  \brief Compressed stream support
  *
@@ -60,6 +65,8 @@ extern "C" {
 #define GAVL_COMPRESSION_BIG_ENDIAN         (1<<4)
 
 #define GAVL_MK_FOURCC(a, b, c, d) ((a<<24)|(b<<16)|(c<<8)|d)
+
+typedef struct gavl_compression_info_s gavl_compression_info_t;
 
   
 /** \brief Codec ID
@@ -121,7 +128,7 @@ typedef enum
    *  some containers need this as well.
    */
   
-typedef struct
+struct gavl_compression_info_s
   {
   int flags; //!< ORed combination of GAVL_COMPRESSION_* flags
   gavl_codec_id_t id; //!< Codec ID
@@ -134,7 +141,7 @@ typedef struct
   
   int video_buffer_size;   //!< VBV buffer size for video (in BYTES)
   uint32_t codec_tag;
-  } gavl_compression_info_t;
+  };
 
 /** \brief Initialize a compression info
  *  \param info A compression info
@@ -688,6 +695,13 @@ void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * bu
 GAVL_PUBLIC
 int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf);
 
+GAVL_PUBLIC
+int gavl_seek_index_read(gavl_seek_index_t * idx, gavf_io_t * io);
+
+GAVL_PUBLIC
+void gavl_seek_index_write(const gavl_seek_index_t * idx, gavf_io_t * io);
+
+  
 /**
  *  @}
  */

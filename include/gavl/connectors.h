@@ -28,8 +28,8 @@
 #define GAVL_CONNECTORS_H_INCLUDED
 
 #include <gavl/gavl.h>
-#include <gavl/compression.h>
 #include <gavl/trackinfo.h>
+#include <gavl/compression.h>
 
 #ifdef __cplusplus
 extern "C" {
