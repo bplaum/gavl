@@ -183,6 +183,7 @@ orientation.c \
 packet.c \
 packetbuffer.c \
 packetconnector.c \
+packetindex.c \
 packetsink.c \
 packetsource.c \
 palette.c \
@@ -196,7 +197,6 @@ scale.c \
 scale_context.c \
 scale_kernels.c \
 scale_table.c \
-seekindex.c \
 shm.c \
 socket.c \
 ssim.c \

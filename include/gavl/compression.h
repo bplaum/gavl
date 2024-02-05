@@ -325,7 +325,7 @@ int gavl_num_compressions();
   
 GAVL_PUBLIC
 gavl_codec_id_t gavl_get_compression(int index);
-
+ 
   
 #define GAVL_PACKET_TYPE_I    0x01      //!< Packet is an I-frame
 #define GAVL_PACKET_TYPE_P    0x02      //!< Packet is a P-frame
@@ -348,6 +348,9 @@ gavl_codec_id_t gavl_get_compression(int index);
   
 #define GAVL_PACKET_PADDING  32 //!< Packets are padded in memory with this many zero bytes
 
+GAVL_PUBLIC
+const char * gavl_coding_type_to_string(int flags);
+  
 /* Extra data which can carried within a packet */
 
 typedef enum
@@ -657,8 +660,8 @@ void gavl_compression_info_to_dictionary(const gavl_compression_info_t * info, g
 
 GAVL_PUBLIC
 void gavl_compression_info_from_dictionary(gavl_compression_info_t * info, const gavl_dictionary_t * dict);
-#endif
 
+  
 typedef struct
   {
   int num_entries;
@@ -700,6 +703,8 @@ int gavl_seek_index_read(gavl_seek_index_t * idx, gavl_io_t * io);
 
 GAVL_PUBLIC
 void gavl_seek_index_write(const gavl_seek_index_t * idx, gavl_io_t * io);
+
+#endif
 
   
 /**

@@ -497,3 +497,15 @@ gavl_packet_to_videoframe(const gavl_packet_t * p,
 
   }
                           
+static const char * coding_type_strings[4] =
+  {
+  "?",
+  "I",
+  "P",
+  "B"
+  };
+
+const char * gavl_coding_type_to_string(int type)
+  {
+  return coding_type_strings[type & GAVL_PACKET_TYPE_MASK];
+  }

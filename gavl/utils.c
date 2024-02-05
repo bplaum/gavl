@@ -31,6 +31,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
@@ -807,3 +810,99 @@ int gavl_host_is_us(const char * hostname)
   }
 
 
+int gavl_is_directory(const char * dir, int wr)
+  {
+  
+  struct stat st;
+
+  if(stat(dir, &st) || !S_ISDIR(st.st_mode))
+    return 0;
+
+
+  if(wr)
+    {
+    if(!access(dir, R_OK|W_OK|X_OK))
+      return 1;
+    }
+  else if(!access(dir, R_OK|X_OK))
+    return 1;
+  
+  return 0;
+  }
+
+int gavl_ensure_directory(const char * dir, int priv)
+  {
+  char ** directories;
+  char * subpath = NULL;
+  int i, ret;
+  int absolute;
+  
+  /* Return early */
+
+  if(gavl_is_directory(dir, 1))
+    return 1;
+  
+  if(dir[0] == '/')
+    absolute = 1;
+  else
+    absolute = 0;
+  
+  /* We omit the first slash */
+  
+  if(absolute)
+    directories = gavl_strbreak(dir+1, '/');
+  else
+    directories = gavl_strbreak(dir, '/');
+  
+  i = 0;
+  ret = 1;
+  while(directories[i])
+    {
+    if(i || absolute)
+      subpath = gavl_strcat(subpath, "/");
+
+    subpath = gavl_strcat(subpath, directories[i]);
+
+    if(access(subpath, R_OK) && (errno == ENOENT))
+      {
+      mode_t mode = S_IRUSR|S_IWUSR|S_IXUSR;
+      if(!priv)
+        mode |= S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH;
+      
+      if(mkdir(subpath, mode) == -1)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Creating directory %s failed: %s",
+               subpath, strerror(errno));
+        ret = 0;
+        break;
+        }
+      else
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created directory %s", subpath);
+      }
+    i++;
+    }
+  if(subpath)
+    free(subpath);
+  gavl_strbreak_free(directories);
+  return ret;
+  }
+
+char * gavl_search_cache_dir(const char * package, const char * directory)
+  {
+  const char * var;
+  char * cache_dir;
+  
+  if((var = getenv("XDG_CACHE_HOME")))
+    cache_dir = gavl_sprintf("%s/%s/%s", var, package, directory);
+  else if((var = getenv("HOME")))
+    cache_dir = gavl_sprintf("%s/.cache/%s/%s", var, package, directory);
+  else
+    return NULL;
+  
+  if(!gavl_ensure_directory(cache_dir, 1))
+    {
+    free(cache_dir);
+    return NULL;
+    }
+  return cache_dir;
+  }

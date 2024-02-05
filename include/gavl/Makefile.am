@@ -26,6 +26,7 @@ metadata.h \
 metatags.h \
 msg.h \
 numptr.h \
+packetindex.h \
 peakdetector.h \
 state.h \
 threadpool.h \

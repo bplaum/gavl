@@ -379,6 +379,23 @@ int gavl_fd_can_write(int fd, int milliseconds);
 GAVL_PUBLIC
 int gavl_host_is_us(const char * hostname);
 
+
+GAVL_PUBLIC
+int gavl_is_directory(const char * dir, int wr);
+/** \brief Ensure that a directory exists
+ *  \param dir Directory
+ *  \returns 1 if the directory exists after the function call, 0 else
+ *
+ *  Non-existing directories will be created if possible
+ */
+
+GAVL_PUBLIC
+int gavl_ensure_directory(const char * dir, int priv);
+
+GAVL_PUBLIC
+char * gavl_search_cache_dir(const char * package, const char * directory);
+
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 

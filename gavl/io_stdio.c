@@ -2,9 +2,10 @@
 #include <sys/stat.h>
 
 #include <unistd.h>
+#include <string.h>
+#include <errno.h>
 
 #include <config.h>
-
 #include <gavfprivate.h>
 
 #include <gavl/log.h>
@@ -114,4 +115,28 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
     sf = NULL;
 
   return gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
+  }
+
+gavl_io_t * gavl_io_from_filename(const char * filename, int wr)
+  {
+  FILE * f;
+  
+  if(wr)
+    {
+    if(!(f = fopen(filename, "w")))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s for writing: %s", filename, strerror(errno));
+      return NULL;
+      }
+    }
+  else
+    {
+    if(!(f = fopen(filename, "r")))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s for writing: %s", filename, strerror(errno));
+      return NULL;
+      }
+    }
+  
+  return gavl_io_create_file(f, wr, 1, 1);
   }

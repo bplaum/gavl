@@ -103,6 +103,10 @@ int gavl_io_flush(gavl_io_t *);
 GAVL_PUBLIC
 gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int do_close);
 
+GAVL_PUBLIC
+gavl_io_t * gavl_io_from_filename(const char * filename, int wr);
+
+  
 #define GAVF_IO_SOCKET_DO_CLOSE     (1<<0)
 
 #define GAVF_IO_SOCKET_BUFFER_READ  (1<<1)

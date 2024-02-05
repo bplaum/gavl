@@ -529,6 +529,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
       buf->keyframes_seen++;
     else if(!buf->keyframes_seen) // Non keyframe
       {
+#if 0
       /* Else: Skip, but allow synchronizing a low delay stream */
       if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
         {
@@ -542,6 +543,7 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
         if((buf->pts != GAVL_TIME_UNDEFINED) && (p->duration > 0))
           buf->pts += p->duration;
         }
+#endif
       buf_push(&buf->pool, &buf->in_packet);
       return GAVL_SINK_OK;
       }
