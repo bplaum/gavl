@@ -511,11 +511,11 @@ void gavl_edl_append_track_to_timeline(gavl_dictionary_t * edl_track,
     edl_m = gavl_dictionary_get_dictionary_create(edl_track, GAVL_META_METADATA);
     gavl_dictionary_copy(edl_m, m);
     
-    if((klass = gavl_dictionary_get_string(edl_m, GAVL_META_MEDIA_CLASS)))
+    if((klass = gavl_dictionary_get_string(edl_m, GAVL_META_CLASS)))
       {
-      if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE_PART))
-        gavl_dictionary_set_string(edl_m, GAVL_META_MEDIA_CLASS,
-                                   GAVL_META_MEDIA_CLASS_MOVIE);
+      if(!strcmp(klass, GAVL_META_CLASS_MOVIE_PART))
+        gavl_dictionary_set_string(edl_m, GAVL_META_CLASS,
+                                   GAVL_META_CLASS_MOVIE);
       }
     
     gavl_dictionary_delete_fields(edl_m, clear_metadata_fields);

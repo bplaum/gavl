@@ -1473,7 +1473,7 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     return;
   
   //  fprintf(stderr, "gavl_track_finalize %s\n",
-  //          gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS));
+  //          gavl_dictionary_get_string(m, GAVL_META_CLASS));
 
   num_audio_streams = gavl_track_get_num_audio_streams(track);
   num_video_streams = gavl_track_get_num_video_streams(track);
@@ -1497,7 +1497,7 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     gavl_dictionary_set_string(m, GAVL_META_HASH, hash);
     }
   
-  media_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+  media_class = gavl_dictionary_get_string(m, GAVL_META_CLASS);
 
   if(!media_class)
     {
@@ -1505,12 +1505,12 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     if((num_audio_streams == 1) && !num_video_streams)
       {
       /* Audio file */
-      media_class = GAVL_META_MEDIA_CLASS_AUDIO_FILE;
+      media_class = GAVL_META_CLASS_AUDIO_FILE;
       }
     else if(!num_audio_streams && !num_video_streams && num_subtitle_streams)
       {
       /* Subtitle file */
-      media_class = GAVL_META_MEDIA_CLASS_SUBTITLE_FILE;
+      media_class = GAVL_META_CLASS_SUBTITLE_FILE;
       }
     else if(num_video_streams >= 1)
       {
@@ -1522,12 +1522,12 @@ void gavl_track_finalize(gavl_dictionary_t * track)
          (fmt->framerate_mode == GAVL_FRAMERATE_STILL))
         {
         /* Photo */
-        media_class = GAVL_META_MEDIA_CLASS_IMAGE;
+        media_class = GAVL_META_CLASS_IMAGE;
         }
       else
         {
         /* Video */
-        media_class = GAVL_META_MEDIA_CLASS_VIDEO_FILE;
+        media_class = GAVL_META_CLASS_VIDEO_FILE;
         }
       }
     }
@@ -1536,27 +1536,27 @@ void gavl_track_finalize(gavl_dictionary_t * track)
   
   if(media_class)
     {
-    if(!strcmp(media_class, GAVL_META_MEDIA_CLASS_AUDIO_FILE))
+    if(!strcmp(media_class, GAVL_META_CLASS_AUDIO_FILE))
       {
       finalize_audio(track);
       
       /* Check for audio broadcast */
       if(gavl_dictionary_get(m, GAVL_META_STATION))
-        media_class = GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST;
+        media_class = GAVL_META_CLASS_AUDIO_BROADCAST;
 
       /* Check for song */
       else if(gavl_dictionary_get(m, GAVL_META_ARTIST) &&
               gavl_dictionary_get(m, GAVL_META_TITLE) &&
               gavl_dictionary_get(m, GAVL_META_ALBUM))
         {
-        media_class = GAVL_META_MEDIA_CLASS_SONG;
+        media_class = GAVL_META_CLASS_SONG;
         }
       }
-    else if(!strcmp(media_class, GAVL_META_MEDIA_CLASS_IMAGE))
+    else if(!strcmp(media_class, GAVL_META_CLASS_IMAGE))
       {
       
       }
-    else if(!strcmp(media_class, GAVL_META_MEDIA_CLASS_VIDEO_FILE))
+    else if(!strcmp(media_class, GAVL_META_CLASS_VIDEO_FILE))
       {
       finalize_video(track);
       if(num_audio_streams > 0)
@@ -1569,33 +1569,33 @@ void gavl_track_finalize(gavl_dictionary_t * track)
           /* Check for episode */
 
           if(basename && detect_episode(basename, m))
-            media_class = GAVL_META_MEDIA_CLASS_TV_EPISODE;
+            media_class = GAVL_META_CLASS_TV_EPISODE;
           /* Check for movie */
           else if(basename && detect_movie_multifile(basename, m))
-            media_class = GAVL_META_MEDIA_CLASS_MOVIE_PART;
+            media_class = GAVL_META_CLASS_MOVIE_PART;
           else if(basename && detect_movie_singlefile(basename, m))
-            media_class = GAVL_META_MEDIA_CLASS_MOVIE;
+            media_class = GAVL_META_CLASS_MOVIE;
           }
         else if(gavl_dictionary_get(m, GAVL_META_STATION))
-          media_class = GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST;
+          media_class = GAVL_META_CLASS_VIDEO_BROADCAST;
         }
       }
     }
 
   if(media_class &&
-     (!(var = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS)) ||
+     (!(var = gavl_dictionary_get_string(m, GAVL_META_CLASS)) ||
       strcmp(var, media_class)))
-    gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, media_class);
+    gavl_dictionary_set_string(m, GAVL_META_CLASS, media_class);
   
   if(basename)
     free(basename);
 
-  media_class = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+  media_class = gavl_dictionary_get_string(m, GAVL_META_CLASS);
   
   /* Add country flag */
   
   if(media_class &&
-     !strcmp(media_class, GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY) &&
+     !strcmp(media_class, GAVL_META_CLASS_CONTAINER_COUNTRY) &&
      !gavl_dictionary_get(m, GAVL_META_ICON_URL))
     {
     if(!(countrycode = gavl_dictionary_get_string(m, GAVL_META_COUNTRY_CODE_2)))
@@ -1649,11 +1649,11 @@ void gavl_track_set_label(gavl_dictionary_t * dict)
   if(gavl_dictionary_get_string(m, GAVL_META_LABEL))
     return;
 
-  klass = gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+  klass = gavl_dictionary_get_string(m, GAVL_META_CLASS);
   
   if(klass)
     {
-    if(!strcmp(klass, GAVL_META_MEDIA_CLASS_SONG))
+    if(!strcmp(klass, GAVL_META_CLASS_SONG))
       {
       const char * title;
       char * artists;
@@ -1667,7 +1667,7 @@ void gavl_track_set_label(gavl_dictionary_t * dict)
         }
       
       }
-    else if(!strcmp(klass, GAVL_META_MEDIA_CLASS_MOVIE))
+    else if(!strcmp(klass, GAVL_META_CLASS_MOVIE))
       {
       const char * title;
       int year;
@@ -1923,7 +1923,7 @@ void gavl_track_update_children(gavl_dictionary_t * dict)
       gavl_dictionary_set_int(tm, GAVL_META_IDX, i);
       gavl_dictionary_set_int(tm, GAVL_META_TOTAL, arr->num_entries);
       
-      if((klass = gavl_dictionary_get_string(tm, GAVL_META_MEDIA_CLASS)))
+      if((klass = gavl_dictionary_get_string(tm, GAVL_META_CLASS)))
         {
         if(gavl_string_starts_with(klass, "item"))
           num_items++;
@@ -1967,7 +1967,7 @@ const char * gavl_track_get_media_class(const gavl_dictionary_t * dict)
   const gavl_dictionary_t * m;
 
   if((m = gavl_track_get_metadata(dict)))
-    return gavl_dictionary_get_string(m, GAVL_META_MEDIA_CLASS);
+    return gavl_dictionary_get_string(m, GAVL_META_CLASS);
   else
     return NULL;
   }
@@ -3056,7 +3056,7 @@ void gavl_track_from_location(gavl_dictionary_t * ret, const char * location)
   gavl_dictionary_t * m;
   track_init(ret);
   m = gavl_track_get_metadata_nc(ret);
-  gavl_dictionary_set_string(m, GAVL_META_MEDIA_CLASS, GAVL_META_MEDIA_CLASS_LOCATION);
+  gavl_dictionary_set_string(m, GAVL_META_CLASS, GAVL_META_CLASS_LOCATION);
   gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location);
   }
 

@@ -447,116 +447,116 @@
  *
  */
 
-#define GAVL_META_MEDIA_CLASS                     "MediaClass"
+#define GAVL_META_CLASS                     "MediaClass"
 #define GAVL_META_CHILD_CLASS                     "ChildClass"
 
 /* Value for class */
-#define GAVL_META_MEDIA_CLASS_ITEM                "item"
+#define GAVL_META_CLASS_ITEM                "item"
 
-#define GAVL_META_MEDIA_CLASS_AUDIO_FILE          "item.audio"
-#define GAVL_META_MEDIA_CLASS_VIDEO_FILE          "item.video"
-#define GAVL_META_MEDIA_CLASS_AUDIO_DISK_TRACK    "item.audio.disktrack"
-#define GAVL_META_MEDIA_CLASS_VIDEO_DISK_TRACK    "item.video.disktrack"
-#define GAVL_META_MEDIA_CLASS_SONG                "item.audio.song"
-#define GAVL_META_MEDIA_CLASS_MOVIE               "item.video.movie"
-#define GAVL_META_MEDIA_CLASS_MOVIE_PART          "item.video.movie.part"
+#define GAVL_META_CLASS_AUDIO_FILE          "item.audio"
+#define GAVL_META_CLASS_VIDEO_FILE          "item.video"
+#define GAVL_META_CLASS_AUDIO_DISK_TRACK    "item.audio.disktrack"
+#define GAVL_META_CLASS_VIDEO_DISK_TRACK    "item.video.disktrack"
+#define GAVL_META_CLASS_SONG                "item.audio.song"
+#define GAVL_META_CLASS_MOVIE               "item.video.movie"
+#define GAVL_META_CLASS_MOVIE_PART          "item.video.movie.part"
 
-#define GAVL_META_MEDIA_CLASS_AUDIO_PODCAST_EPISODE "item.audio.podcastepisode"
-#define GAVL_META_MEDIA_CLASS_VIDEO_PODCAST_EPISODE "item.video.podcastepisode"
+#define GAVL_META_CLASS_AUDIO_PODCAST_EPISODE "item.audio.podcastepisode"
+#define GAVL_META_CLASS_VIDEO_PODCAST_EPISODE "item.video.podcastepisode"
 
-#define GAVL_META_MEDIA_CLASS_TV_EPISODE          "item.video.episode"
+#define GAVL_META_CLASS_TV_EPISODE          "item.video.episode"
 
 /* Streams get this this type when it's not clear if they are audio or video broadcasts */
-#define GAVL_META_MEDIA_CLASS_BROADCAST           "item.broadcast"
-#define GAVL_META_MEDIA_CLASS_AUDIO_BROADCAST     "item.audio.broadcast"
-#define GAVL_META_MEDIA_CLASS_VIDEO_BROADCAST     "item.video.broadcast"
-#define GAVL_META_MEDIA_CLASS_IMAGE               "item.image"
+#define GAVL_META_CLASS_BROADCAST           "item.broadcast"
+#define GAVL_META_CLASS_AUDIO_BROADCAST     "item.audio.broadcast"
+#define GAVL_META_CLASS_VIDEO_BROADCAST     "item.video.broadcast"
+#define GAVL_META_CLASS_IMAGE               "item.image"
 
 // non-media file: This is given to filesystem objects, which contain no media
-#define GAVL_META_MEDIA_CLASS_FILE                "item.file"     
+#define GAVL_META_CLASS_FILE                "item.file"     
 
 // Location, which needs to be specified further: This is given to urls in redirector (e.g. m3u) files.
 // Loading can be delayed
 
-#define GAVL_META_MEDIA_CLASS_LOCATION            "item.location"
+#define GAVL_META_CLASS_LOCATION            "item.location"
 
 // External subtitle file
-#define GAVL_META_MEDIA_CLASS_SUBTITLE_FILE        "item.subtitles"
+#define GAVL_META_CLASS_SUBTITLE_FILE        "item.subtitles"
 
 // Stream comes from recording device
-#define GAVL_META_MEDIA_CLASS_AUDIO_RECORDER      "item.recorder.audio" 
-#define GAVL_META_MEDIA_CLASS_VIDEO_RECORDER      "item.recorder.video" 
+#define GAVL_META_CLASS_AUDIO_RECORDER      "item.recorder.audio" 
+#define GAVL_META_CLASS_VIDEO_RECORDER      "item.recorder.video" 
 
 /* Container values */
-#define GAVL_META_MEDIA_CLASS_CONTAINER           "container"       // Generic
-#define GAVL_META_MEDIA_CLASS_MUSICALBUM          "container.musicalbum" 
-#define GAVL_META_MEDIA_CLASS_PHOTOALBUM          "container.photoalbum" 
-#define GAVL_META_MEDIA_CLASS_PLAYLIST            "container.playlist"
-#define GAVL_META_MEDIA_CLASS_PODCAST             "container.podcast"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_CATEGORY  "container.category"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_ACTOR     "container.category.actor" 
-#define GAVL_META_MEDIA_CLASS_CONTAINER_DIRECTOR  "container.category.director" 
-#define GAVL_META_MEDIA_CLASS_CONTAINER_ARTIST    "container.category.artist" 
-#define GAVL_META_MEDIA_CLASS_CONTAINER_COUNTRY   "container.category.country" 
-#define GAVL_META_MEDIA_CLASS_CONTAINER_GENRE     "container.category.genre"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_LANGUAGE  "container.category.language"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_TAG       "container.category.tag"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_YEAR      "container.category.year"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_TV        "container.tv"
-#define GAVL_META_MEDIA_CLASS_CONTAINER_RADIO     "container.radio"
-#define GAVL_META_MEDIA_CLASS_TV_SEASON           "container.season"
-#define GAVL_META_MEDIA_CLASS_TV_SHOW             "container.tvshow"
-#define GAVL_META_MEDIA_CLASS_DIRECTORY           "container.directory" // On filesystem
+#define GAVL_META_CLASS_CONTAINER           "container"       // Generic
+#define GAVL_META_CLASS_MUSICALBUM          "container.musicalbum" 
+#define GAVL_META_CLASS_PHOTOALBUM          "container.photoalbum" 
+#define GAVL_META_CLASS_PLAYLIST            "container.playlist"
+#define GAVL_META_CLASS_PODCAST             "container.podcast"
+#define GAVL_META_CLASS_CONTAINER_CATEGORY  "container.category"
+#define GAVL_META_CLASS_CONTAINER_ACTOR     "container.category.actor" 
+#define GAVL_META_CLASS_CONTAINER_DIRECTOR  "container.category.director" 
+#define GAVL_META_CLASS_CONTAINER_ARTIST    "container.category.artist" 
+#define GAVL_META_CLASS_CONTAINER_COUNTRY   "container.category.country" 
+#define GAVL_META_CLASS_CONTAINER_GENRE     "container.category.genre"
+#define GAVL_META_CLASS_CONTAINER_LANGUAGE  "container.category.language"
+#define GAVL_META_CLASS_CONTAINER_TAG       "container.category.tag"
+#define GAVL_META_CLASS_CONTAINER_YEAR      "container.category.year"
+#define GAVL_META_CLASS_CONTAINER_TV        "container.tv"
+#define GAVL_META_CLASS_CONTAINER_RADIO     "container.radio"
+#define GAVL_META_CLASS_TV_SEASON           "container.season"
+#define GAVL_META_CLASS_TV_SHOW             "container.tvshow"
+#define GAVL_META_CLASS_DIRECTORY           "container.directory" // On filesystem
 
-#define GAVL_META_MEDIA_CLASS_MULTITRACK_FILE     "container.multitrackfile"
+#define GAVL_META_CLASS_MULTITRACK_FILE     "container.multitrackfile"
 
 /* Root Containers */
-#define GAVL_META_MEDIA_CLASS_ROOT               "container.root" 
+#define GAVL_META_CLASS_ROOT               "container.root" 
 
 // Mapped locally, not part of database
-#define GAVL_META_MEDIA_CLASS_ROOT_PLAYQUEUE "container.root.playqueue" 
+#define GAVL_META_CLASS_ROOT_PLAYQUEUE "container.root.playqueue" 
 
-#define GAVL_META_MEDIA_CLASS_ROOT_MUSICALBUMS   "container.root.musicalbums"
-#define GAVL_META_MEDIA_CLASS_ROOT_SONGS         "container.root.songs" 
-#define GAVL_META_MEDIA_CLASS_ROOT_MOVIES        "container.root.movies"
-#define GAVL_META_MEDIA_CLASS_ROOT_TV_SHOWS      "container.root.tvshows"
-#define GAVL_META_MEDIA_CLASS_ROOT_STREAMS       "container.root.streams"
-#define GAVL_META_MEDIA_CLASS_ROOT_DIRECTORIES   "container.root.directories"
-#define GAVL_META_MEDIA_CLASS_ROOT_PHOTOS        "container.root.photos"
-#define GAVL_META_MEDIA_CLASS_ROOT_PODCASTS      "container.root.podcasts"
-#define GAVL_META_MEDIA_CLASS_ROOT_RECORDERS     "container.root.recorders"
+#define GAVL_META_CLASS_ROOT_MUSICALBUMS   "container.root.musicalbums"
+#define GAVL_META_CLASS_ROOT_SONGS         "container.root.songs" 
+#define GAVL_META_CLASS_ROOT_MOVIES        "container.root.movies"
+#define GAVL_META_CLASS_ROOT_TV_SHOWS      "container.root.tvshows"
+#define GAVL_META_CLASS_ROOT_STREAMS       "container.root.streams"
+#define GAVL_META_CLASS_ROOT_DIRECTORIES   "container.root.directories"
+#define GAVL_META_CLASS_ROOT_PHOTOS        "container.root.photos"
+#define GAVL_META_CLASS_ROOT_PODCASTS      "container.root.podcasts"
+#define GAVL_META_CLASS_ROOT_RECORDERS     "container.root.recorders"
 
-#define GAVL_META_MEDIA_CLASS_ROOT_FAVORITES     "container.root.favorites" 
-#define GAVL_META_MEDIA_CLASS_ROOT_BOOKMARKS     "container.root.bookmarks" 
-#define GAVL_META_MEDIA_CLASS_ROOT_LIBRARY       "container.root.library"
+#define GAVL_META_CLASS_ROOT_FAVORITES     "container.root.favorites" 
+#define GAVL_META_CLASS_ROOT_BOOKMARKS     "container.root.bookmarks" 
+#define GAVL_META_CLASS_ROOT_LIBRARY       "container.root.library"
 
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE            "container.root.removable"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_AUDIOCD    "container.root.removable.cd.audio"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VCD        "container.root.removable.cd.vcd"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_SVCD       "container.root.removable.cd.svcd"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_VIDEODVD   "container.root.removable.dvd.video"
+#define GAVL_META_CLASS_ROOT_REMOVABLE            "container.root.removable"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_AUDIOCD    "container.root.removable.cd.audio"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_VCD        "container.root.removable.cd.vcd"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_SVCD       "container.root.removable.cd.svcd"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_VIDEODVD   "container.root.removable.dvd.video"
 
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM            "container.root.removable.filesystem"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD        "container.root.removable.filesystem.hdd"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE   "container.root.removable.filesystem.pendrive"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD "container.root.removable.filesystem.memorycard"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE     "container.root.removable.filesystem.mobile"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD         "container.root.removable.filesystem.cdrom"
-#define GAVL_META_MEDIA_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD        "container.root.removable.filesystem.dvd"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM            "container.root.removable.filesystem"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_HDD        "container.root.removable.filesystem.hdd"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_PENDRIVE   "container.root.removable.filesystem.pendrive"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MEMORYCARD "container.root.removable.filesystem.memorycard"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_MOBILE     "container.root.removable.filesystem.mobile"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_CD         "container.root.removable.filesystem.cdrom"
+#define GAVL_META_CLASS_ROOT_REMOVABLE_FILESYSTEM_DVD        "container.root.removable.filesystem.dvd"
 
 /* Remote media server */
-#define GAVL_META_MEDIA_CLASS_ROOT_SERVER        "container.root.server"
+#define GAVL_META_CLASS_ROOT_SERVER        "container.root.server"
 
 /* Non-media source related media classes */
 
-#define GAVL_META_MEDIA_CLASS_BACKEND_RENDERER      "backend.renderer"
-#define GAVL_META_MEDIA_CLASS_BACKEND_MDB           "backend.mdb"
-#define GAVL_META_MEDIA_CLASS_BACKEND_CONTROLPANEL  "backend.controlpanel"
+#define GAVL_META_CLASS_BACKEND_RENDERER      "backend.renderer"
+#define GAVL_META_CLASS_BACKEND_MDB           "backend.mdb"
+#define GAVL_META_CLASS_BACKEND_CONTROLPANEL  "backend.controlpanel"
 
-#define GAVL_META_MEDIA_CLASS_SINK_AUDIO            "sink.audio"
-#define GAVL_META_MEDIA_CLASS_SINK_VIDEO            "sink.video"
+#define GAVL_META_CLASS_SINK_AUDIO            "sink.audio"
+#define GAVL_META_CLASS_SINK_VIDEO            "sink.video"
 
-#define GAVL_META_MEDIA_CLASS_WEBPAGE               "item.webpage"
+#define GAVL_META_CLASS_WEBPAGE               "item.webpage"
 
 /* GUI States */
 
