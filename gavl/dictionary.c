@@ -917,6 +917,8 @@ gavl_dictionary_t * gavl_dictionary_get_recursive_create(gavl_dictionary_t * dic
 
   if(!strchr(path, '/')) // Shortcut
     return gavl_dictionary_get_dictionary_create(dict, path);
+  else if(!strcmp(path, "/"))
+    return dict;
   
   dirs = gavl_strbreak(path, '/');
 
