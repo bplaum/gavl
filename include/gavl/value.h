@@ -484,7 +484,13 @@ struct gavl_dict_entry_s
 /* Value functions */
 
 GAVL_PUBLIC
+int gavl_value_clamp(gavl_value_t * v, const gavl_value_t * min, const gavl_value_t * max);
+
+GAVL_PUBLIC
 int gavl_value_compare(const gavl_value_t * v1, const gavl_value_t * v2);
+
+GAVL_PUBLIC
+int gavl_value_addto(const gavl_value_t * src, gavl_value_t * dst);
 
 GAVL_PUBLIC
 void gavl_value_copy(gavl_value_t * dst, const gavl_value_t * src);
