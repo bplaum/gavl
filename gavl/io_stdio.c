@@ -133,7 +133,7 @@ gavl_io_t * gavl_io_from_filename(const char * filename, int wr)
     {
     if(!(f = fopen(filename, "r")))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s for writing: %s", filename, strerror(errno));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open %s for reading: %s", filename, strerror(errno));
       return NULL;
       }
     }
