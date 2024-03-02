@@ -906,3 +906,23 @@ char * gavl_search_cache_dir(const char * package, const char * directory)
     }
   return cache_dir;
   }
+
+char * gavl_search_config_dir(const char * package, const char * directory)
+  {
+  const char * var;
+  char * config_dir;
+  
+  if((var = getenv("XDG_CONFIG_HOME")))
+    config_dir = gavl_sprintf("%s/%s/%s", var, package, directory);
+  else if((var = getenv("HOME")))
+    config_dir = gavl_sprintf("%s/.config/%s/%s", var, package, directory);
+  else
+    return NULL;
+  
+  if(!gavl_ensure_directory(config_dir, 0))
+    {
+    free(config_dir);
+    return NULL;
+    }
+  return config_dir;
+  }
