@@ -395,6 +395,8 @@ int gavl_ensure_directory(const char * dir, int priv);
 GAVL_PUBLIC
 char * gavl_search_cache_dir(const char * package, const char * directory);
 
+GAVL_PUBLIC
+char * gavl_search_config_dir(const char * package, const char * directory);
 
 #endif // GAVL_UTILS_H_INCLUDED
 
