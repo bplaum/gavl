@@ -177,6 +177,37 @@ int gavl_value_compare(const gavl_value_t * v1, const gavl_value_t * v2)
   return 0;
   }
 
+int gavl_value_clamp(gavl_value_t * v, const gavl_value_t * min, const gavl_value_t * max)
+  {
+  if(min && (gavl_value_compare(v, min) < 0))
+    gavl_value_copy(v, min);
+
+  if(max && (gavl_value_compare(v, max) > 0))
+    gavl_value_copy(v, max);
+  
+  }
+
+int gavl_value_addto(const gavl_value_t * src, gavl_value_t * dst)
+  {
+  if(src->type != dst->type)
+    return 0;
+
+  switch(src->type)
+    {
+    case GAVL_TYPE_INT:
+      dst->v.i += src->v.i;
+      break;
+    case GAVL_TYPE_LONG:
+      dst->v.l += src->v.l;
+      break;
+    case GAVL_TYPE_FLOAT:
+      dst->v.d += src->v.d;
+      break;
+    }
+  /* TODO: Maybe add support for strings and arrays? */
+  
+  }
+
 void gavl_value_copy(gavl_value_t * dst, const gavl_value_t * src)
   {
   gavl_value_reset(dst);
@@ -398,9 +429,10 @@ void gavl_value_set_dictionary_nocopy(gavl_value_t * v, gavl_dictionary_t * val)
 
 void gavl_value_set_array_nocopy(gavl_value_t * v, gavl_array_t * val)
   {
+  gavl_array_t * dst;
   gavl_value_reset(v);
-  v->type = GAVL_TYPE_ARRAY;
-  v->v.array = val;
+  dst = gavl_value_set_array(v);
+  gavl_array_move(dst, val);
   }
 
 gavl_array_t * gavl_value_set_array(gavl_value_t * v)
