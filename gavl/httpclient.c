@@ -1426,6 +1426,9 @@ static int send_buffer_async(gavl_io_t * io,
   int result;
 
   //  fprintf(stderr, "send_buffer_async 1  %d\n", timeout);
+
+  if(buf->pos == buf->len)
+    return 1;
   
   if((timeout > 0) && !gavl_io_can_write(io, timeout))
     return 0;
@@ -1988,7 +1991,7 @@ static int async_iteration(gavl_io_t * io, int timeout)
   
   if(c->state == STATE_COMPLETE)
     {
-    fprintf(stderr, "async_iteration done %d\n", !!(c->flags & FLAG_ERROR));
+    //  fprintf(stderr, "async_iteration done %d\n", !!(c->flags & FLAG_ERROR));
     return (c->flags & FLAG_ERROR) ? -1 : 1;
     }
   gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown state %d", c->state);
