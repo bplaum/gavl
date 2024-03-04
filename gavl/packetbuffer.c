@@ -352,8 +352,8 @@ static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
   /* Get remaining durations with a brute force method */
   if(buf->flags & FLAG_FLUSH)
     {
-    int last_idx;
-    int64_t duration;
+    int last_idx = 0;
+    int64_t duration = 0;
     
     for(i = 0; i < buf->buf.num; i++)
       {
