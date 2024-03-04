@@ -423,8 +423,9 @@ static void update_timestamps_b_frames(gavl_packet_buffer_t * buf)
     }
 
   /* PTS from frame type and duration */
-  if((buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
-     (buf->buf.packets[buf->buf.num-1]->duration > 0))
+  if((buf->buf.num >= 2) &&
+     (buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-2]->duration > 0))
     {
     pts_from_duration_b_frames(buf);
     }

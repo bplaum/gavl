@@ -185,6 +185,11 @@ static int handle_remote_close(gavl_http_client_t * c)
       c->chunk_length = 0;
       break;
     case STATE_READ_BODY_NORMAL:
+
+      //      fprintf(stderr, "Connection closed while reading body\n");
+      //      gavl_dictionary_dump(&c->resp, 2);
+      //      fprintf(stderr, "\nBytes read: %d\n", c->res_body->len);
+      
       if(c->total_bytes <= 0)
         goto error;
       
@@ -200,10 +205,14 @@ static int handle_remote_close(gavl_http_client_t * c)
       goto error;
     }
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Connection closed unexpectedly, reopening");
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Connection closed unexpectedly (state: %d), reopening", c->state);
+          
   /* Re-connect */
   c->num_redirections = 0;
   c->num_reconnects++;
+
+  if(c->req_body)
+    c->req_body->pos = 0;
   
   if(c->io_int)
     {
@@ -1402,7 +1411,7 @@ void gavl_http_client_resume(gavl_io_t * io)
   {
   gavl_http_client_t * c = gavl_io_get_priv(io);
 
-  fprintf(stderr, "gavl_http_client_resume %d\n", c->state);
+  //  fprintf(stderr, "gavl_http_client_resume %d\n", c->state);
 
   /* Resume after seek */
   if(c->state != STATE_COMPLETE)
@@ -1711,8 +1720,8 @@ static int async_iteration(gavl_io_t * io, int timeout)
       gavl_http_request_to_buffer(&c->req, &c->header_buffer);
 
 #ifdef DUMP_HEADERS
-      gavl_dprintf("Sending request %d\n", c->header_buffer.len);
-      gavl_dictionary_dump(&c->req, 2);
+        gavl_dprintf("Sending request %d\n", c->header_buffer.len);
+        gavl_dictionary_dump(&c->req, 2);
 #endif
       }
     
@@ -2007,7 +2016,7 @@ int gavl_http_client_run_async_done(gavl_io_t * io, int timeout)
   
   gavl_http_client_t * c = gavl_io_get_priv(io);
 
-  //  fprintf(stderr, "gavl_http_client_run_async_done %d\n", c->state);
+  // fprintf(stderr, "gavl_http_client_run_async_done %d\n", c->state);
   
   if(timeout > 0)
     {
