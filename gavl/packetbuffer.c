@@ -341,7 +341,7 @@ static int get_next_by_pts(gavl_packet_buffer_t * buf, int64_t pts, int start, i
   return ret;
   }
 
-static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
+static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)   
   {
   int ip1 = -1;
   int ip2 = -1;
