@@ -598,7 +598,7 @@ GAVL_PUBLIC
 char * gavl_value_to_string(const gavl_value_t * v);
 
 GAVL_PUBLIC
-void gavl_value_from_string(gavl_value_t * v, const char * str);
+int gavl_value_from_string(gavl_value_t * v, const char * str);
 
 
 

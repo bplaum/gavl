@@ -24,9 +24,13 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include <config.h>
+
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
 #include <gavl/value.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "value"
 
 static const struct
   {
@@ -184,7 +188,7 @@ int gavl_value_clamp(gavl_value_t * v, const gavl_value_t * min, const gavl_valu
 
   if(max && (gavl_value_compare(v, max) > 0))
     gavl_value_copy(v, max);
-  
+  return 1;
   }
 
 int gavl_value_addto(const gavl_value_t * src, gavl_value_t * dst)
@@ -203,9 +207,11 @@ int gavl_value_addto(const gavl_value_t * src, gavl_value_t * dst)
     case GAVL_TYPE_FLOAT:
       dst->v.d += src->v.d;
       break;
+    default:
+      return 0;
     }
   /* TODO: Maybe add support for strings and arrays? */
-  
+  return 1;
   }
 
 void gavl_value_copy(gavl_value_t * dst, const gavl_value_t * src)
@@ -702,7 +708,7 @@ char * gavl_value_to_string(const gavl_value_t * v)
     }
   }
 
-void gavl_value_from_string(gavl_value_t * v, const char * str)
+int gavl_value_from_string(gavl_value_t * v, const char * str)
   {
   switch(v->type)
     {
@@ -716,18 +722,19 @@ void gavl_value_from_string(gavl_value_t * v, const char * str)
       if(rest == end)
         {
         v->type = GAVL_TYPE_LONG;
-        return;
+        break;
         }
 
       v->v.d = strtod(str, &rest);
       if(rest == end)
         {
         v->type = GAVL_TYPE_FLOAT;
-        return;
+        break;
         }
       // Default
       v->v.str = gavl_strdup(str);
       v->type = GAVL_TYPE_STRING;
+      break;
       }
       break;
     case GAVL_TYPE_INT:
@@ -743,9 +750,12 @@ void gavl_value_from_string(gavl_value_t * v, const char * str)
       v->v.str = gavl_strdup(str);
       break;
     default:
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set value of type %s from string %s", gavl_type_to_string(v->type),
+               str);
+      return 0;
       break;
     }
-  
+  return 1;
   }
 
 const gavl_audio_format_t * gavl_value_get_audio_format(const gavl_value_t * v)
