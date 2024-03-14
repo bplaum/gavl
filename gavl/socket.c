@@ -859,7 +859,7 @@ int gavl_socket_connect_inet(gavl_socket_address_t * a, int milliseconds)
   /* Create the socket */
   if((ret = create_socket(a->addr.ss_family, SOCK_STREAM, 0)) < 0)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create TCP socket");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create TCP socket: %s", strerror(errno));
     return -1;
     }
 
@@ -922,7 +922,7 @@ int gavl_socket_connect_unix(const char * name)
   ret = create_socket(PF_LOCAL, SOCK_STREAM, 0);
   if(ret < 0)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create unix socket");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create unix socket: %s", strerror(errno));
     return -1;
     }
 
@@ -1011,7 +1011,7 @@ int gavl_listen_socket_create_inet(gavl_socket_address_t * addr,
   
   if(ret < 0)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create TCP server socket");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create TCP server socket: %s", strerror(errno));
     return -1;
     }
   
@@ -1073,7 +1073,7 @@ int gavl_listen_socket_create_unix(const char * name,
   ret = create_socket(PF_LOCAL, SOCK_STREAM, 0);
   if(ret < 0)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create unix server socket");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot create unix server socket: %s", strerror(errno));
     return -1;
     }
 
