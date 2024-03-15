@@ -136,7 +136,7 @@ static void do_reset_connection(gavl_http_client_t * c)
     gavl_io_destroy(c->io_proxy);
     c->io_proxy = NULL;
     }
-
+  
   gavl_buffer_reset(&c->header_buffer);
   gavl_buffer_reset(&c->chunk_header_buffer);
   c->real_uri     = NULL;
@@ -246,6 +246,12 @@ static void close_connection(gavl_http_client_t * c)
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Closing connection: %s", c->uri);
 
   do_reset_connection(c);
+
+  if(c->io_proxy)
+    {
+    gavl_io_destroy(c->io_proxy);
+    c->io_proxy = NULL;
+    }
   
   if(c->io_int)
     {
@@ -253,6 +259,12 @@ static void close_connection(gavl_http_client_t * c)
     c->io_int = NULL;
     }
 
+  if(c->fd >= 0)
+    {
+    gavl_socket_close(c->fd);
+    c->fd = -1;
+    }
+  
   c->host         = gavl_strrep(c->host, NULL);
   c->protocol     = gavl_strrep(c->protocol, NULL);
   c->proxy_host   = gavl_strrep(c->proxy_host, NULL);
@@ -760,6 +772,7 @@ gavl_io_t * gavl_http_client_create()
   
   c->port         = -1;
   c->proxy_port   = -1;
+  c->fd           = -1;
   
   return ret;
   }
