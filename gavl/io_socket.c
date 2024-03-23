@@ -94,7 +94,7 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
   else
     result = gavl_socket_read_data_noblock(s->fd, data + bytes_read, len);
 
-  if((result < len) && ((err = errno) || (err = gavl_socket_get_errno(s->fd))))
+  if((result < 0) && ((err = errno) || (err = gavl_socket_get_errno(s->fd))))
     {
     /* Non fatal errors are handled gracefully */
     if((err == EINPROGRESS) || (err == EAGAIN) || (err == EWOULDBLOCK))
