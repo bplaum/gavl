@@ -1148,7 +1148,6 @@ void gavl_listen_socket_destroy(int sock)
   gavl_socket_close(sock);
   }
 
-
 int gavl_socket_read_data_noblock(int fd, uint8_t * data, int len)
   {
   int result;
