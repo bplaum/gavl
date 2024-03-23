@@ -105,7 +105,8 @@ static int do_read_socket(void * priv, uint8_t * data, int len, int block)
     else
       {
       gavl_io_set_error(s->io);
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got socket error while reading (block: %d): %s\n", block, strerror(err));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got socket error while reading (block: %d, len: %d): %s\n", block, len,
+               strerror(err));
       }
     }
   
