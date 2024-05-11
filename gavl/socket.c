@@ -113,13 +113,8 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
   dst->len = src->len;
   }
 
-void gavl_socket_address_destroy(gavl_socket_address_t * a)
+static void async_cancel(gavl_socket_address_t * a)
   {
-  int err;
-
-  if(a->gai.ar_result)
-    freeaddrinfo(a->gai.ar_result);
-  
   if(a->flags & FLAG_LOOKUP_ACTIVE)
     {
     if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
@@ -129,6 +124,16 @@ void gavl_socket_address_destroy(gavl_socket_address_t * a)
                a->gai_ar_name, gai_strerror(err));
     
     }
+  }
+
+void gavl_socket_address_destroy(gavl_socket_address_t * a)
+  {
+  int err;
+
+  async_cancel(a);
+  
+  if(a->gai.ar_result)
+    freeaddrinfo(a->gai.ar_result);
   
   if(a->gai_ar_name)
     free(a->gai_ar_name);
@@ -441,6 +446,9 @@ int gavl_socket_address_set(gavl_socket_address_t * a, const char * hostname,
 int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
                                   int port, int socktype)
   {
+  /* Cancel earlier request */
+  async_cancel(a);
+  
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up %s", host);
   set_addr_hints(&a->gai_ar_request, socktype, host);
 
