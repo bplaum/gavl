@@ -115,21 +115,20 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
 
 static void async_cancel(gavl_socket_address_t * a)
   {
-  if(a->flags & FLAG_LOOKUP_ACTIVE)
-    {
-    if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelled host lookup for %s", a->gai_ar_name);
-    else
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling host lookup for %s failed: %s",
-               a->gai_ar_name, gai_strerror(err));
-    
-    }
+  int err;
+
+  if(!a->flags & FLAG_LOOKUP_ACTIVE)
+    return;
+
+  if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelled host lookup for %s", a->gai_ar_name);
+  else
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling host lookup for %s failed: %s",
+             a->gai_ar_name, gai_strerror(err));
   }
 
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
   {
-  int err;
-
   async_cancel(a);
   
   if(a->gai.ar_result)
