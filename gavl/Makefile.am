@@ -199,6 +199,7 @@ scale_kernels.c \
 scale_table.c \
 shm.c \
 socket.c \
+socketaddress.c \
 ssim.c \
 state.c \
 stats.c \

@@ -23,6 +23,7 @@ mix.h \
 sampleformat.h \
 samplerate.h \
 scale.h \
+socket_private.h \
 transform.h \
 vaapi.h \
 video.h \
