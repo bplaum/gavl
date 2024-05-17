@@ -61,6 +61,9 @@ GAVL_PUBLIC
 int gavl_socket_address_set_async_done(gavl_socket_address_t *, int timeout);
 
 GAVL_PUBLIC
+void gavl_socket_address_set_async_cancel(gavl_socket_address_t *);
+
+GAVL_PUBLIC
 void gavl_socket_address_set_port(gavl_socket_address_t * addr, int port);
 
 GAVL_PUBLIC

@@ -9,6 +9,7 @@
 #include <net/if.h>
 #endif
 
+#include <sys/time.h>
 #include <netinet/in.h>
 
 #include <sys/types.h>
@@ -19,6 +20,7 @@
 #include <stdio.h>
 #include <arpa/inet.h> // inet_ntop
 #include <errno.h>
+#include <pthread.h>
 
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
@@ -30,8 +32,24 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "socketaddress"
 
+// typedef struct lookup_async_s lookup_async_t;
 
-#define FLAG_LOOKUP_ACTIVE (1<<0)
+// #define FLAG_LOOKUP_ACTIVE (1<<0)
+
+/* Asychronous host lookup */
+
+struct lookup_async_s
+  {
+  char * hostname;
+  struct addrinfo * addr;
+  int port;
+  int socktype;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  
+  int waiting; // Someone is waiting for us
+  int done; // Lookup done
+  };
 
 
 gavl_socket_address_t * gavl_socket_address_create()
@@ -48,32 +66,10 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
   dst->len = src->len;
   }
 
-static void async_cancel(gavl_socket_address_t * a)
-  {
-  int err;
-
-  if(!a->flags & FLAG_LOOKUP_ACTIVE)
-    return;
-
-  if((err = gai_cancel(&a->gai)) == EAI_CANCELED)
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelled host lookup for %s", a->gai_ar_name);
-  else
-    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling host lookup for %s failed: %s",
-             a->gai_ar_name, gai_strerror(err));
-
-  
-  }
-
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
   {
-  async_cancel(a);
+  gavl_socket_address_set_async_cancel(a);
   
-  if(a->gai.ar_result)
-    freeaddrinfo(a->gai.ar_result);
-  
-  if(a->gai_ar_name)
-    free(a->gai_ar_name);
-
   free(a);
   }
 /* */
@@ -341,6 +337,8 @@ int gavl_socket_address_set(gavl_socket_address_t * a, const char * hostname,
                             int port, int socktype)
   {
   struct addrinfo * addr;
+
+  gavl_socket_address_set_async_cancel(a);
   
   addr = hostbyname(hostname, socktype);
   if(!addr)
@@ -358,134 +356,6 @@ int gavl_socket_address_set(gavl_socket_address_t * a, const char * hostname,
   
   return 1;
   }
-
-int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
-                                  int port, int socktype)
-  {
-  /* Cancel earlier request */
-  async_cancel(a);
-  
-  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up %s", host);
-  set_addr_hints(&a->gai_ar_request, socktype, host);
-
-  /* TODO: Make this a noop whe host and port didn't change */
-
-  if(a->gai_ar_name && !strcmp(a->gai_ar_name, host) &&
-     (a->gai_port == port))
-    {
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Using cached host address for %s:%d", host, port);
-    return 1; // Nothing to do, take last result
-    }
-
-  a->gai_ar_name = gavl_strrep(a->gai_ar_name, host);
-  a->gai_port = port;
-  
-  if(a->gai.ar_result)
-    freeaddrinfo(a->gai.ar_result);
-  
-  memset(&a->gai, 0, sizeof(a->gai));
-  
-  a->gai.ar_request = &a->gai_ar_request;
-  a->gai.ar_name = a->gai_ar_name;
-
-  a->gai_arr[0] = &a->gai;
-  
-  if(getaddrinfo_a(GAI_NOWAIT, a->gai_arr, 1, NULL))
-    return 0;
-
-  a->flags |= FLAG_LOOKUP_ACTIVE;
-  
-  return 1;
-  }
-
-int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
-  {
-  int result;
-  
-  if(!(a->flags & FLAG_LOOKUP_ACTIVE))
-    return 1; // Nothing to do
-  
-  //  fprintf(stderr, "gavl_socket_address_set_async_done\n");
-  
-  if(timeout >= 0)
-    {
-    struct timespec to;
-    to.tv_sec = timeout / 1000;
-    to.tv_nsec = (timeout % 1000) * 1000000;
-    result = gai_suspend((const struct gaicb**)a->gai_arr, 1, &to);
-    }
-  else
-    result = gai_suspend((const struct gaicb**)a->gai_arr, 1, NULL);
-
-  //  fprintf(stderr, "gavl_socket_address_set_async_done 2 %d\n", result);
-  
-  switch(result)
-    {
-    case 0:
-    case EAI_ALLDONE:
-      break;
-    case EAI_SYSTEM:
-      return 0;
-      break;
-    case EAI_AGAIN:
-    case EAI_INTR:
-      return 0;
-      break;
-    default:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Looking up host %s failed: %d %s",
-               a->gai_ar_name, result, gai_strerror(result));
-      a->flags &= ~FLAG_LOOKUP_ACTIVE;
-      return -1;
-      break;
-    }
-
-  result = gai_error(&a->gai);
-
-  switch(result)
-    {
-    case 0:
-    case EAI_ALLDONE:
-      {
-      char str[GAVL_SOCKET_ADDR_STR_LEN];
-
-      //      memcpy(&a->addr, addr->ai_addr, addr->ai_addrlen);
-      //      a->len = addr->ai_addrlen;
-      
-      memcpy(&a->addr, a->gai.ar_result->ai_addr, a->gai.ar_result->ai_addrlen);
-      a->len = a->gai.ar_result->ai_addrlen;
-      
-      //  if(!hostbyname(a, hostname))
-      //    return 0;
-      //  a->port = port;
-
-      gavl_socket_address_set_port(a, a->gai_port);
-
-
-      gavl_socket_address_to_string(a, str);
-      gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Looking up host %s succeeded: %s", a->gai_ar_name, str);
-      a->flags &= ~FLAG_LOOKUP_ACTIVE;
-      return 1;
-      }
-      break;
-    case EAI_INPROGRESS:
-      return 0;
-      break;
-    case EAI_CANCELED:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: Canceled",
-               a->gai_ar_name);
-      a->flags &= ~FLAG_LOOKUP_ACTIVE;
-      return -1;
-      break;
-    default:
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resolve address of %s: %d %s",
-               a->gai_ar_name, result, gai_strerror(result));
-      a->flags &= ~FLAG_LOOKUP_ACTIVE;
-      return -1;
-    }
-  a->flags &= ~FLAG_LOOKUP_ACTIVE;
-  return -1;
-  }
-
 
 int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const char * wildcard)
   {
@@ -733,3 +603,171 @@ int gavl_interface_index_from_address(const gavl_socket_address_t * a)
   
   return ret;
   }
+
+/* Asychronous host lookup */
+
+
+static lookup_async_t * async_create(const char * hostname,
+                                     int port,
+                                     int socktype)
+  {
+  lookup_async_t * ret = calloc(1, sizeof(*ret));
+  
+  ret->hostname = gavl_strdup(hostname);
+  ret->port = port;
+  ret->socktype = socktype;
+  ret->waiting = 1;
+
+  pthread_mutex_init(&ret->mutex, NULL);
+  pthread_cond_init(&ret->cond, NULL);
+  
+  return ret;
+  }
+
+static void async_destroy(lookup_async_t * a)
+  {
+  pthread_mutex_destroy(&a->mutex);
+  pthread_cond_destroy(&a->cond);
+
+  if(a->addr)
+    freeaddrinfo(a->addr);
+  
+  free(a);
+  }
+
+
+static void * lookup_thread(void * data)
+  {
+  lookup_async_t * a = data;
+
+  struct addrinfo * addr;
+  
+  addr = hostbyname(a->hostname, a->socktype);
+
+  pthread_mutex_lock(&a->mutex);
+
+  //  fprintf(stderr, "gavl_socket_address_set_async done %p\n", addr);
+  
+  if(a->waiting)
+    {
+    a->addr = addr;
+    a->done = 1;
+    a->addr = addr;
+    pthread_cond_broadcast(&a->cond);
+    pthread_mutex_unlock(&a->mutex);
+    }
+  else
+    {
+    freeaddrinfo(addr);
+    pthread_mutex_unlock(&a->mutex);
+    async_destroy(a);
+    }
+  
+  return NULL;
+  }
+
+int gavl_socket_address_set_async(gavl_socket_address_t * a, const char * host,
+                                  int port, int socktype)
+  {
+  pthread_attr_t attr;
+  pthread_t th;
+
+  //  fprintf(stderr, "gavl_socket_address_set_async %s\n", host);
+  
+  gavl_socket_address_set_async_cancel(a);
+  a->async = async_create(host, port, socktype);
+  
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  pthread_create(&th, &attr, lookup_thread, a->async);
+  pthread_attr_destroy(&attr);
+  
+  return 1;
+  }
+
+static void cleanup_async(gavl_socket_address_t * a)
+  {
+  async_destroy(a->async);
+  a->async = NULL;
+  }
+
+static int finish_async(gavl_socket_address_t * a)
+  {
+  if(!a->async->addr)
+    {
+    cleanup_async(a);
+    return 0;
+    }
+
+  memcpy(&a->addr, a->async->addr->ai_addr, a->async->addr->ai_addrlen);
+  a->len = a->async->addr->ai_addrlen;
+  gavl_socket_address_set_port(a, a->async->port);
+  cleanup_async(a);
+  return 1;
+  }
+
+int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
+  {
+  struct timespec time_to_wait;
+  struct timeval now;
+  int64_t to;
+  
+  pthread_mutex_lock(&a->async->mutex);
+
+  if(a->async->done)
+    {
+    pthread_mutex_unlock(&a->async->mutex);
+    return finish_async(a);
+    }
+
+  if(timeout <= 0)
+    {
+    pthread_mutex_unlock(&a->async->mutex);
+    return 0;
+    }
+  /* Wait on condition variable */
+  gettimeofday(&now,NULL);
+  
+  time_to_wait.tv_sec  = now.tv_sec;
+  time_to_wait.tv_nsec = now.tv_usec;
+  time_to_wait.tv_nsec*= 1000;  // us -> ns
+
+  time_to_wait.tv_sec += timeout / 1000;
+  to = timeout % 1000;
+  to *= (1000*1000); // ms -> us -> ns
+
+  to += time_to_wait.tv_nsec;
+  time_to_wait.tv_sec += to / (1000*1000*1000);
+  time_to_wait.tv_nsec = to % (1000*1000*1000);
+
+  if(!pthread_cond_timedwait(&a->async->cond, &a->async->mutex, &time_to_wait))
+    {
+    pthread_mutex_unlock(&a->async->mutex);
+    return finish_async(a);
+    }
+  
+  if(errno == ETIMEDOUT)
+    {
+    pthread_mutex_unlock(&a->async->mutex);
+    return 0;
+    }
+  else
+    {
+    pthread_mutex_unlock(&a->async->mutex);
+    cleanup_async(a);
+    return -1;
+    }
+    
+  }
+
+void gavl_socket_address_set_async_cancel(gavl_socket_address_t * a)
+  {
+  if(!a->async)
+    return;
+  
+  pthread_mutex_lock(&a->async->mutex);
+  a->async->waiting = 0;
+  pthread_mutex_unlock(&a->async->mutex);
+  a->async = NULL;
+  }
+
