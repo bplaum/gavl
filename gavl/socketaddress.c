@@ -696,7 +696,7 @@ static int finish_async(gavl_socket_address_t * a)
   if(!a->async->addr)
     {
     cleanup_async(a);
-    return 0;
+    return -1;
     }
 
   memcpy(&a->addr, a->async->addr->ai_addr, a->async->addr->ai_addrlen);
