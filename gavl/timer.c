@@ -58,6 +58,13 @@ gavl_time_t gavl_time_get_monotonic(void)
   return t;
   }
 
+gavl_time_t gavl_time_get_realtime(void)
+  {
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return (int64_t)(t.tv_sec)*1000000LL + t.tv_usec;
+  }
+
 struct gavl_timer_s
   {
   int64_t start_time_real;

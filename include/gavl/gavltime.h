@@ -216,6 +216,10 @@ int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret);
 GAVL_PUBLIC
 gavl_time_t gavl_time_get_monotonic(void);
 
+/* Returns microseconds since the epoch */  
+GAVL_PUBLIC
+gavl_time_t gavl_time_get_realtime(void);
+
 /* Simple software timer */
 
 /*! \defgroup timer Software timer
