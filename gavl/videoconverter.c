@@ -138,10 +138,10 @@ static int add_context_csp(gavl_video_converter_t * cnv,
 #endif
     return 0;
     }
-#if 0
-  fprintf(stderr, "Doing pixelformat conversion from %s to %s\n",
-          gavl_pixelformat_to_string(input_format->pixelformat),
-          gavl_pixelformat_to_string(output_format->pixelformat));
+#if 1
+  gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Doing pixelformat conversion from %s to %s",
+           gavl_pixelformat_to_string(input_format->pixelformat),
+           gavl_pixelformat_to_string(output_format->pixelformat));
   
 #endif
   return 1;

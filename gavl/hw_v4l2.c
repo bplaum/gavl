@@ -1332,7 +1332,7 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
   int i;
 
   dev->s = stream;
-  
+
   if(gavl_dictionary_get_int(&dev->dev, GAVL_V4L2_CAPABILITIES, &caps) &&
      (caps & V4L2_CAP_VIDEO_CAPTURE_MPLANE))
     dev->capture.buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -1403,9 +1403,8 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
                         &dev->capture.format,
                         dev->capture.buf_type);
     gavl_video_format_dump(&dev->capture.format);
-
+    dev->capture.format.hwctx = dev->hwctx;
     }
-
   
   gavl_video_format_copy(gavl_stream_get_video_format_nc(stream),
                          &dev->capture.format);
