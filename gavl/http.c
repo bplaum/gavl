@@ -6,9 +6,11 @@
 
 #include <config.h>
 
-#include <gavl/gavf.h>
+#include <gavl/gavl.h>
 #include <gavl/http.h>
 #include <gavl/log.h>
+#include <gavl/io.h>
+#include <gavl/utils.h>
 
 #define LOG_DOMAIN "gavl.http"
 

@@ -6,81 +6,6 @@
 
 /* Dictionary added to the track or stream dictionaries */
 
-/* I/O */
-
-struct gavl_io_s
-  {
-  gavf_read_func read_func;
-  gavf_read_func read_func_nonblock;
-  
-  gavf_write_func write_func;
-  gavf_write_func write_func_nonblock;
-  gavf_seek_func seek_func;
-  gavf_close_func close_func;
-  gavf_flush_func flush_func;
-  gavf_poll_func poll_func;
-  
-  void * priv;
-  
-  int64_t position;
-  
-  /* Informational data */
-  
-  int64_t total_bytes;
-  
-  gavl_dictionary_t info;
-  
-  gavl_buffer_t get_buf;
-
-  int flags;
-  };
-
-void gavl_io_init(gavl_io_t * ret,
-                  gavf_read_func  r,
-                  gavf_write_func w,
-                  gavf_seek_func  s,
-                  gavf_close_func c,
-                  gavf_flush_func f,
-                  int flags,
-                  void * priv);
-
-
-
-void gavl_io_skip(gavl_io_t * io, int bytes);
-
-void gavl_io_init_buf_read(gavl_io_t * io, gavl_buffer_t * buf);
-void gavl_io_init_buf_write(gavl_io_t * io, gavl_buffer_t * buf);
-
-void gavl_io_set_nonblock_read(gavl_io_t * io, gavf_read_func read_nonblock);
-void gavl_io_set_nonblock_write(gavl_io_t * io, gavf_write_func write_nonblock);
-
-/* Packetbuffer */
-
-typedef struct gavf_packet_buffer_s gavf_packet_buffer_t;
-
-gavf_packet_buffer_t * gavf_packet_buffer_create(int timescale);
-
-
-void gavf_packet_buffer_set_unref_func(gavf_packet_buffer_t * b,
-                                       gavf_packet_unref_func unref_func,
-                                       void *                 unref_data);
-
-gavl_packet_t * gavf_packet_buffer_get_write(gavf_packet_buffer_t *);
-void gavf_packet_buffer_done_write(gavf_packet_buffer_t * b);
-
-gavl_packet_t * gavf_packet_buffer_get_read(gavf_packet_buffer_t *);
-gavl_packet_t * gavf_packet_buffer_peek_read(gavf_packet_buffer_t * b);
-
-
-gavl_time_t gavf_packet_buffer_get_min_pts(gavf_packet_buffer_t * b);
-
-void gavf_packet_buffer_destroy(gavf_packet_buffer_t *);
-
-const gavl_packet_t * gavf_packet_buffer_get_last(gavf_packet_buffer_t * b);
-void gavf_packet_buffer_remove_last(gavf_packet_buffer_t * b);
-
-void gavf_packet_buffer_clear(gavf_packet_buffer_t * b);
-
 /* Stream */
 
 #define STREAM_FLAG_DISCONTINUOUS (1<<3)
@@ -101,9 +26,9 @@ typedef struct
   int packet_duration;
   
   // PTS Offset (to make all PTSes start near zero)
-  int64_t pts_offset;
+  //  int64_t pts_offset;
 
-  gavf_packet_buffer_t * pb;
+  //  gavf_packet_buffer_t * pb;
   
   gavl_packet_source_t * psrc;
   gavl_packet_sink_t * psink;
@@ -252,8 +177,6 @@ int gavf_packet_index_write(gavl_io_t * io, const gavf_packet_index_t * idx);
 void gavf_packet_index_free(gavf_packet_index_t * idx);
 void gavf_packet_index_dump(gavf_packet_index_t * idx);
 
-void gavl_io_cleanup(gavl_io_t * io);
-
 
 /* Global gavf structure */
 
@@ -290,7 +213,7 @@ struct gavf_s
   gavl_handle_msg_func msg_callback;
   void * msg_data;
 
-  gavf_chunk_t packets_chunk;
+  gavl_chunk_t packets_chunk;
   //  gavf_chunk_t sync_chunk;
   
   gavf_options_t opt;

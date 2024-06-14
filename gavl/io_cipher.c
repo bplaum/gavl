@@ -7,7 +7,9 @@
 
 #include <config.h>
 
-#include <gavfprivate.h>
+#include <gavl/gavl.h>
+#include <gavl/io.h>
+#include <io_private.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "cipher"
 
@@ -253,7 +255,7 @@ gavl_io_t * gavl_io_create_cipher(gavl_cipher_algo_t algo,
                        NULL,
                        close_cipher,
                        NULL,
-                       GAVF_IO_CAN_READ,
+                       GAVL_IO_CAN_READ,
                        priv);
   
   return ret;

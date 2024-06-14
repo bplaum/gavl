@@ -4,7 +4,7 @@
 
 #include <config.h>
 
-#include <gavfprivate.h>
+#include <gavl/gavl.h>
 #include <gavl/utils.h>
 #include <gavl/numptr.h>
 #include <gavl/value.h>
@@ -12,15 +12,19 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "io"
 
+#include <io.h>
+#include <io_private.h>
+
+
 // #define DUMP_MSG_WRITE
 // #define DUMP_MSG_READ
 
 void gavl_io_init(gavl_io_t * ret,
-                  gavf_read_func  r,
-                  gavf_write_func w,
-                  gavf_seek_func  s,
-                  gavf_close_func c,
-                  gavf_flush_func f,
+                  gavl_read_func  r,
+                  gavl_write_func w,
+                  gavl_seek_func  s,
+                  gavl_close_func c,
+                  gavl_flush_func f,
                   int flags,
                   void * priv)
   {
@@ -34,12 +38,12 @@ void gavl_io_init(gavl_io_t * ret,
   ret->flags = flags;
   }
 
-void gavl_io_set_nonblock_read(gavl_io_t * io, gavf_read_func read_nonblock)
+void gavl_io_set_nonblock_read(gavl_io_t * io, gavl_read_func read_nonblock)
   {
   io->read_func_nonblock = read_nonblock;
   }
 
-void gavl_io_set_nonblock_write(gavl_io_t * io, gavf_write_func write_nonblock)
+void gavl_io_set_nonblock_write(gavl_io_t * io, gavl_write_func write_nonblock)
   {
   io->write_func_nonblock = write_nonblock;
   }
@@ -51,7 +55,7 @@ void * gavl_io_get_priv(gavl_io_t * io)
 
 int gavl_io_can_seek(gavl_io_t * io)
   {
-  return (io->seek_func && (io->flags & GAVF_IO_CAN_SEEK)) ? 1 : 0;
+  return (io->seek_func && (io->flags & GAVL_IO_CAN_SEEK)) ? 1 : 0;
   }
 
 int gavl_io_can_read(gavl_io_t * io, int timeout)
@@ -78,11 +82,11 @@ int gavl_io_can_write(gavl_io_t * io, int timeout)
 
 
 
-gavl_io_t * gavl_io_create(gavf_read_func  r,
-                           gavf_write_func w,
-                           gavf_seek_func  s,
-                           gavf_close_func c,
-                           gavf_flush_func f,
+gavl_io_t * gavl_io_create(gavl_read_func  r,
+                           gavl_write_func w,
+                           gavl_seek_func  s,
+                           gavl_close_func c,
+                           gavl_flush_func f,
                            int flags,
                            void * priv)
   {
@@ -123,20 +127,20 @@ void gavl_io_set_info(gavl_io_t * io, int64_t total_bytes,
   
   io->position = 0;
 
-  io->flags &= ~(GAVF_IO_ERROR|GAVF_IO_EOF|
-                 GAVF_IO_CAN_SEEK|
-                 GAVF_IO_CAN_READ|
-                 GAVF_IO_CAN_WRITE);
+  io->flags &= ~(GAVL_IO_ERROR|GAVL_IO_EOF|
+                 GAVL_IO_CAN_SEEK|
+                 GAVL_IO_CAN_READ|
+                 GAVL_IO_CAN_WRITE);
 
-  io->flags |= (flags & (GAVF_IO_CAN_SEEK|
-                         GAVF_IO_CAN_READ|
-                         GAVF_IO_CAN_WRITE));
+  io->flags |= (flags & (GAVL_IO_CAN_SEEK|
+                         GAVL_IO_CAN_READ|
+                         GAVL_IO_CAN_WRITE));
   
   //  fprintf(stderr, "gavl_io_set_info %s\n", filename);
   
   }
 
-void gavl_io_set_poll_func(gavl_io_t * io, gavf_poll_func f)
+void gavl_io_set_poll_func(gavl_io_t * io, gavl_poll_func f)
   {
   io->poll_func = f;
   }
@@ -177,32 +181,32 @@ int gavl_io_flush(gavl_io_t * io)
 
 int gavl_io_got_error(gavl_io_t * io)
   {
-  return io->flags & GAVF_IO_ERROR;
+  return io->flags & GAVL_IO_ERROR;
   }
 
 int gavl_io_got_eof(gavl_io_t * io)
   {
-  return io->flags & GAVF_IO_EOF;
+  return io->flags & GAVL_IO_EOF;
   }
 
 void gavl_io_set_error(gavl_io_t * io)
   {
-  io->flags |= GAVF_IO_ERROR;
+  io->flags |= GAVL_IO_ERROR;
   }
 
 void gavl_io_clear_error(gavl_io_t * io)
   {
-  io->flags &= ~GAVF_IO_ERROR;
+  io->flags &= ~GAVL_IO_ERROR;
   }
 
 void gavl_io_set_eof(gavl_io_t * io)
   {
-  io->flags |= GAVF_IO_EOF;
+  io->flags |= GAVL_IO_EOF;
   }
 
 void gavl_io_clear_eof(gavl_io_t * io)
   {
-  io->flags &= ~GAVF_IO_EOF;
+  io->flags &= ~GAVL_IO_EOF;
   }
 
 int64_t gavl_io_position(gavl_io_t * io)
@@ -276,14 +280,14 @@ static int io_read_data(gavl_io_t * io, uint8_t * buf, int len, int block)
 
 int gavl_io_read_data(gavl_io_t * io, uint8_t * buf, int len)
   {
-  if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
+  if(io->flags & (GAVL_IO_ERROR|GAVL_IO_EOF))
     return 0;
   return io_read_data(io, buf, len, 1);
   }
 
 int gavl_io_read_data_nonblock(gavl_io_t * io, uint8_t * buf, int len)
   {
-  if(io->flags & (GAVF_IO_ERROR|GAVF_IO_EOF))
+  if(io->flags & (GAVL_IO_ERROR|GAVL_IO_EOF))
     return 0;
   return io_read_data(io, buf, len, 0);
   }
@@ -1092,35 +1096,32 @@ int gavl_value_read(gavl_io_t * io, gavl_value_t * v)
       break;
     case GAVL_TYPE_AUDIOFORMAT:
       {
+      int result;
       gavl_audio_format_t * afmt;
-      gavl_buffer_t buf;
-      gavl_buffer_init(&buf);
+      gavl_dictionary_t dict;
+      gavl_dictionary_init(&dict);
+      afmt = gavl_value_get_audio_format_nc(v);
 
-      afmt = gavl_value_set_audio_format(v);
+      if((result = gavl_dictionary_read(io, &dict)))
+        result = gavl_audio_format_from_dictionary(afmt, &dict);
       
-      if(!gavl_io_read_buffer(io, &buf) ||
-         !gavl_audio_format_from_buffer(buf.buf, buf.len, afmt))
-        {
-        gavl_buffer_free(&buf);
-        return 0;
-        }
-      gavl_buffer_free(&buf);
+      gavl_dictionary_free(&dict);
+      return result;
       }
       break;
     case GAVL_TYPE_VIDEOFORMAT:
       {
-      gavl_buffer_t buf;
+      int result;
       gavl_video_format_t * vfmt;
-      gavl_buffer_init(&buf);
-      vfmt = gavl_value_set_video_format(v);
+      gavl_dictionary_t dict;
+      gavl_dictionary_init(&dict);
+      vfmt = gavl_value_get_video_format_nc(v);
 
-      if(!gavl_io_read_buffer(io, &buf) ||
-         !gavl_video_format_from_buffer(buf.buf, buf.len, vfmt))
-        {
-        gavl_buffer_free(&buf);
-        return 0;
-        }
-      gavl_buffer_free(&buf);
+      if((result = gavl_dictionary_read(io, &dict)))
+        result = gavl_video_format_from_dictionary(vfmt, &dict);
+      
+      gavl_dictionary_free(&dict);
+      return result;
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
@@ -1143,7 +1144,8 @@ int gavl_value_read(gavl_io_t * io, gavl_value_t * v)
       break;
     case GAVL_TYPE_DICTIONARY:
       {
-      gavl_dictionary_read(io, v->v.dictionary);
+      if(!gavl_dictionary_read(io, v->v.dictionary))
+        return 0;
       }
       break;
     case GAVL_TYPE_ARRAY:
@@ -1231,30 +1233,26 @@ int gavl_value_write(gavl_io_t * io, const gavl_value_t * v)
       break;
     case GAVL_TYPE_AUDIOFORMAT:
       {
-      gavl_buffer_t buf;
-      gavl_buffer_init(&buf);
-      
-      if(!(buf.buf = gavl_audio_format_to_buffer(&buf.len, v->v.audioformat)) ||
-         !gavl_io_write_buffer(io, &buf))
-        {
-        gavl_buffer_free(&buf);
+      int result;
+      gavl_dictionary_t dict;
+      gavl_dictionary_init(&dict);
+      gavl_audio_format_to_dictionary(v->v.audioformat, &dict);
+      result = gavl_dictionary_write(io, &dict);
+      gavl_dictionary_free(&dict);
+      if(!result)
         return 0;
-        }
-      gavl_buffer_free(&buf);
       }
       break;
     case GAVL_TYPE_VIDEOFORMAT:
       {
-      gavl_buffer_t buf;
-      gavl_buffer_init(&buf);
-      
-      if(!(buf.buf = gavl_video_format_to_buffer(&buf.len, v->v.videoformat)) ||
-         !gavl_io_write_buffer(io, &buf))
-        {
-        gavl_buffer_free(&buf);
+      int result;
+      gavl_dictionary_t dict;
+      gavl_dictionary_init(&dict);
+      gavl_video_format_to_dictionary(v->v.videoformat, &dict);
+      result = gavl_dictionary_write(io, &dict);
+      gavl_dictionary_free(&dict);
+      if(!result)
         return 0;
-        }
-      gavl_buffer_free(&buf);
       }
       break;
     case GAVL_TYPE_COLOR_RGB:
@@ -1317,7 +1315,7 @@ int gavl_msg_from_buffer(const uint8_t * buf, int len, gavl_msg_t * msg)
   return result;
   }
 
-int gavf_msg_to_packet(const gavl_msg_t * msg,
+int gavl_msg_to_packet(const gavl_msg_t * msg,
                        gavl_packet_t * dst)
   {
   dst->pts = GAVL_TIME_UNDEFINED;  
@@ -1327,20 +1325,13 @@ int gavf_msg_to_packet(const gavl_msg_t * msg,
   return 1;
   }
 
-int gavf_packet_to_msg(const gavl_packet_t * src,
+int gavl_packet_to_msg(const gavl_packet_t * src,
                        gavl_msg_t * msg)
   {
   gavl_dictionary_set_long(&msg->header, GAVL_MSG_HEADER_TIMESTAMP, src->pts);
   return gavl_msg_from_buffer(src->buf.buf, src->buf.len, msg);
   }
 
-#if 0
-void gavl_io_set_msg_cb(gavl_io_t * io, gavl_handle_msg_func msg_callback, void * msg_data)
-  {
-  io->msg_callback = msg_callback;
-  io->msg_data = msg_data;
-  }
-#endif
 
 /* Sub I/O */
 
@@ -1584,3 +1575,113 @@ int gavl_io_get_flags(gavl_io_t * io)
   {
   return io->flags;
   }
+
+/* Chunk I/O */
+
+int gavl_chunk_is(const gavl_chunk_t * head, const char * eightcc)
+  {
+  if(!strncmp(head->eightcc, eightcc, 8))
+    return 1;
+  else
+    return 0;
+  }
+
+int gavl_chunk_read_header(gavl_io_t * io, gavl_chunk_t * head)
+  {
+  /* Byte align (if not already aligned) */
+  if(!gavl_io_align_read(io))
+    return 0;
+  
+  if((gavl_io_read_data(io, (uint8_t*)head->eightcc, 8) < 8) ||
+     !gavl_io_read_int64f(io, &head->len))
+    return 0;
+  /* Be strcmp friendly */
+  head->eightcc[8] = 0x00;
+  return 1;
+  }
+
+int gavl_chunk_start(gavl_io_t * io, gavl_chunk_t * head, const char * eightcc)
+  {
+  gavl_io_align_write(io);
+  
+  head->start = gavl_io_position(io);
+
+  memcpy(head->eightcc, eightcc, 8);
+  
+  if((gavl_io_write_data(io, (const uint8_t*)eightcc, 8) < 8) ||
+     !gavl_io_write_int64f(io, 0))
+    return 0;
+  return 1;
+  }
+
+int gavl_chunk_finish(gavl_io_t * io, gavl_chunk_t * head, int write_size)
+  {
+  int64_t position;
+  int64_t size;
+  
+  position = gavl_io_position(io);
+  
+  if(write_size && gavl_io_can_seek(io))
+    {
+    size = (position - head->start) - 16;
+
+    position = gavl_io_position(io);
+    
+    gavl_io_seek(io, head->start+8, SEEK_SET);
+    gavl_io_write_int64f(io, size);
+    gavl_io_seek(io, position, SEEK_SET);
+    }
+
+  /* Pad to multiple of 8 */
+    
+  gavl_io_align_write(io);
+
+  return 1;
+  }
+
+gavl_io_t * gavl_chunk_start_io(gavl_io_t * io, gavl_chunk_t * head, const char * eightcc)
+  {
+  gavl_io_t * sub_io = gavl_io_create_mem_write();
+  
+  gavl_chunk_start(sub_io, head, eightcc);
+  return sub_io;
+  }
+  
+
+int gavl_chunk_finish_io(gavl_io_t * io, gavl_chunk_t * head, gavl_io_t * sub_io)
+  {
+  int len = 0;
+  uint8_t * ret;
+  
+  gavl_chunk_finish(sub_io, head, 1);
+  ret = gavl_io_mem_get_buf(sub_io, &len);
+  gavl_io_destroy(sub_io);
+  
+  gavl_io_write_data(io, ret, len);
+  gavl_io_flush(io);
+  free(ret);
+
+  return 1;
+  }
+
+/* From / To Buffer */
+
+int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt)
+  {
+  int result;
+  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
+  result = gavl_dictionary_read(io, fmt);
+  gavl_io_destroy(io);
+  return result;
+  }
+  
+uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt)
+  {
+  uint8_t * ret;
+  gavl_io_t * io = gavl_io_create_mem_write();
+  gavl_dictionary_write(io, fmt);
+  ret = gavl_io_mem_get_buf(io, len);
+  gavl_io_destroy(io);
+  return ret;
+  }
+

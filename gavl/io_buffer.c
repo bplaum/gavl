@@ -70,7 +70,7 @@ gavl_io_t * gavl_io_create_buffer_write(gavl_buffer_t * buf)
   buf_t * b = calloc(1, sizeof(*b));
   
   b->buf = buf;
-  return gavl_io_create(NULL, write_buffer, NULL, close_buffer, NULL, GAVF_IO_CAN_READ, b);
+  return gavl_io_create(NULL, write_buffer, NULL, close_buffer, NULL, GAVL_IO_CAN_READ, b);
   }
 
 gavl_io_t * gavl_io_create_buffer_read(const gavl_buffer_t * buf)
@@ -78,5 +78,5 @@ gavl_io_t * gavl_io_create_buffer_read(const gavl_buffer_t * buf)
   buf_t * b = calloc(1, sizeof(*b));
   
   b->buf_c = buf;
-  return gavl_io_create(read_buffer, NULL, seek_buffer, close_buffer, NULL, GAVF_IO_CAN_READ | GAVF_IO_CAN_SEEK, b);
+  return gavl_io_create(read_buffer, NULL, seek_buffer, close_buffer, NULL, GAVL_IO_CAN_READ | GAVL_IO_CAN_SEEK, b);
   }

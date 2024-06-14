@@ -61,21 +61,21 @@ static void close_file(void * priv)
 GAVL_PUBLIC
 gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   {
-  gavf_read_func rf;
-  gavf_write_func wf;
-  gavf_seek_func sf;
-  gavf_flush_func ff;
+  gavl_read_func rf;
+  gavl_write_func wf;
+  gavl_seek_func sf;
+  gavl_flush_func ff;
   int flags = 0;
   struct stat st;
   int fd = fileno(f);
 
   if(isatty(fd))
-    flags |= GAVF_IO_IS_TTY;
+    flags |= GAVL_IO_IS_TTY;
 
   if(wr)
-    flags |= GAVF_IO_CAN_WRITE;
+    flags |= GAVL_IO_CAN_WRITE;
   else
-    flags |= GAVF_IO_CAN_READ;
+    flags |= GAVL_IO_CAN_READ;
   
   if(fstat(fd, &st))
     {
@@ -84,18 +84,18 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
     }
   if(S_ISFIFO(st.st_mode)) /* Pipe: Use local connection */
     {
-    flags |= (GAVF_IO_IS_LOCAL|GAVF_IO_IS_PIPE);
+    flags |= (GAVL_IO_IS_LOCAL|GAVL_IO_IS_PIPE);
     }
   else if(S_ISREG(st.st_mode) && can_seek)
     {
-    flags |= GAVF_IO_IS_REGULAR;
+    flags |= GAVL_IO_IS_REGULAR;
     }
 
-  if(!(flags & GAVF_IO_IS_REGULAR))
+  if(!(flags & GAVL_IO_IS_REGULAR))
     can_seek = 0;
   
   if(can_seek)
-    flags |= GAVF_IO_CAN_SEEK;
+    flags |= GAVL_IO_CAN_SEEK;
   
   if(wr)
     {

@@ -1,8 +1,6 @@
 #ifndef GAVLHTTP_H_INCLUDED
 #define GAVLHTTP_H_INCLUDED
 
-#include <gavl/gavf.h>
-
 /* Special variables for the first line of the HTTP requests and responses */
 
 #define GAVL_HTTP_META_PROTOCOL   "$PROTOCOL"

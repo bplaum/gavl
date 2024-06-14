@@ -7,6 +7,7 @@
 
 #include <gavfprivate.h>
 #include <metatags.h>
+#include <io_private.h>
 
 #include <gavl/http.h>
 #include <gavl/gavlsocket.h>
@@ -382,8 +383,6 @@ static void init_streams(gavf_t * g)
       case GAVL_STREAM_NONE:
         break;
       }
-    g->streams[i].pb =
-      gavf_packet_buffer_create(g->streams[i].timescale);
     }
 
   }
@@ -403,9 +402,6 @@ static void gavf_stream_free(gavf_stream_t * s)
     gavl_video_sink_destroy(s->vsink);
   if(s->psink)
     gavl_packet_sink_destroy(s->psink);
-  if(s->pb)
-    gavf_packet_buffer_destroy(s->pb);
-  
   if(s->aframe)
     {
     gavl_audio_frame_null(s->aframe);
@@ -444,8 +440,6 @@ void gavf_clear_buffers(gavf_t * g)
 
   for(i = 0; i < g->num_streams; i++)
     {
-    if(g->streams[i].pb)
-      gavf_packet_buffer_clear(g->streams[i].pb);
     }
   }
 
@@ -509,85 +503,6 @@ const gavl_dictionary_t * gavf_get_media_info(const gavf_t * g)
   return &g->mi;
   }
 
-#if 0
-int gavf_select_track(gavf_t * g, int track)
-  {
-  //  gavf_chunk_t head;
-  int ret = 0;
-  
-  free_track(g);
-
-  if(!(g->cur = gavl_get_track_nc(&g->mi, track)))
-    return 0;
-
-  g->num_streams = gavl_track_get_num_streams_all(g->cur);
-
-  init_streams(g);
-
-  if(GAVF_HAS_FLAG(g, GAVF_FLAG_INTERACTIVE))
-    {
-    gavl_msg_t msg;
-    
-    /* Forward comand */
-    gavl_msg_init(&msg);
-    
-    }
-  else
-    {
-    /* TODO: File based multi-track support */
-    
-    }
-#if 0
-  if(GAVF_HAS_FLAG(g, GAVF_FLAG_STREAMING) &&
-     !GAVF_HAS_FLAG(g, GAVF_FLAG_MULTI_HEADER))
-    {
-    /* Seek until the first sync header */
-
-    while(1)
-      {
-      if(!gavl_io_align_read(g->io))
-        goto fail;
-      
-      if(!gavf_chunk_read_header(g->io, &head))
-        goto fail;
-      
-      fprintf(stderr, "Got signature:\n");
-      gavl_hexdump((uint8_t*)head.eightcc, 8, 8);
-
-      if(!strcmp(head.eightcc, GAVF_TAG_PACKETS))
-        break;
-      }
-
-    if(!gavl_io_align_read(g->io))
-      goto fail;
-
-    if(gavl_io_read_data(g->io, (uint8_t*)head.eightcc, 8) < 8)
-      goto fail;
-    
-    fprintf(stderr, "Got signature:\n");
-    gavl_hexdump((uint8_t*)head.eightcc, 8, 8);
-    
-    }
-  
-  
-
-  if(!GAVF_HAS_FLAG(g, GAVF_FLAG_STREAMING))
-    {
-    /* Read indices */
-
-    
-    }
-
-#endif
-  
-  ret = 1;
-  
-  //  fail:
-  return ret;
-  }
-
-#endif
-
 static int read_dictionary(gavl_io_t * io,
                            gavf_chunk_t * head,
                            gavl_buffer_t * buf,
@@ -625,17 +540,6 @@ static int read_dictionary(gavl_io_t * io,
   return result;
   }
 
-int gavf_read_dictionary(gavl_io_t * io,
-                         gavf_chunk_t * head,
-                         gavl_dictionary_t * ret)
-  {
-  int result;
-  gavl_buffer_t buf;
-  gavl_buffer_init(&buf);
-  result = read_dictionary(io, head, &buf, ret);
-  gavl_buffer_free(&buf);
-  return result;
-  }
 
 #if 0
 static int read_header(gavf_t * g,
@@ -1622,8 +1526,6 @@ void gavf_stream_set_unref(gavf_t * g, uint32_t id,
     s->unref_func = func;
     s->unref_priv = priv;
     
-    if(s->pb)
-      gavf_packet_buffer_set_unref_func(s->pb, func, priv);
     }
   }
 
@@ -1639,92 +1541,6 @@ gavf_stream_t * gavf_find_stream_by_id(gavf_t * g, int32_t id)
   }
 
 
-int gavf_chunk_is(const gavf_chunk_t * head, const char * eightcc)
-  {
-  if(!strncmp(head->eightcc, eightcc, 8))
-    return 1;
-  else
-    return 0;
-  }
-
-
-int gavf_chunk_read_header(gavl_io_t * io, gavf_chunk_t * head)
-  {
-  /* Byte align (if not already aligned) */
-  if(!gavl_io_align_read(io))
-    return 0;
-  
-  if((gavl_io_read_data(io, (uint8_t*)head->eightcc, 8) < 8) ||
-     !gavl_io_read_int64f(io, &head->len))
-    return 0;
-  /* Be strcmp friendly */
-  head->eightcc[8] = 0x00;
-  return 1;
-  }
-
-int gavf_chunk_start(gavl_io_t * io, gavf_chunk_t * head, const char * eightcc)
-  {
-  gavl_io_align_write(io);
-  
-  head->start = gavl_io_position(io);
-
-  memcpy(head->eightcc, eightcc, 8);
-  
-  if((gavl_io_write_data(io, (const uint8_t*)eightcc, 8) < 8) ||
-     !gavl_io_write_int64f(io, 0))
-    return 0;
-  return 1;
-  }
-
-int gavf_chunk_finish(gavl_io_t * io, gavf_chunk_t * head, int write_size)
-  {
-  int64_t position;
-  int64_t size;
-  
-  position = gavl_io_position(io);
-  
-  if(write_size && gavl_io_can_seek(io))
-    {
-    size = (position - head->start) - 16;
-
-    position = gavl_io_position(io);
-    
-    gavl_io_seek(io, head->start+8, SEEK_SET);
-    gavl_io_write_int64f(io, size);
-    gavl_io_seek(io, position, SEEK_SET);
-    }
-
-  /* Pad to multiple of 8 */
-    
-  gavl_io_align_write(io);
-
-  return 1;
-  }
-
-gavl_io_t * gavf_chunk_start_io(gavl_io_t * io, gavf_chunk_t * head, const char * eightcc)
-  {
-  gavl_io_t * sub_io = gavl_io_create_mem_write();
-  
-  gavf_chunk_start(sub_io, head, eightcc);
-  return sub_io;
-  }
-  
-
-int gavf_chunk_finish_io(gavl_io_t * io, gavf_chunk_t * head, gavl_io_t * sub_io)
-  {
-  int len = 0;
-  uint8_t * ret;
-  
-  gavf_chunk_finish(sub_io, head, 1);
-  ret = gavl_io_mem_get_buf(sub_io, &len);
-  gavl_io_destroy(sub_io);
-  
-  gavl_io_write_data(io, ret, len);
-  gavl_io_flush(io);
-  free(ret);
-
-  return 1;
-  }
 
 void gavf_set_msg_cb(gavf_t * g, gavl_handle_msg_func msg_callback, void * msg_data)
   {
@@ -2011,17 +1827,17 @@ static void get_io_flags(gavf_t * g)
   int flags;
   flags = gavl_io_get_flags(g->io);
   
-  if(flags & GAVF_IO_IS_SOCKET)
+  if(flags & GAVL_IO_IS_SOCKET)
     {
     GAVF_SET_FLAG(g, GAVF_FLAG_INTERACTIVE);
     GAVF_SET_FLAG(g, GAVF_FLAG_SEPARATE_STREAMS);
     
-    if(flags & GAVF_IO_IS_UNIX_SOCKET)
+    if(flags & GAVL_IO_IS_UNIX_SOCKET)
       {
       GAVF_SET_FLAG(g, GAVF_FLAG_UNIX);
       }
     }
-  else if(flags & GAVF_IO_IS_REGULAR)
+  else if(flags & GAVL_IO_IS_REGULAR)
     {
     GAVF_SET_FLAG(g, GAVF_FLAG_ONDISK);
     }
@@ -2091,7 +1907,7 @@ int gavf_open_uri_write(gavf_t * g, const char * uri)
   if(uri[0] == '|')
     {
     FILE * f;
-    flags = GAVF_IO_CAN_WRITE | GAVF_IO_IS_LOCAL | GAVF_IO_IS_PIPE;
+    flags = GAVL_IO_CAN_WRITE | GAVL_IO_IS_LOCAL | GAVL_IO_IS_PIPE;
     
     uri++;
     while(isspace(*uri) && (*uri != '\0'))
@@ -2132,7 +1948,7 @@ int gavf_open_uri_write(gavf_t * g, const char * uri)
   
   flags = gavl_io_get_flags(g->io);
   
-  if(flags & GAVF_IO_IS_PIPE)
+  if(flags & GAVL_IO_IS_PIPE)
     {
     int fd;
     int server_fd;
@@ -2192,7 +2008,7 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
   if(uri[0] == '<')
     {
     FILE * f;
-    flags = GAVF_IO_CAN_WRITE | GAVF_IO_IS_LOCAL | GAVF_IO_IS_PIPE;
+    flags = GAVL_IO_CAN_WRITE | GAVL_IO_IS_LOCAL | GAVL_IO_IS_PIPE;
     
     uri++;
     while(isspace(*uri) && (*uri != '\0'))
@@ -2228,7 +2044,7 @@ int gavf_open_uri_read(gavf_t * g, const char * uri)
 
   /* Do pipe redirection */
 
-  if(flags & GAVF_IO_IS_PIPE)
+  if(flags & GAVL_IO_IS_PIPE)
     {
     int ret = 0;
     const char * method;
@@ -2588,3 +2404,4 @@ int gavf_start_program(gavf_t * g, const gavl_dictionary_t * track)
     }
   return 1;  
   }
+

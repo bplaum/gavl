@@ -43,9 +43,6 @@ timescale_test \
 value_test \
 volume_test
 
-bin_PROGRAMS = \
-gavfdump
-
 pixelformat_penalty_SOURCES = pixelformat_penalty.c
 pixelformat_penalty_LDADD = ../gavl/libgavl.la
 
@@ -55,9 +52,6 @@ vaapi_x11_LDADD = ../gavl/libgavl.la @LIBVA_LIBS@ @X_LIBS@
 
 benchmark_SOURCES = benchmark.c
 benchmark_LDADD = ../gavl/libgavl.la @RT_LIBS@
-
-gavfdump_SOURCES = gavfdump.c
-gavfdump_LDADD = ../gavl/libgavl.la
 
 volume_test_SOURCES = volume_test.c
 volume_test_LDADD = -lm ../gavl/libgavl.la

@@ -109,7 +109,6 @@ $(hw_egl_cflags) \
 SUBDIRS = \
 hq \
 c \
-gavf \
 libgdither \
 libsamplerate \
 $(mmx_subdirs) \
@@ -245,7 +244,6 @@ $(sse3_libs) \
 $(ssse3_libs) \
 $(threednow_libs) \
 c/libgavl_c.la \
-gavf/libgavf.la \
 hq/libgavl_hq.la \
 libgdither/libgdither.la \
 libsamplerate/libsamplerate.la \

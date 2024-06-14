@@ -4,7 +4,6 @@ chapterlist.h \
 compression.h \
 connectors.h \
 edl.h \
-gavf.h \
 gavldefs.h \
 gavldsp.h \
 gavl.h \

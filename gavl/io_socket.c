@@ -4,14 +4,16 @@
 
 #include <config.h>
 
+#include <gavl/gavl.h>
 
-#include <gavl/gavf.h>
+
+#include <gavl/utils.h>
 #include <gavl/gavlsocket.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "io_socket"
 
-#include <gavfprivate.h>
-
+#include <gavl/io.h>
+#include <io_private.h>
 
 /* 10 kB */
 #define BUFFER_SIZE 10240
@@ -35,7 +37,7 @@ static void do_buffer(socket_t * s)
   {
   int len;
 
-  if(!(s->flags & GAVF_IO_SOCKET_BUFFER_READ))
+  if(!(s->flags & GAVL_IO_SOCKET_BUFFER_READ))
     return;
   
   if(s->buf.len < BUFFER_SIZE)
@@ -152,7 +154,7 @@ static void close_socket(void * priv)
 
   gavl_buffer_free(&s->buf);
   
-  if(s->flags & GAVF_IO_SOCKET_DO_CLOSE)
+  if(s->flags & GAVL_IO_SOCKET_DO_CLOSE)
     gavl_socket_close(s->fd);
   free(s);
   }
@@ -180,12 +182,12 @@ gavl_io_t * gavl_io_create_socket(int fd, int read_timeout, int socket_flags)
   s->timeout = read_timeout;
   s->fd = fd;
 
-  flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
+  flags = GAVL_IO_CAN_READ | GAVL_IO_CAN_WRITE | GAVL_IO_IS_DUPLEX | GAVL_IO_IS_SOCKET;
 
   if(gavl_socket_is_local(fd))
-    flags |= GAVF_IO_IS_LOCAL;
+    flags |= GAVL_IO_IS_LOCAL;
   if(gavl_socket_is_unix(fd))
-    flags |= GAVF_IO_IS_UNIX_SOCKET;
+    flags |= GAVL_IO_IS_UNIX_SOCKET;
   
   gavl_buffer_alloc(&s->buf, BUFFER_SIZE);
   

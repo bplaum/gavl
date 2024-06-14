@@ -12,377 +12,15 @@
 
 /* Formats */
 
-#define MAX_EXT_SIZE_AF 16
-#define MAX_EXT_SIZE_VF 32
 #define MAX_EXT_SIZE_PK 32
-#define MAX_EXT_SIZE_CI 16
-
-int gavf_read_audio_format(gavl_io_t * io, gavl_audio_format_t * format)
-  {
-  int i;
-  uint32_t num_extensions;
-  
-  gavl_extension_header_t eh;
-
-  memset(format, 0, sizeof(*format));
-
-  if(!gavl_io_read_uint32v(io, &format->samplerate) ||
-     !gavl_io_read_uint32v(io, &format->num_channels))
-    return 0;
-
-  for(i = 0; i < format->num_channels; i++)
-    {
-    if(!gavl_io_read_uint32v(io, &format->channel_locations[i]))
-      return 0;
-    }
-
-  if(!gavl_io_read_uint32v(io, &num_extensions))
-    return 0;
-
-  for(i = 0; i < num_extensions; i++)
-    {
-    if(!gavf_extension_header_read(io, &eh))
-      return 0;
-    switch(eh.key)
-      {
-      case GAVF_EXT_AF_SAMPLESPERFRAME:
-        if(!gavl_io_read_uint32v(io, &format->samples_per_frame))
-          return 0;
-        break;
-      case GAVF_EXT_AF_SAMPLEFORMAT:
-        if(!gavl_io_read_uint32v(io, &format->sample_format))
-          return 0;
-        break;
-      case GAVF_EXT_AF_INTERLEAVE:
-        if(!gavl_io_read_uint32v(io, &format->interleave_mode))
-          return 0;
-        break;
-      case GAVF_EXT_AF_CENTER_LEVEL:
-        if(!gavl_io_read_float(io, &format->center_level))
-          return 0;
-        break;
-      case GAVF_EXT_AF_REAR_LEVEL:
-        if(!gavl_io_read_float(io, &format->rear_level))
-          return 0;
-        break;
-      default:
-        /* Skip */
-        gavl_io_skip(io, eh.len);
-        break;
-      }
-    }
-  return 1;
-  }
-
-int gavf_write_audio_format(gavl_io_t * io, const gavl_audio_format_t * format)
-  {
-  int ret = 0;
-
-  int num_extensions;
-  uint8_t data[MAX_EXT_SIZE_AF];
-  gavl_buffer_t buf;
-  gavl_io_t bufio;
-  int i;
-
-  gavl_buffer_init_static(&buf, data, MAX_EXT_SIZE_AF);
-  gavl_io_init_buf_write(&bufio, &buf);
-  
-  /* Write common stuff */
-  if(!gavl_io_write_uint32v(io, format->samplerate) ||
-     !gavl_io_write_uint32v(io, format->num_channels))
-    goto fail;
-  
-  for(i = 0; i < format->num_channels; i++)
-    {
-    if(!gavl_io_write_uint32v(io, format->channel_locations[i]))
-      goto fail;
-    }
-
-  /* Count extensions */
-  num_extensions = 0;
-
-  if(format->samples_per_frame != 0)
-    num_extensions++;
-
-  if(format->interleave_mode != GAVL_INTERLEAVE_NONE)
-    num_extensions++;
-
-  if(format->sample_format != GAVL_SAMPLE_NONE)
-    num_extensions++;
-
-  if(format->center_level != 0.0)
-    num_extensions++;
-
-  if(format->rear_level != 0.0)
-    num_extensions++;
-  
-  /* Write extensions */
-  if(!gavl_io_write_uint32v(io, num_extensions))
-    goto fail;
-  
-  if(!num_extensions)
-    {
-    ret = 1;
-    goto fail;
-    }
-  
-  if(format->samples_per_frame != 0)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->samples_per_frame) ||
-       !gavf_extension_write(io, GAVF_EXT_AF_SAMPLESPERFRAME,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  if(format->interleave_mode != GAVL_INTERLEAVE_NONE)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->interleave_mode) ||
-       !gavf_extension_write(io, GAVF_EXT_AF_INTERLEAVE,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  if(format->sample_format != GAVL_SAMPLE_NONE)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->sample_format) ||
-       !gavf_extension_write(io, GAVF_EXT_AF_SAMPLEFORMAT,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  if(format->center_level != 0.0)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_float(&bufio, format->center_level) ||
-       !gavf_extension_write(io, GAVF_EXT_AF_CENTER_LEVEL,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  if(format->rear_level != 0.0)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_float(&bufio, format->rear_level) ||
-       !gavf_extension_write(io, GAVF_EXT_AF_REAR_LEVEL,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-
-  ret = 1;
-  fail:
-  
-  gavl_io_cleanup(&bufio);
-  return ret;
-  }
-
-int gavf_read_video_format(gavl_io_t * io, gavl_video_format_t * format)
-  {
-  int i;
-  uint32_t num_extensions;
-  
-  gavl_extension_header_t eh;
-
-  memset(format, 0, sizeof(*format));
-  
-  /* Read mandatory stuff */
-  if(!gavl_io_read_uint32v(io, &format->image_width) ||
-     !gavl_io_read_uint32v(io, &format->image_height) ||
-     !gavl_io_read_int32v(io, &format->framerate_mode) ||
-     !gavl_io_read_uint32v(io, &format->timescale))
-    return 0;
-
-  if(format->framerate_mode != GAVL_FRAMERATE_STILL)
-    {
-    if(!gavl_io_read_uint32v(io, &format->frame_duration))
-      return 0;
-    }
-
-  /* Set defaults */
-  format->pixel_width = 1;
-  format->pixel_height = 1;
-  
-  /* Read extensions */
-  if(!gavl_io_read_uint32v(io, &num_extensions))
-    return 0;
-
-  for(i = 0; i < num_extensions; i++)
-    {
-    if(!gavf_extension_header_read(io, &eh))
-      return 0;
-    switch(eh.key)
-      {
-      case GAVF_EXT_VF_PIXELFORMAT:
-        if(!gavl_io_read_uint32v(io, &format->pixelformat))
-          return 0;
-        break;
-      case GAVF_EXT_VF_PIXEL_ASPECT:
-        if(!gavl_io_read_uint32v(io, &format->pixel_width) ||
-           !gavl_io_read_uint32v(io, &format->pixel_height))
-          return 0;
-        break;
-      case GAVF_EXT_VF_INTERLACE:
-        if(!gavl_io_read_int32v(io, &format->interlace_mode))
-          return 0;
-        break;
-      case GAVF_EXT_VF_FRAME_SIZE:
-        if(!gavl_io_read_uint32v(io, &format->frame_width) ||
-           !gavl_io_read_uint32v(io, &format->frame_height))
-          return 0;
-        break;
-      case GAVF_EXT_VF_TC_RATE:
-        if(!gavl_io_read_uint32v(io, &format->timecode_format.int_framerate))
-          return 0;
-        break;
-      case GAVF_EXT_VF_TC_FLAGS:
-        if(!gavl_io_read_uint32v(io, &format->timecode_format.flags))
-          return 0;
-        break;
-      default:
-        /* Skip */
-        gavl_io_skip(io, eh.len);
-        break;
-        
-      }
-    }
-
-  if(!format->frame_width || !format->frame_height)
-    gavl_video_format_set_frame_size(format, 0, 0);
-  
-  return 1;
-  }
-
-int gavf_write_video_format(gavl_io_t * io, const gavl_video_format_t * format)
-  {
-  int ret = 0;
-  int num_extensions;
-  uint8_t data[MAX_EXT_SIZE_VF];
-  gavl_buffer_t buf;
-  gavl_io_t bufio;
-
-  gavl_buffer_init_static(&buf, data, MAX_EXT_SIZE_VF);
-  gavl_io_init_buf_write(&bufio, &buf);
-  
-  /* Write mandatory stuff */
-  if(!gavl_io_write_uint32v(io, format->image_width) ||
-     !gavl_io_write_uint32v(io, format->image_height) ||
-     !gavl_io_write_int32v(io, format->framerate_mode) ||
-     !gavl_io_write_uint32v(io, format->timescale))
-    goto fail;
-    	
-  if(format->framerate_mode != GAVL_FRAMERATE_STILL)
-    {
-    if(!gavl_io_write_uint32v(io, format->frame_duration))
-      goto fail;
-    }
-  
-  /* Count extensions */
-  num_extensions = 0;
-
-  if(format->pixelformat != GAVL_PIXELFORMAT_NONE)
-    num_extensions++;
-  
-  if(format->pixel_width != format->pixel_height)
-    num_extensions++;
-    
-  if(format->interlace_mode != GAVL_INTERLACE_NONE)
-    num_extensions++;
-
-  if((format->image_width != format->frame_width) ||
-     (format->frame_width != format->frame_height))
-    num_extensions++;
-
-  if(format->timecode_format.int_framerate)
-    {
-    num_extensions++;
-    if(format->timecode_format.flags)
-      num_extensions++;
-    }
-  
-  /* Write extensions */
-
-  if(!gavl_io_write_uint32v(io, num_extensions))
-    goto fail;
-    
-  if(!num_extensions)
-    {
-    ret = 1;
-    goto fail;
-    }
-  
-  if(format->pixelformat != GAVL_PIXELFORMAT_NONE)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->pixelformat) ||
-       !gavf_extension_write(io, GAVF_EXT_VF_PIXELFORMAT,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  
-  if(format->pixel_width != format->pixel_height)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->pixel_width) ||
-       !gavl_io_write_uint32v(&bufio, format->pixel_height) ||
-       !gavf_extension_write(io, GAVF_EXT_VF_PIXEL_ASPECT,
-                            buf.len, buf.buf))
-      goto fail;
-    }
-  
-  if(format->interlace_mode != GAVL_INTERLACE_NONE)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_int32v(&bufio, format->interlace_mode) ||
-       !gavf_extension_write(io, GAVF_EXT_VF_INTERLACE,
-                             buf.len, buf.buf))
-      goto fail;
-
-    }
-
-  if((format->image_width != format->frame_width) ||
-     (format->frame_width != format->frame_height))
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->frame_width) ||
-       !gavl_io_write_uint32v(&bufio, format->frame_height) ||
-       !gavf_extension_write(io, GAVF_EXT_VF_FRAME_SIZE,
-                             buf.len, buf.buf))
-      goto fail;
-
-    }
-
-  if(format->timecode_format.int_framerate)
-    {
-    gavl_io_buf_reset(&bufio);
-    if(!gavl_io_write_uint32v(&bufio, format->timecode_format.int_framerate) ||
-       !gavf_extension_write(io, GAVF_EXT_VF_TC_RATE,
-                             buf.len, buf.buf))
-      goto fail;
-
-    
-    if(format->timecode_format.flags)
-      {
-      gavl_io_buf_reset(&bufio);
-      if(!gavl_io_write_uint32v(&bufio, format->timecode_format.flags) ||
-         !gavf_extension_write(io, GAVF_EXT_VF_TC_FLAGS,
-                               buf.len, buf.buf))
-        goto fail;
-      }
-    }
-
-  ret = 1;
-  fail:
-  
-  gavl_io_cleanup(&bufio);
-  
-  return ret;
-  }
 
 /* Packet */
-
 
 int gavf_write_gavl_packet(gavl_io_t * io,
                            const gavf_stream_t * s,
                            const gavl_packet_t * p)
   {
+#if 0
   uint32_t num_extensions;
 
   uint8_t data[MAX_EXT_SIZE_PK];
@@ -587,6 +225,7 @@ int gavf_write_gavl_packet(gavl_io_t * io,
   return 1;
 
   fail:
+#endif
   return 0;
   }
 
@@ -594,6 +233,7 @@ int gavf_write_gavl_packet(gavl_io_t * io,
 int gavf_read_gavl_packet_header(gavl_io_t * io,
                                  gavl_packet_t * p)
   {
+#if 0
   int ret = 0;
   uint8_t c;
   
@@ -742,11 +382,14 @@ int gavf_read_gavl_packet_header(gavl_io_t * io,
   
   fail:
   return ret;
+#endif
+  return 0;
   }
 
 int gavf_read_gavl_packet(gavl_io_t * io,
                           gavl_packet_t * p)
   {
+
   /* Payload */
   gavl_packet_alloc(p, p->buf.len);
   if(gavl_io_read_data(io, p->buf.buf, p->buf.len) < p->buf.len)
@@ -810,82 +453,3 @@ int gavf_skip_gavl_packet(gavl_io_t * io,
   
   }
 
-/* From / To Buffer */
-
-int gavl_audio_format_from_buffer(const uint8_t * buf, int len, gavl_audio_format_t * fmt)
-  {
-  int result;
-  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
-  result = gavf_read_audio_format(io, fmt);
-  gavl_io_destroy(io);
-  return result;
-  }
-  
-uint8_t * gavl_audio_format_to_buffer(int * len, const gavl_audio_format_t * fmt)
-  {
-  uint8_t * ret;
-  gavl_io_t * io = gavl_io_create_mem_write();
-  gavf_write_audio_format(io, fmt);
-  ret = gavl_io_mem_get_buf(io, len);
-  gavl_io_destroy(io);
-  return ret;
-  }
-
-int gavl_video_format_from_buffer(const uint8_t * buf, int len, gavl_video_format_t * fmt)
-  {
-  int result;
-  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
-  result = gavf_read_video_format(io, fmt);
-  gavl_io_destroy(io);
-  return result;
-  }
-  
-uint8_t * gavl_video_format_to_buffer(int * len, const gavl_video_format_t * fmt)
-  {
-  uint8_t * ret;
-  gavl_io_t * io = gavl_io_create_mem_write();
-  gavf_write_video_format(io, fmt);
-  ret = gavl_io_mem_get_buf(io, len);
-  gavl_io_destroy(io);
-  return ret;
-  }
-
-int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt)
-  {
-  int result;
-  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
-  result = gavl_dictionary_read(io, fmt);
-  gavl_io_destroy(io);
-  return result;
-  }
-  
-uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt)
-  {
-  uint8_t * ret;
-  gavl_io_t * io = gavl_io_create_mem_write();
-  gavl_dictionary_write(io, fmt);
-  ret = gavl_io_mem_get_buf(io, len);
-  gavl_io_destroy(io);
-  return ret;
-  }
-
-#if 0
-int gavl_compression_info_from_buffer(const uint8_t * buf, int len, gavl_compression_info_t * fmt)
-  {
-  int result;
-  gavl_io_t * io = gavl_io_create_mem_read(buf, len);
-  result = gavf_read_compression_info(io, fmt);
-  gavl_io_destroy(io);
-  return result;
-  }
-  
-uint8_t * gavl_compression_info_to_buffer(int * len, const gavl_compression_info_t * fmt)
-  {
-  uint8_t * ret;
-  gavl_io_t * io = gavl_io_create_mem_write();
-  gavf_write_compression_info(io, fmt);
-  ret = gavl_io_mem_get_buf(io, len);
-  gavl_io_destroy(io);
-  return ret;
-  }
-#endif

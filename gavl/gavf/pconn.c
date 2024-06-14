@@ -111,15 +111,6 @@ gavl_source_status_t gavf_demux_iteration(gavf_t * g)
     }
   else
     {
-    gavl_packet_t * read_packet;
-
-    read_packet = gavf_packet_buffer_get_write(read_stream->pb);
-    gavl_packet_copy_metadata(read_packet, &pkt);
-
-    if(!gavf_read_gavl_packet(g->io, read_packet))
-      return GAVL_SOURCE_EOF;
-    
-    gavf_packet_buffer_done_write(read_stream->pb);
     }
   
   

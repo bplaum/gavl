@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gavfprivate.h>
+#include <gavl/gavl.h>
+#include <gavl/io.h>
+#include <io_private.h>
 
 /* Buffer as io */
 

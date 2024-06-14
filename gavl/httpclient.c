@@ -11,8 +11,13 @@
 #include <gavl/http.h>
 #include <gavl/log.h>
 #include <gavl/gavlsocket.h>
-#include <gavfprivate.h>
+// #include <gavfprivate.h>
 #include <gavl/metatags.h>
+
+#include <gavl/io.h>
+
+#include <io_private.h>
+
 
 // #define DUMP_HEADERS
 
@@ -762,7 +767,7 @@ gavl_io_t * gavl_http_client_create()
                    seek_http,
                    close_func,
                    /* gavf_flush_func f */ NULL,
-                   GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE,
+                   GAVL_IO_CAN_READ | GAVL_IO_CAN_WRITE,
                    c);
   
   c->io = ret;
@@ -1149,14 +1154,14 @@ static int handle_response(gavl_io_t * io)
           }
 #endif   
         if(c->flags & FLAG_HAS_RESPONSE_BODY)
-          flags = GAVF_IO_CAN_READ;
+          flags = GAVL_IO_CAN_READ;
         
         if((var = gavl_dictionary_get_string_i(&c->resp, "Accept-Ranges")) &&
            !strcasecmp(var, "bytes") && (c->total_bytes > 0))
-          flags |= GAVF_IO_CAN_SEEK;
+          flags |= GAVL_IO_CAN_SEEK;
         }
       else if(!strcmp(c->method, "PUT")) // Not supported yet
-        flags = GAVF_IO_CAN_WRITE;
+        flags = GAVL_IO_CAN_WRITE;
       
       if(!(c->flags & FLAG_HAS_RESPONSE_BODY))
         check_keepalive(c);
@@ -1640,12 +1645,12 @@ static int async_iteration(gavl_io_t * io, int timeout)
 
       if(c->flags & FLAG_USE_TLS)
         {
-        c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+        c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVL_IO_SOCKET_DO_CLOSE);
         c->state = STATE_TLS_HANDSHAKE;
         }
       else
         {
-        c->io_int = gavl_io_create_socket(c->fd, 5000, GAVF_IO_SOCKET_DO_CLOSE);
+        c->io_int = gavl_io_create_socket(c->fd, 5000, GAVL_IO_SOCKET_DO_CLOSE);
         c->state = STATE_SEND_REQUEST;
         }
       c->fd = -1;
@@ -1703,7 +1708,7 @@ static int async_iteration(gavl_io_t * io, int timeout)
       return -1;
       }
     
-    c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVF_IO_SOCKET_DO_CLOSE);
+    c->io_int = gavl_io_create_tls_client_async(c->fd, c->host, GAVL_IO_SOCKET_DO_CLOSE);
     c->state = STATE_TLS_HANDSHAKE;
     
     c->fd = -1;

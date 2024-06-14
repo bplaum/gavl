@@ -37,25 +37,8 @@
 #define GAVF_FLAG_ONDISK           (1<<9)
 #define GAVF_FLAG_STARTED          (1<<10)
 
-/* IO flags */
-
-#define GAVF_IO_CAN_READ          (1<<0)
-#define GAVF_IO_CAN_WRITE         (1<<1)
-#define GAVF_IO_CAN_SEEK          (1<<2)
-#define GAVF_IO_IS_DUPLEX         (1<<3) // Duplex means we have the backchannel for messages
-#define GAVF_IO_IS_REGULAR        (1<<4)
-#define GAVF_IO_IS_SOCKET         (1<<5)
-#define GAVF_IO_IS_UNIX_SOCKET    (1<<6)
-#define GAVF_IO_IS_LOCAL          (1<<7)
-#define GAVF_IO_IS_PIPE           (1<<8)
-#define GAVF_IO_IS_TTY            (1<<9)
 
 /* Flags which change at runtime */
-
-#define GAVF_IO_EOF               (1<<16)
-#define GAVF_IO_ERROR             (1<<17)
-
-
 
 
 #define GAVF_PROTOCOL_TCP      "gavf-tcp"
@@ -71,6 +54,18 @@
 /* gavf specific dictionary */
 #define GAVF_DICT              "gavf"
 #define GAVF_META_HWSTORAGE    "hw" // Where the frames are stored
+
+/* Packet flags (per stream) */
+#define GAVL_PACKET_HAS_STREAM_ID  (1<<0)
+#define GAVL_PACKET_HAS_DURATION   (1<<1)
+#define GAVL_PACKET_HAS_INTERLACE  (1<<2)
+
+/* Packet flags (per packet) */
+#define GAVL_PACKET_HAS_RECTANGLE (1<<0)
+#define GAVL_PACKET_HAS_TIMECODE  (1<<1)
+#define GAVL_PACKET_HAS_HEADER    (1<<2)
+#define GAVL_PACKET_HAS_SEQ_END   (1<<3)
+#define GAVL_PACKET_HAS_FIELD2    (1<<4)
 
 
 /*
@@ -158,56 +153,7 @@ typedef struct gavf_options_s gavf_options_t;
 
 /* Chunk structure */
 
-typedef struct
-  {
-  char eightcc[9];
-  int64_t start; // gavl_io_position();
-  int64_t len;   // gavl_io_position() - start;
-  } gavf_chunk_t;
 
-
-GAVL_PUBLIC
-int gavf_read_dictionary(gavl_io_t * io,
-                         gavf_chunk_t * head,
-                         gavl_dictionary_t * ret);
-
-
-GAVL_PUBLIC
-int gavf_chunk_read_header(gavl_io_t * io, gavf_chunk_t * head);
-
-GAVL_PUBLIC
-int gavf_chunk_is(const gavf_chunk_t * head, const char * eightcc);
-
-GAVL_PUBLIC
-int gavf_chunk_start(gavl_io_t * io, gavf_chunk_t * head, const char * eightcc);
-
-GAVL_PUBLIC
-int gavf_chunk_finish(gavl_io_t * io, gavf_chunk_t * head, int write_size);
-
-GAVL_PUBLIC
-gavl_io_t * gavf_chunk_start_io(gavl_io_t * io, gavf_chunk_t * head, const char * eightcc);
-
-GAVL_PUBLIC
-int gavf_chunk_finish_io(gavl_io_t * io, gavf_chunk_t * head, gavl_io_t * sub_io);
-
-
-/** \brief Read a message
- *  \param ret Where the message will be copied
- *  \param io I/O context
- *  \returns 1 on success, 0 on error
- */
-
-GAVL_PUBLIC
-int gavl_msg_read(gavl_msg_t * ret, gavl_io_t * io);
-
-/** \brief Write a message
- *  \param msg A message
- *  \param io I/O context
- *  \returns 1 on success, 0 on error
- */
-
-GAVL_PUBLIC
-int gavl_msg_write(const gavl_msg_t * msg, gavl_io_t * io);
 
 /* Buffer as io */
 
@@ -481,35 +427,8 @@ int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t 
 GAVL_PUBLIC
 uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
 
-GAVL_PUBLIC
-uint8_t * gavl_msg_to_buffer(int * len, const gavl_msg_t * msg);
-
-GAVL_PUBLIC
-int gavl_msg_from_buffer(const uint8_t * buf, int len, gavl_msg_t * msg);
 
 /* Formats */
-GAVL_PUBLIC
-int gavf_read_audio_format(gavl_io_t * io, gavl_audio_format_t * format);
-GAVL_PUBLIC
-int gavf_write_audio_format(gavl_io_t * io, const gavl_audio_format_t * format);
-
-GAVL_PUBLIC
-int gavf_read_video_format(gavl_io_t * io, gavl_video_format_t * format);
-
-GAVL_PUBLIC
-int gavf_write_video_format(gavl_io_t * io, const gavl_video_format_t * format);
-
-/* Compression info */
-
-#if 0
-GAVL_PUBLIC
-int gavf_read_compression_info(gavl_io_t * io,
-                               gavl_compression_info_t * ci);
-
-GAVL_PUBLIC
-int gavf_write_compression_info(gavl_io_t * io,
-                                const gavl_compression_info_t * ci);
-#endif
 
 /* Metadata */
 
@@ -526,13 +445,6 @@ int gavl_dictionary_write(gavl_io_t * io, const gavl_dictionary_t * ci);
 GAVL_PUBLIC
 void gavf_set_msg_cb(gavf_t * g, gavl_handle_msg_func msg_callback, void * msg_data);
 
-GAVL_PUBLIC
-int gavf_msg_to_packet(const gavl_msg_t * msg,
-                       gavl_packet_t * dst);
-
-GAVL_PUBLIC
-int gavf_packet_to_msg(const gavl_packet_t * src,
-                       gavl_msg_t * msg);
 
 GAVL_PUBLIC
 void gavf_options_copy(gavf_options_t * dst, const gavf_options_t * src);

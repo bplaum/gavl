@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <gavfprivate.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -16,6 +15,9 @@
 
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
+
+#include <gavl/io.h>
+#include <io_private.h>
 
 /* Global initialization */
 
@@ -376,7 +378,7 @@ static void close_tls(void * priv)
   if(p->server_name)
     free(p->server_name);
 
-  if(p->flags & GAVF_IO_SOCKET_DO_CLOSE)
+  if(p->flags & GAVL_IO_SOCKET_DO_CLOSE)
     gavl_socket_close(p->fd);
 
   if(p->timer)
@@ -431,7 +433,7 @@ gavl_io_t * gavl_io_create_tls_client_async(int fd, const char * server_name, in
   tls_t * p;
   //  int result;
   gavl_io_t * io;
-  int flags = GAVF_IO_CAN_READ | GAVF_IO_CAN_WRITE | GAVF_IO_IS_DUPLEX | GAVF_IO_IS_SOCKET;
+  int flags = GAVL_IO_CAN_READ | GAVL_IO_CAN_WRITE | GAVL_IO_IS_DUPLEX | GAVL_IO_IS_SOCKET;
 
   tls_global_init();
   

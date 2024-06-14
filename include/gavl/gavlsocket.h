@@ -169,7 +169,7 @@ int gavl_unix_socket_create(char ** name, int queue_size);
 
 GAVL_PUBLIC
 int gavl_listen_socket_accept(int sock, int milliseconds,
-                            gavl_socket_address_t * from);
+                              gavl_socket_address_t * from);
 
 GAVL_PUBLIC
 void gavl_listen_socket_destroy(int);

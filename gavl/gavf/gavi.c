@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <gavl/metatags.h>
 
 #include <gavfprivate.h>
 
@@ -19,25 +20,26 @@ int gavl_image_write_header(gavl_io_t * io,
                             const gavl_dictionary_t * m,
                             const gavl_video_format_t * v)
   {
+  int result;
+  gavl_dictionary_t s;
+  gavl_dictionary_init(&s);
+
   if((gavl_io_write_data(io, sig, 8) < 8))
     return 0;
 
   if(m)
     {
-    if(!gavl_dictionary_write(io, m))
+    if(!gavl_dictionary_set_dictionary(&s, GAVL_META_METADATA, m))
       return 0;
     }
   else
-    {
-    gavl_dictionary_t m1;
-    gavl_dictionary_init(&m1);
-    if(!gavl_dictionary_write(io, &m1))
-      return 0;
-    }
+    gavl_dictionary_get_dictionary_create(&s, GAVL_META_METADATA);
   
-  if(!gavf_write_video_format(io, v))
-    return 0;
-  return 1;
+  gavl_dictionary_set_video_format(&s, GAVL_META_FORMAT, v);
+ 
+  result = gavl_dictionary_write(io, &s);
+  gavl_dictionary_free(&s);
+  return result;
   }
 
 int gavl_image_write_image(gavl_io_t * io,
@@ -55,11 +57,21 @@ int gavl_image_read_header(gavl_io_t * io,
                            gavl_video_format_t * v)
   {
   uint8_t sig_test[8];
+  const gavl_video_format_t * fmt;
+  gavl_dictionary_t s;
+  gavl_dictionary_init(&s);
+  
   if((gavl_io_read_data(io, sig_test, 8) < 8) ||
      memcmp(sig_test, sig, 8) ||
-     !gavl_dictionary_read(io, m) ||
-     !gavf_read_video_format(io, v))
+     !gavl_dictionary_read(io, &s) ||
+     !(fmt = gavl_dictionary_get_video_format(&s, GAVL_META_FORMAT)))
+    {
+    gavl_dictionary_free(&s);
     return 0;
+    }
+
+  gavl_dictionary_free(&s);
+  
   return 1;
   }
 

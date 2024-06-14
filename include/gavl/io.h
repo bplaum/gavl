@@ -29,6 +29,25 @@ extern "C" {
 #include <stdio.h>
 #include <inttypes.h>
 
+#include <gavl/msg.h>
+
+  
+/* IO flags */
+
+#define GAVL_IO_CAN_READ          (1<<0)
+#define GAVL_IO_CAN_WRITE         (1<<1)
+#define GAVL_IO_CAN_SEEK          (1<<2)
+#define GAVL_IO_IS_DUPLEX         (1<<3) // Duplex means we have the backchannel for messages
+#define GAVL_IO_IS_REGULAR        (1<<4)
+#define GAVL_IO_IS_SOCKET         (1<<5)
+#define GAVL_IO_IS_UNIX_SOCKET    (1<<6)
+#define GAVL_IO_IS_LOCAL          (1<<7)
+#define GAVL_IO_IS_PIPE           (1<<8)
+#define GAVL_IO_IS_TTY            (1<<9)
+ 
+#define GAVL_IO_EOF               (1<<16)
+#define GAVL_IO_ERROR             (1<<17)
+  
 /* Crypto I/O */
 typedef enum
   {
@@ -52,13 +71,12 @@ typedef enum
   
 /* I/O Structure */
 
-typedef int (*gavf_read_func)(void * priv, uint8_t * data, int len);
-typedef int (*gavf_write_func)(void * priv, const uint8_t * data, int len);
-typedef int64_t (*gavf_seek_func)(void * priv, int64_t pos, int whence);
-typedef void (*gavf_close_func)(void * priv);
-typedef int (*gavf_flush_func)(void * priv);
-
-typedef int (*gavf_poll_func)(void * priv, int timeout, int wr);
+typedef int (*gavl_read_func)(void * priv, uint8_t * data, int len);
+typedef int (*gavl_write_func)(void * priv, const uint8_t * data, int len);
+typedef int64_t (*gavl_seek_func)(void * priv, int64_t pos, int whence);
+typedef void (*gavl_close_func)(void * priv);
+typedef int (*gavl_flush_func)(void * priv);
+typedef int (*gavl_poll_func)(void * priv, int timeout, int wr);
 
 
 
@@ -67,7 +85,7 @@ typedef int (*gavf_poll_func)(void * priv, int timeout, int wr);
 typedef struct gavl_io_s gavl_io_t;
 
 GAVL_PUBLIC
-void gavl_io_set_poll_func(gavl_io_t * io, gavf_poll_func f);
+void gavl_io_set_poll_func(gavl_io_t * io, gavl_poll_func f);
 
 GAVL_PUBLIC
 int gavl_io_can_read(gavl_io_t * io, int timeout);
@@ -76,11 +94,11 @@ GAVL_PUBLIC
 int gavl_io_can_write(gavl_io_t * io, int timeout);
 
 GAVL_PUBLIC
-gavl_io_t * gavl_io_create(gavf_read_func  r,
-                           gavf_write_func w,
-                           gavf_seek_func  s,
-                           gavf_close_func c,
-                           gavf_flush_func f,
+gavl_io_t * gavl_io_create(gavl_read_func  r,
+                           gavl_write_func w,
+                           gavl_seek_func  s,
+                           gavl_close_func c,
+                           gavl_flush_func f,
                            int flags,
                            void * data);
 
@@ -101,16 +119,19 @@ GAVL_PUBLIC
 int gavl_io_flush(gavl_io_t *);
 
 GAVL_PUBLIC
+void gavl_io_skip(gavl_io_t * io, int bytes);
+  
+GAVL_PUBLIC
 gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int do_close);
 
 GAVL_PUBLIC
 gavl_io_t * gavl_io_from_filename(const char * filename, int wr);
 
   
-#define GAVF_IO_SOCKET_DO_CLOSE     (1<<0)
+#define GAVL_IO_SOCKET_DO_CLOSE     (1<<0)
 
-#define GAVF_IO_SOCKET_BUFFER_READ  (1<<1)
-// #define GAVF_IO_SOCKET_BUFFER_WRITE (1<<2)
+#define GAVL_IO_SOCKET_BUFFER_READ  (1<<1)
+// #define GAVL_IO_SOCKET_BUFFER_WRITE (1<<2)
 
 
 GAVL_PUBLIC
@@ -378,7 +399,69 @@ int gavl_io_write_32_be(gavl_io_t * ctx,uint32_t val);
 GAVL_PUBLIC
 int gavl_io_write_64_be(gavl_io_t * ctx, uint64_t val);
 
+/** \brief Read a message
+ *  \param ret Where the message will be copied
+ *  \param io I/O context
+ *  \returns 1 on success, 0 on error
+ */
 
+GAVL_PUBLIC
+int gavl_msg_read(gavl_msg_t * ret, gavl_io_t * io);
+
+/** \brief Write a message
+ *  \param msg A message
+ *  \param io I/O context
+ *  \returns 1 on success, 0 on error
+ */
+
+GAVL_PUBLIC
+int gavl_msg_write(const gavl_msg_t * msg, gavl_io_t * io);
+
+GAVL_PUBLIC
+uint8_t * gavl_msg_to_buffer(int * len, const gavl_msg_t * msg);
+
+GAVL_PUBLIC
+int gavl_msg_from_buffer(const uint8_t * buf, int len, gavl_msg_t * msg);
+
+GAVL_PUBLIC
+int gavl_msg_to_packet(const gavl_msg_t * msg,
+                       gavl_packet_t * dst);
+
+GAVL_PUBLIC
+int gavl_packet_to_msg(const gavl_packet_t * src,
+                       gavl_msg_t * msg);
+  
+
+typedef struct
+  {
+  char eightcc[9];
+  int64_t start; // gavl_io_position();
+  int64_t len;   // gavl_io_position() - start;
+  } gavl_chunk_t;
+
+GAVL_PUBLIC
+int gavl_chunk_read_header(gavl_io_t * io, gavl_chunk_t * head);
+
+GAVL_PUBLIC
+int gavl_chunk_is(const gavl_chunk_t * head, const char * eightcc);
+
+GAVL_PUBLIC
+int gavl_chunk_start(gavl_io_t * io, gavl_chunk_t * head, const char * eightcc);
+
+GAVL_PUBLIC
+int gavl_chunk_finish(gavl_io_t * io, gavl_chunk_t * head, int write_size);
+
+GAVL_PUBLIC
+gavl_io_t * gavl_chunk_start_io(gavl_io_t * io, gavl_chunk_t * head, const char * eightcc);
+
+GAVL_PUBLIC
+int gavl_chunk_finish_io(gavl_io_t * io, gavl_chunk_t * head, gavl_io_t * sub_io);
+
+GAVL_PUBLIC
+int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t * fmt);
+
+GAVL_PUBLIC
+uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
   
 #ifdef __cplusplus
 }

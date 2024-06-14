@@ -367,7 +367,7 @@ int gavl_packet_index_write(const gavl_packet_index_t * idx, gavl_io_t * io)
 
 gavl_packet_index_t * gavl_packet_index_load(const char * filename)
   {
-  gavf_chunk_t head;
+  gavl_chunk_t head;
   gavl_packet_index_t * idx;
   
   gavl_io_t * io;
@@ -375,8 +375,8 @@ gavl_packet_index_t * gavl_packet_index_load(const char * filename)
   if(!(io = gavl_io_from_filename(filename, 0)))
     return 0;
 
-  if(!gavf_chunk_read_header(io, &head) ||
-     !gavf_chunk_is(&head, GAVF_TAG_PACKET_INDEX))
+  if(!gavl_chunk_read_header(io, &head) ||
+     !gavl_chunk_is(&head, GAVF_TAG_PACKET_INDEX))
     return 0;
 
   idx = gavl_packet_index_create(0);
@@ -392,16 +392,16 @@ gavl_packet_index_t * gavl_packet_index_load(const char * filename)
 
 int gavl_packet_index_save(gavl_packet_index_t * idx, const char * filename)
   {
-  gavf_chunk_t head;
+  gavl_chunk_t head;
 
   gavl_io_t * io;
 
   if(!(io = gavl_io_from_filename(filename, 1)))
     return 0;
   
-  gavf_chunk_start(io, &head, GAVF_TAG_PACKET_INDEX);
+  gavl_chunk_start(io, &head, GAVF_TAG_PACKET_INDEX);
   gavl_packet_index_write(idx, io);
-  gavf_chunk_finish(io, &head, 1);
+  gavl_chunk_finish(io, &head, 1);
   gavl_io_destroy(io);
   return 1;
   }

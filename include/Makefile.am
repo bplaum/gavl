@@ -16,6 +16,7 @@ gavfprivate.h \
 gavlshm.h \
 hw_private.h \
 interleave.h \
+io_private.h \
 language_table.h \
 macros.h \
 memalign.h \

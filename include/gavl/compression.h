@@ -325,7 +325,6 @@ int gavl_num_compressions();
   
 GAVL_PUBLIC
 gavl_codec_id_t gavl_get_compression(int index);
- 
   
 #define GAVL_PACKET_TYPE_I    0x01      //!< Packet is an I-frame
 #define GAVL_PACKET_TYPE_P    0x02      //!< Packet is a P-frame
@@ -345,6 +344,8 @@ gavl_codec_id_t gavl_get_compression(int index);
 
   
 #define GAVL_PACKET_FLAG_PRIV (1<<16) //!< Private flag (defined outside of gavl)
+#define GAVL_PACKET_FLAG_PUBLIC_MASK  0x0000ffff  //!< Mask for public flags
+#define GAVL_PACKET_FLAG_PRIVATE_MASK 0xffff0000  //!< Mask for private flags (defined outside of gavl)
   
 #define GAVL_PACKET_PADDING  32 //!< Packets are padded in memory with this many zero bytes
 

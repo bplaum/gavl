@@ -357,7 +357,6 @@ gavl/Makefile \
 gavl/libgdither/Makefile \
 gavl/libsamplerate/Makefile \
 gavl/c/Makefile \
-gavl/gavf/Makefile \
 gavl/hq/Makefile \
 gavl/mmx/Makefile \
 gavl/mmxext/Makefile \
