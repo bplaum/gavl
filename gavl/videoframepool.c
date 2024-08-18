@@ -20,60 +20,108 @@
  * *****************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 
+#include <config.h>
 #include <gavl/gavl.h>
+#include <gavl/log.h>
+#define LOG_DOMAIN "videoframepool"
+
+typedef struct
+  {
+  gavl_video_frame_t * frame;
+  int used;
+  } pool_element_t;
 
 struct gavl_video_frame_pool_s
   {
   int num_frames;
   int frames_alloc;
-  gavl_video_frame_t ** frames;
-  gavl_video_frame_t * (*create_frame)(void * priv);
-  void * priv;
+  pool_element_t * frames;
+
+  gavl_video_format_t format;
+  
+  gavl_hw_context_t * hwctx;
   };
 
 gavl_video_frame_pool_t *
-gavl_video_frame_pool_create(gavl_video_frame_t * (create_frame)(void * priv),
-                             void * priv)
+gavl_video_frame_pool_create(gavl_hw_context_t * ctx)
   {
   gavl_video_frame_pool_t * ret;
   ret = calloc(1, sizeof(*ret));
-  ret->create_frame = create_frame;
-  ret->priv = priv;
+  ret->hwctx = ctx;
   return ret;
   }
+
+static gavl_video_frame_t * create_frame(gavl_video_frame_pool_t *p)
+  {
+  gavl_video_frame_t * ret;
   
+  if(p->hwctx)
+    ret = gavl_hw_video_frame_create_ram(p->hwctx, &p->format);
+  else
+    {
+    ret = gavl_video_frame_create(&p->format);
+    ret->buf_idx = p->num_frames;
+    }
+  ret->client_data = p;
+  return ret;
+  }
+
 gavl_video_frame_t * gavl_video_frame_pool_get(gavl_video_frame_pool_t *p)
   {
   int i;
+
+  if(!p->format.image_width)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Format must be set before getting frames");
+    return NULL;
+    }
+
   for(i = 0; i < p->num_frames; i++)
     {
-    if(!p->frames[i]->refcount)
-      return p->frames[i];
+    if(!p->frames[i].used)
+      {
+      p->frames[i].used = 1;
+      return p->frames[i].frame;
+      }
     }
   /* Allocate a new frame */
   if(p->num_frames == p->frames_alloc)
     {
     p->frames_alloc += 16;
     p->frames = realloc(p->frames, p->frames_alloc * sizeof(*p->frames));
+    memset(p->frames + p->num_frames, 0,
+           sizeof(*p->frames)*(p->frames_alloc - p->num_frames));
     }
-
-  if(p->create_frame)
-    p->frames[p->num_frames] = p->create_frame(p->priv);
-  else
-    {
-    p->frames[p->num_frames] = gavl_video_frame_create(p->priv);
-    gavl_video_frame_clear(p->frames[p->num_frames], p->priv);
-    }
+  
+  p->frames[p->num_frames].frame = create_frame(p);
   p->num_frames++;
-  return p->frames[p->num_frames-1];
+  
+  p->frames[p->num_frames-1].used = 1;
+  return p->frames[p->num_frames-1].frame;
+  }
+
+void gavl_video_frame_pool_release(gavl_video_frame_t * frame)
+  {
+  int i = 0;
+  gavl_video_frame_pool_t *p = frame->client_data;
+
+  for(i = 0; i < p->num_frames; i++)
+    {
+    if(p->frames[i].frame == frame)
+      {
+      p->frames[i].used = 0;
+      return;
+      }
+    }
   }
 
 void gavl_video_frame_pool_destroy(gavl_video_frame_pool_t *p)
   {
   int i;
   for(i = 0; i < p->num_frames; i++)
-    gavl_video_frame_destroy(p->frames[i]);
+    gavl_video_frame_destroy(p->frames[i].frame);
   if(p->frames)
     free(p->frames);
   free(p);
@@ -83,5 +131,32 @@ void gavl_video_frame_pool_reset(gavl_video_frame_pool_t *p)
   {
   int i;
   for(i = 0; i < p->num_frames; i++)
-    p->frames[i]->refcount = 0;
+    p->frames[i].used = 0;
+  }
+
+int gavl_video_frame_pool_set_format(gavl_video_frame_pool_t *p, const gavl_video_format_t * fmt)
+  {
+  if(!p->format.image_width)
+    {
+    gavl_video_format_copy(&p->format, fmt);
+    gavl_video_format_set_frame_size(&p->format, 16, 32);
+    }
+  else
+    {
+    /* Sanity checks */
+    if((p->format.image_width != fmt->image_width) &&
+       (p->format.image_height != fmt->image_height) &&
+       (p->format.pixelformat != fmt->pixelformat))
+      {
+      return 0;
+      }
+    
+    }
+  return 1;
+  }
+
+const gavl_video_format_t *
+gavl_video_frame_pool_get_format(const gavl_video_frame_pool_t * p)
+  {
+  return &p->format;
   }

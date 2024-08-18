@@ -58,16 +58,6 @@ uint32_t gavl_drm_fourcc_from_gavl(gavl_pixelformat_t pfmt)
   return 0;
   }
 
-
-#if 0
-typedef struct
-  {
-  int frames_alloc;
-  gavl_video_frame_t ** frames;
-  
-  } dma_native_t;
-#endif
-
 static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx,
                                                          gavl_video_format_t * fmt)
   {
@@ -81,12 +71,11 @@ static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx
 
 static void video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f)
   {
-  int i;
-  gavl_dmabuf_video_frame_t * info;
-
   
   if(f->storage)
     {
+    int i;
+    gavl_dmabuf_video_frame_t * info;
     info = f->storage;
 
     for(i = 0; i < info->num_buffers; i++)
@@ -94,10 +83,12 @@ static void video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f)
 
     free(info);
     }
+  
   f->hwctx = NULL;
   gavl_video_frame_destroy(f);
   }
 
+#if 0
 typedef struct
   {
   int fourcc;
@@ -111,7 +102,7 @@ typedef struct
   
   } dma_payload_t;
 
-#if 0
+
 static int video_frame_to_packet_dmabuf(gavl_hw_context_t * ctx,
                                         const gavl_video_format_t * fmt,
                                         const gavl_video_frame_t * frame,
@@ -195,7 +186,6 @@ static const gavl_hw_funcs_t funcs =
    //    .can_export             = exports_type_v4l2,
    //    .export_video_frame = export_video_frame_v4l2,
   };
-
 
 gavl_hw_context_t * gavl_hw_ctx_create_dma()
   {

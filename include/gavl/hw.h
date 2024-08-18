@@ -35,9 +35,6 @@
 #define GAVL_HW_SUPPORTS_AUDIO       (1<<0)
 #define GAVL_HW_SUPPORTS_VIDEO       (1<<1)
 #define GAVL_HW_SUPPORTS_PACKETS     (1<<2)
-#define GAVL_HW_SUPPORTS_SHARED      (1<<3) // Data can be shared among processes
-// #define GAVL_HW_SUPPORTS_DMA_EXPORT  (1<<4) // Buffer can be exported as Linux DMA buffer
-// #define GAVL_HW_SUPPORTS_DMA_IMPORT  (1<<5) // Buffer can be imported as Linux DMA buffer
 
 typedef enum
   {
@@ -60,7 +57,6 @@ GAVL_PUBLIC const char * gavl_hw_type_to_string(gavl_hw_type_t type);
 
 GAVL_PUBLIC const char * gavl_hw_type_to_id(gavl_hw_type_t type);
 GAVL_PUBLIC gavl_hw_type_t gavl_hw_type_from_id(const char * id);
-
 
 GAVL_PUBLIC int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
 GAVL_PUBLIC int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);

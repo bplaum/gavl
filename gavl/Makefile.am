@@ -158,7 +158,6 @@ edl.c \
 frametable.c \
 hw.c \
 hw_dmabuf.c \
-hw_shm.c \
 http.c \
 httpclient.c \
 interleave.c \
@@ -196,7 +195,6 @@ scale.c \
 scale_context.c \
 scale_kernels.c \
 scale_table.c \
-shm.c \
 socket.c \
 socketaddress.c \
 ssim.c \

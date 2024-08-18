@@ -370,18 +370,23 @@ int gavl_video_formats_equal(const gavl_video_format_t * format_1,
 void gavl_video_format_set_frame_size(gavl_video_format_t * format,
                                       int pad_h, int pad_v)
   {
+  int sub_h = 1, sub_v = 1;
+  if(format->pixelformat != GAVL_PIXELFORMAT_NONE)
+    gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
+  
   if((pad_h < 1) || (pad_v < 1))
     {
-    int sub_h = 1, sub_v = 1;
-
-    if(format->pixelformat != GAVL_PIXELFORMAT_NONE)
-      gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
-    
     if(pad_h < 1)
       pad_h = sub_h;
     if(pad_v < 1)
       pad_v = sub_v;
     }
+  else
+    {
+    pad_h *= sub_h;
+    pad_v *= sub_v;
+    }
+  
   format->frame_width  = ((format->image_width  + pad_h - 1) / pad_h) * pad_h;
   format->frame_height = ((format->image_height + pad_v - 1) / pad_v) * pad_v;
   }

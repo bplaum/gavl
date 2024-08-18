@@ -188,7 +188,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_shm(int wr)
   {
   shm_t * native = calloc(1, sizeof(*native));
   native->wr = wr;
-  return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_SHM, GAVL_HW_SUPPORTS_VIDEO | GAVL_HW_SUPPORTS_SHARED);
+  return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_SHM, GAVL_HW_SUPPORTS_VIDEO);
   }
 
 /*

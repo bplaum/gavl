@@ -97,12 +97,6 @@ gavl_packet_sink_s gavl_packet_sink_t;
 
 typedef struct gavl_video_format_s gavl_video_format_t;
 
-/** \ingroup video_frame
- *  \brief Packet sink
- *
- *  You don't want to know what's inside
- */
-
 typedef struct gavl_video_frame_s gavl_video_frame_t;
 
 
@@ -2472,13 +2466,13 @@ int gavl_video_format_get_image_size(const gavl_video_format_t * format);
   \ingroup video_format
   \brief Set the frame size from the image size
   \param format A video format
-  \param pad_h Horizontal padding value
-  \param pad_v Vertical padding value
+  \param align_h Horizontal alignment value
+  \param align_v Vertical alignment value
 
   Set the frame_width and frame_height of the format
   from the image_width and image_height. Pad them
-  to multiples of pad_h and pad_v pixels.
-
+  to multiples of align_v and align_h pixels.
+  
   If pad_h or pad_v is zero or less, use the chroma subsampling
   factors (e.g. a 4:1:1 format will have width as a multiple of 4
   and the height as a multiple of 1).
@@ -2588,15 +2582,13 @@ struct gavl_video_frame_s
   uint8_t * planes[GAVL_MAX_PLANES]; /*!< Pointers to the planes */
   int strides[GAVL_MAX_PLANES];      /*!< For each plane, this stores the byte offset between the scanlines */
   
-  void * client_data;    /*!< For storing user data (gavl never touches these) */
+  void * client_data;    /*!< For storing user data */
   int64_t timestamp; /*!< Timestamp in stream specific units (see \ref video_format) */
   int64_t duration; /*!< Duration in stream specific units (see \ref video_format) */
   gavl_interlace_mode_t   interlace_mode;/*!< Interlace mode */
   gavl_timecode_t timecode; /*!< Timecode associated with this frame */
 
-  int refcount;             /*!< Reference count: Means that the frame is still used (since 1.5.0) */
-  //   void (*destroy)(struct gavl_video_frame_s*, void*priv); /*!< Function for destroying this frame (since 1.5.0) */
-  //  void * destroy_priv;      /*!< Private data to pass to destroy() (since 1.5.0) */
+  int dummy;             // !< Used to be reference count. Was renamed to keep ABI compatibility
   
   gavl_rectangle_i_t src_rect;   //!< Valid rectangle in this frame (since 1.5.0)      */
   int32_t dst_x;                     //!< x offset in the destination frame. (since 1.5.0) */
@@ -4311,8 +4303,7 @@ typedef struct gavl_video_frame_pool_s gavl_video_frame_pool_t;
   
 GAVL_PUBLIC
 gavl_video_frame_pool_t *
-gavl_video_frame_pool_create(gavl_video_frame_t * (*create_frame)(void * priv),
-                             void * priv);
+gavl_video_frame_pool_create(gavl_hw_context_t * hwctx);
 
 /** \brief Create a video frame pool
  *  \param p A frame pool
@@ -4322,6 +4313,15 @@ gavl_video_frame_pool_create(gavl_video_frame_t * (*create_frame)(void * priv),
 GAVL_PUBLIC
 gavl_video_frame_t * gavl_video_frame_pool_get(gavl_video_frame_pool_t *p);
 
+GAVL_PUBLIC
+void gavl_video_frame_pool_release(gavl_video_frame_t * frame);
+
+GAVL_PUBLIC
+int gavl_video_frame_pool_set_format(gavl_video_frame_pool_t *p, const gavl_video_format_t * fmt);
+
+GAVL_PUBLIC
+const gavl_video_format_t * gavl_video_frame_pool_get_format(const gavl_video_frame_pool_t *p);
+  
 /** \brief Destroy a video frame pool
  *  \param p A frame pool
  *
