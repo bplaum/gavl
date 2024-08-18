@@ -53,6 +53,7 @@
 #define STATE_READ_CHUNK_TAIL      12 // Chunked
 
 #define STATE_COMPLETE              13
+#define STATE_PAUSED                14
 
 /* Read chunk header in these byte increments */
 #define CHUNK_HEADER_BYTES 4
@@ -149,7 +150,10 @@ static void do_reset_connection(gavl_http_client_t * c)
   c->total_bytes = 0;
   c->chunk_length = 0;
   c->pos = 0;
-  c->state        = STATE_START;
+
+  if(c->state != STATE_PAUSED)
+    c->state        = STATE_START;
+  
   c->num_redirections = 0;
   
   gavl_io_clear_eof(c->io);
@@ -1064,6 +1068,8 @@ static void prepare_header(gavl_http_client_t * c,
     else
       gavl_dictionary_set_string_nocopy(request, "Range", gavl_sprintf("bytes=%"PRId64"-%"PRId64,
                                                                         c->range_start, c->range_end - 1));
+
+    //    fprintf(stderr, "Set range: %s\n", gavl_dictionary_get_string(request, "Range"));
     }
 
 #if 0
@@ -1402,7 +1408,7 @@ void
 gavl_http_client_set_range(gavl_io_t * io, int64_t start, int64_t end)
   {
   gavl_http_client_t * c = gavl_io_get_priv(io);
-
+  //  fprintf(stderr, "gavl_http_client_set_range %"PRId64" %"PRId64"\n", start, end);
   c->range_start = start;
   c->range_end   = end;
   
@@ -1419,6 +1425,8 @@ void gavl_http_client_pause(gavl_io_t * io)
 
   //  fprintf(stderr, "gavl_http_client_pause %"PRId64"\n", c->position);
 
+  c->state = STATE_PAUSED;
+  
   close_connection(c);
   
   //  gavl_io_destroy(c->io_int);
@@ -1429,19 +1437,24 @@ void gavl_http_client_resume(gavl_io_t * io)
   {
   gavl_http_client_t * c = gavl_io_get_priv(io);
 
-  //  fprintf(stderr, "gavl_http_client_resume %d\n", c->state);
-
+  //  fprintf(stderr, "gavl_http_client_resume %"PRId64"\n", c->position);
+  
   /* Resume after seek */
-  if(c->state != STATE_COMPLETE)
+  if(c->state != STATE_PAUSED)
     {
-    if(c->state != STATE_START) 
-      gavl_http_client_set_range(io, c->position, -1);
-
-    if(!reopen(io))
-      fprintf(stderr, "Re-opening failed\n");
-    else
-      fprintf(stderr, "Re-opened %"PRId64"\n", c->position);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot resume: client was not paused");
+    return;
     }
+  
+  gavl_http_client_set_range(io, c->position, -1);
+
+  c->state = STATE_START;
+  
+  if(!reopen(io))
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Re-opening failed");
+  //  else
+  //    fprintf(stderr, "Re-opened %"PRId64"\n", c->position);
+  
   }
 
 /* Asynchronous states */
