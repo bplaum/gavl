@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <gavl/gavl.h>
 
 gavl_frame_table_t * gavl_frame_table_create()
   {
