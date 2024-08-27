@@ -1,9 +1,8 @@
 /*****************************************************************
  * gavl - a general purpose audio/video processing library
  *
- * Copyright (c) 2001 - 2012 Members of the Gmerlin project
- * gmerlin-general@lists.sourceforge.net
- * http://gmerlin.sourceforge.net
+ * Copyright (c) 2001 - 2024 Members of the Gmerlin project
+ * http://github.com/bplaum
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
+
+
 
 #ifdef INTERPOLATE_USE_16 /* Only used in functions, which are a bit too slow anyway */
 static const mmx_t interpolate_rgb16_upper_mask =   { 0x000000000000f800LL };
