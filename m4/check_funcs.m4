@@ -12,7 +12,8 @@ GMERLIN_EXE_LDFLAGS=""
 AC_MSG_CHECKING(if linker supports --no-undefined)
 OLD_LDFLAGS=$LDFLAGS
 LDFLAGS="$LDFLAGS -Wl,--no-undefined"
-AC_TRY_LINK([],[],
+
+AC_LINK_IFELSE([AC_LANG_SOURCE([[int main() { return 0; } ]])],
             [GMERLIN_LIB_LDFLAGS="-Wl,--no-undefined $GMERLIN_LIB_LDFLAGS"; AC_MSG_RESULT(Supported)],
             [AC_MSG_RESULT(Unsupported)])
 LDFLAGS=$OLD_LDFLAGS
@@ -20,7 +21,7 @@ LDFLAGS=$OLD_LDFLAGS
 AC_MSG_CHECKING(if linker supports --as-needed)
 OLD_LDFLAGS=$LDFLAGS
 LDFLAGS="$LDFLAGS -Wl,--as-needed"
-AC_TRY_LINK([],[],
+AC_LINK_IFELSE([AC_LANG_SOURCE([[int main() { return 0; }]])],
             [GMERLIN_EXE_LDFLAGS="-Wl,--as-needed $GMERLIN_EXE_LDFLAGS"; AC_MSG_RESULT(Supported)],
             [AC_MSG_RESULT(Unsupported)])
 LDFLAGS=$OLD_LDFLAGS
@@ -664,34 +665,15 @@ have_libpng=false
 PNG_REQUIRED="1.2.2"
 
 AC_ARG_ENABLE(libpng,
-[AC_HELP_STRING([--disable-libpng],[Disable libpng (default: autodetect)])],
+[AS_HELP_STRING([--disable-libpng],[Disable libpng (default: autodetect)])],
 [case "${enableval}" in
    yes) test_libpng=true ;;
    no)  test_libpng=false ;;
 esac],[test_libpng=true])
 
 if test x$test_libpng = xtrue; then
-   
-OLD_LIBS=$LIBS
 
-LIBS="$LIBS -lpng -lm -lz"
- 
-AC_MSG_CHECKING(for libpng)
-AC_TRY_LINK([#include <png.h>],
-            [png_structp png_ptr;
-             png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
-                                               (png_voidp)0,
-                                                NULL, NULL);],
-            [have_libpng=true])
- 
-case $have_libpng in
-  true) AC_DEFINE(HAVE_LIBPNG)
-        AC_MSG_RESULT(yes)
-        PNG_LIBS=$LIBS;;
-  false) AC_MSG_RESULT(no); PNG_LIBS=""; PNG_CFLAGS="";;
-esac
-LIBS=$OLD_LIBS
-
+PKG_CHECK_MODULES(PNG, libpng, have_libpng="true", have_libpng="false")
 fi
 
 AC_SUBST(PNG_CFLAGS)
@@ -1559,6 +1541,7 @@ dnl OpenGL
 dnl
 AC_DEFUN([GMERLIN_CHECK_OPENGL],[
 AH_TEMPLATE([HAVE_GL],[OpenGL available])
+AH_TEMPLATE([HAVE_GLX],[GLX available])
 AH_TEMPLATE([HAVE_EGL],[EGL available])
 
 dnl
@@ -1571,12 +1554,36 @@ have_GL="true"
 AC_SEARCH_LIBS([glBegin], [GL], [], [have_GL="false"], [])
 
 if test "x$have_GL" = "xtrue"; then
-AC_TRY_LINK([#include <GL/gl.h>],[
-if(0) glBegin(GL_QUADS); return 0;],
-[],[have_GL="false"])
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <GL/gl.h>
+				 int main()
+				 {
+				     if(0)
+				       glBegin(GL_QUADS);
+				       return 0; } ]])],
+	       [],[have_GL="false"])
+dnl AC_LINK_IFELSE(AC_LANG_SOURCE([]),[],[have_GL="false"])
 fi
 
 GL_LIBS=$LIBS
+
+LIBS="$OLD_LIBS"
+
+dnl
+dnl Check for GLX
+dnl
+
+OLD_LIBS=$LIBS
+
+have_GLX="true"
+AC_SEARCH_LIBS([glXCreateContext], [GL glx], [], [have_GLX="false"], [])
+
+if test "x$have_GL" = "xtrue"; then
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <GL/glx.h>
+				 int main() { if(0) glXChooseFBConfig(NULL, 0, NULL, NULL); return 0;} ]])],
+	       [],[have_GLX="false"])
+fi
+
+GLX_LIBS=$LIBS
 
 LIBS="$OLD_LIBS"
 
@@ -1590,9 +1597,12 @@ have_EGL="true"
 AC_SEARCH_LIBS([eglGetCurrentDisplay], [GL EGL], [], [have_EGL="false"], [])
 
 if test "x$have_GL" = "xtrue"; then
-AC_TRY_LINK([#include <EGL/egl.h>],[
-if(0) eglGetCurrentDisplay(); return 0;
-],[],[have_EGL="false"])
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <EGL/egl.h>
+				 int main() { 
+				     if(0) eglGetCurrentDisplay(); return 0;
+				 }
+				]])],
+               [],[have_EGL="false"])
 fi
 
 EGL_LIBS=$LIBS
@@ -1603,6 +1613,9 @@ LIBS="$OLD_LIBS"
 if test "x$have_GL" = "xtrue"; then
 AC_DEFINE(HAVE_GL)
 
+if test "x$have_GLX" = "xtrue"; then
+AC_DEFINE(HAVE_GLX)
+fi
 
 if test "x$have_EGL" = "xtrue"; then
 AC_DEFINE(HAVE_EGL)
@@ -1611,13 +1624,15 @@ fi
 fi
 
 AM_CONDITIONAL(HAVE_GL, test x$have_GL = xtrue)
+AM_CONDITIONAL(HAVE_GLX, test x$have_GLX = xtrue)
 AM_CONDITIONAL(HAVE_EGL, test x$have_EGL = xtrue)
 
 AC_SUBST(GL_CFLAGS)
 AC_SUBST(GL_LIBS)
+AC_SUBST(GLX_CFLAGS)
+AC_SUBST(GLX_LIBS)
 AC_SUBST(EGL_CFLAGS)
 AC_SUBST(EGL_LIBS)
-
 ])
 
 
@@ -1665,57 +1680,6 @@ AC_DEFUN([GMERLIN_CHECK_INOTIFY],[
 have_inotify="false"
 AH_TEMPLATE([HAVE_INOTIFY], [System supports inotify])
 AC_CHECK_FUNC(inotify_init,have_inotify="true";AC_DEFINE(HAVE_INOTIFY))
-
-])
-
-dnl
-dnl Semaphores
-dnl
-
-AC_DEFUN([GMERLIN_CHECK_SEMAPHORES],[
-AH_TEMPLATE([HAVE_POSIX_SEMAPHORES], [System supports POSIX semaphores])
-
-have_posix_semaphores="false"
-
-OLD_LIBS=$LIBS
-LIBS="$LIBS -lpthread"
-
-AC_MSG_CHECKING([for POSIX unnamed semaphores]);
-
-  AC_TRY_RUN([
-    #include <semaphore.h>
-	  
-    #include <stdio.h>
-    main()
-    {
-    int result;
-    sem_t s;
-    result = sem_init(&s, 0, 0);
-    if(result)
-      return -1;
-    return 0;
-    }
-  ],
-  [
-    # program could be run
-    have_posix_semaphores="true"
-    AC_MSG_RESULT(yes)
-    AC_DEFINE(HAVE_POSIX_SEMAPHORES)
-  ],[
-    # program could not be run
-    AC_MSG_RESULT(no)
-  ],[
-    # cross compiling
-    have_posix_semaphores="true"
-    AC_MSG_RESULT([assuming yes (cross compiling)])
-    AC_DEFINE(HAVE_POSIX_SEMAPHORES)
-  ]
-)
-
-LIBS=$OLD_LIBS
-
-
-AM_CONDITIONAL(HAVE_POSIX_SEMAPHORES, test x$have_posix_semaphores = xtrue)
 
 ])
 
@@ -1790,7 +1754,7 @@ AH_TEMPLATE([HAVE_V4L2], [Enable v4l2])
 	     
 have_v4l2=false
 AC_ARG_ENABLE(v4l2,
-              AC_HELP_STRING(--disable-v4l2, [Disable Video4Linux (default: autodetect)]),
+              AS_HELP_STRING(--disable-v4l2, [Disable Video4Linux (default: autodetect)]),
               [case "${enableval}" in
                  yes) test_v4l2=true ;;
                  no) test_v4l2=false ;;
@@ -1950,7 +1914,7 @@ LIBVA_CFLAGS=""
 LIBVA_LIBS=""
 
 AC_ARG_ENABLE(libva,
-[AC_HELP_STRING([--disable-libva],[Disable libva (default: autodetect)])],
+[AS_HELP_STRING([--disable-libva],[Disable libva (default: autodetect)])],
 [case "${enableval}" in
    yes) test_libva=true ;;
    no)  test_libva=false ;;

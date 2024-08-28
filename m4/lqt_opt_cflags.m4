@@ -8,7 +8,8 @@ AC_DEFUN([LQT_TRY_CFLAGS],
     [AC_MSG_CHECKING([if $CC supports $1 flags])
     SAVE_CFLAGS="$CFLAGS"
     CFLAGS="$1"
-    AC_TRY_COMPILE([],[],[lqt_try_cflags_ok=yes],[lqt_try_cflags_ok=no])
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[int main() { return 0; } ]])],
+		      [lqt_try_cflags_ok=yes],[lqt_try_cflags_ok=no])
     CFLAGS="$SAVE_CFLAGS"
     AC_MSG_RESULT([$lqt_try_cflags_ok])
     if test x"$lqt_try_cflags_ok" = x"yes"; then
@@ -34,7 +35,7 @@ dnl
 LQT_DEBUG=false
 
 AC_ARG_ENABLE(debug,
-[AC_HELP_STRING([--enable-debug],[Enable debugging, disable optimization])],
+[AS_HELP_STRING([--enable-debug],[Enable debugging, disable optimization])],
 [case "${enableval}" in
    yes) LQT_DEBUG=true ;;
    no)  LQT_DEBUG=false ;;
@@ -46,7 +47,7 @@ dnl Extra cflags from the commandline. Can have the special values "none" or "au
 dnl
 
 AC_ARG_WITH(cpuflags, 
-AC_HELP_STRING([--with-cpuflags],[Set CPU specific compiler flags. Default is auto, which
+AS_HELP_STRING([--with-cpuflags],[Set CPU specific compiler flags. Default is auto, which
                does autodetection. Specify none for compiling the most portable binaries]),
                lqt_cpuflags="$withval", lqt_cpuflags="auto")
 

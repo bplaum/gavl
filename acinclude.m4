@@ -1,17 +1,3 @@
-dnl AC_TRY_CFLAGS (CFLAGS, [ACTION-IF-WORKS], [ACTION-IF-FAILS])
-dnl check if $CC supports a given set of cflags
-AC_DEFUN([AC_TRY_CFLAGS],
-    [AC_MSG_CHECKING([if $CC supports $1 flags])
-    SAVE_CFLAGS="$CFLAGS"
-    CFLAGS="$1"
-    AC_TRY_COMPILE([],[],[ac_cv_try_cflags_ok=yes],[ac_cv_try_cflags_ok=no])
-    CFLAGS="$SAVE_CFLAGS"
-    AC_MSG_RESULT([$ac_cv_try_cflags_ok])
-    if test x"$ac_cv_try_cflags_ok" = x"yes"; then
-        ifelse([$2],[],[:],[$2])
-    else
-        ifelse([$3],[],[:],[$3])
-    fi])
 
 dnl AC_C_ATTRIBUTE_ALIGNED
 dnl define ATTRIBUTE_ALIGNED_MAX to the maximum alignment if this is supported
@@ -20,8 +6,7 @@ AC_DEFUN([AC_C_ATTRIBUTE_ALIGNED],
         [ac_cv_c_attribute_aligned],
         [ac_cv_c_attribute_aligned=0
         for ac_cv_c_attr_align_try in 2 4 8 16 32 64; do
-            AC_TRY_COMPILE([],
-                [static char c __attribute__ ((aligned($ac_cv_c_attr_align_try))) = 0; return c;],
+            AC_COMPILE_IFELSE([AC_LANG_SOURCE([[static char c __attribute__ ((aligned($ac_cv_c_attr_align_try))) = 0; ]])],
                 [ac_cv_c_attribute_aligned=$ac_cv_c_attr_align_try])
         done])
     if test x"$ac_cv_c_attribute_aligned" != x"0"; then
@@ -49,14 +34,20 @@ lrint_save_CFLAGS=$CFLAGS
 lrint_save_LIBS=$LIBS
 CFLAGS="-O2"
 LIBS="-lm"
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #define         _ISOC9X_SOURCE  1
 #define         _ISOC99_SOURCE  1
 #define         __USE_ISOC99    1
 #define         __USE_ISOC9X    1
 
 #include <math.h>
-], if (!lrint(3.14159)) lrint(2.7183);, ac_cv_c99_lrint=yes, ac_cv_c99_lrint=no)
+
+int main()
+{
+if (!lrint(3.14159)) lrint(2.7183);
+return 0;
+}]])],
+ac_cv_c99_lrint=yes, ac_cv_c99_lrint=no)
 
 CFLAGS=$lrint_save_CFLAGS
 LIBS=$lrint_save_LIBS
@@ -89,14 +80,19 @@ lrintf_save_CFLAGS=$CFLAGS
 lrintf_save_LIBS=$LIBS
 CFLAGS="-O2"
 LIBS="-lm"
-AC_TRY_LINK([
+AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #define         _ISOC9X_SOURCE  1
 #define         _ISOC99_SOURCE  1
 #define         __USE_ISOC99    1
 #define         __USE_ISOC9X    1
 
 #include <math.h>
-], if (!lrintf(3.14159)) lrintf(2.7183);, ac_cv_c99_lrintf=yes, ac_cv_c99_lrintf=no)
+int main()
+{
+if (!lrintf(3.14159)) lrintf(2.7183);
+return 0;
+}
+]])], ac_cv_c99_lrintf=yes, ac_cv_c99_lrintf=no)
 
 CFLAGS=$lrintf_save_CFLAGS
 LIBS=$lrint_save_LIBS

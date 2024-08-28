@@ -4,7 +4,7 @@ AC_INIT([gavl], [2.0.0pre1])
 AC_CONFIG_SRCDIR([include/gavl/gavl.h])
 AM_INIT_AUTOMAKE
 
-AM_CONFIG_HEADER(include/config.h)
+AC_CONFIG_HEADERS(include/config.h)
 
 GAVL_VERSION=$VERSION
 
@@ -31,8 +31,7 @@ AC_CANONICAL_HOST
 
 AC_DISABLE_STATIC
 
-AC_PROG_LIBTOOL
-AM_PROG_LIBTOOL
+LT_INIT
 
 AC_PROG_MAKE_SET
 
@@ -46,7 +45,7 @@ test_doxygen="true"
 have_doxygen="false"
 
 AC_ARG_WITH(doxygen,
-    AC_HELP_STRING([--without-doxygen],
+    AS_HELP_STRING([--without-doxygen],
     [disable documentation generation]),
     test_doxygen="false")
 
@@ -186,17 +185,22 @@ LIBS=$RT_LIBS
 
 AC_MSG_CHECKING(for CLOCK_MONOTONIC)
 
-AC_TRY_COMPILE([
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
   #include <time.h>
   #include <errno.h>
-],[
+  int main()
+  {
+  long t = 10000000;
+  
   struct timespec tm;
   struct timespec rem;
-  tm.tv_sec = *t / 1000000;
-  tm.tv_nsec = (*t % 1000000)*1000;
+  tm.tv_sec = t / 1000000;
+  tm.tv_nsec = (t % 1000000)*1000;
   clock_nanosleep(CLOCK_MONOTONIC, 0,
                         &tm, &rem);
-  ],
+  return 0;
+  }
+  ]])],
   [
     # program could be run
     AC_MSG_RESULT(yes)
@@ -224,11 +228,6 @@ AC_C99_FUNC_LRINTF
 
 AC_CHECK_HEADERS(sys/times.h byteswap.h)
 
-dnl
-dnl POSIX Semaphores
-dnl
-
-GMERLIN_CHECK_SEMAPHORES
 
 dnl
 dnl Check for libpng (only needed for some tests)
@@ -299,7 +298,7 @@ dnl Stuff from libsamplerate
 dnl
 
 AC_ARG_ENABLE(cpu-clip,
-    AC_HELP_STRING([--disable-cpu-clip], [disable tricky cpu specific clipper]),
+    AS_HELP_STRING([--disable-cpu-clip], [disable tricky cpu specific clipper]),
     ac_arg_cpu_clip="N", ac_arg_cpu_clip="Y")
 
 if test x$ac_arg_cpu_clip = "xY" ; then
@@ -342,7 +341,7 @@ AC_SUBST(LIBGAVL_LIBS)
 AC_SUBST(LIBGAVL_LDFLAGS)	
 AC_SUBST(APPS_LDFLAGS)
 
-AC_OUTPUT(Makefile \
+AC_CONFIG_FILES([Makefile \
 gavl.spec \
 gavl.pc \
 doc/Makefile \
@@ -364,5 +363,7 @@ gavl/3dnow/Makefile \
 gavl/sse/Makefile \
 gavl/sse2/Makefile \
 gavl/sse3/Makefile \
-gavl/ssse3/Makefile )
+gavl/ssse3/Makefile])
+
+AC_OUTPUT
 

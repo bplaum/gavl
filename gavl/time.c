@@ -384,16 +384,17 @@ gavl_time_prettyprint_absolute(gavl_time_t gavl_time, char * str, int local)
     localtime_r(&t, &tm);
   else
     gmtime_r(&t, &tm);
-  
+
+  /* Use the  division remainder to silence gcc warnings */
   snprintf(str,
            GAVL_TIME_STRING_LEN_ABSOLUTE,
            "%04d-%02d-%02d %02d:%02d:%02d",
-           tm.tm_year + 1900,
-           tm.tm_mon + 1,
-           tm.tm_mday,
-           tm.tm_hour,
-           tm.tm_min,
-           tm.tm_sec);
+           (tm.tm_year + 1900) % 10000,
+           (tm.tm_mon + 1)%100,
+           tm.tm_mday%100,
+           tm.tm_hour % 100,
+           tm.tm_min % 100,
+           tm.tm_sec % 100);
   }
 
 void
@@ -405,9 +406,9 @@ gavl_time_prettyprint_local(gavl_time_t gavl_time, char str[GAVL_TIME_STRING_LEN
   localtime_r(&t, &tm);
   
   snprintf(str,
-           GAVL_TIME_STRING_LEN_ABSOLUTE,
+           GAVL_TIME_STRING_LEN,
            "%d:%02d:%02d",
-           tm.tm_hour,
+           tm.tm_hour % 100,
            tm.tm_min,
            tm.tm_sec);
   }
@@ -427,12 +428,12 @@ gavl_time_prettyprint_absolute_full(gavl_time_t gavl_time, char * str, int local
   snprintf(str,
            GAVL_TIME_STRING_LEN_ABSOLUTE,
            "%04d-%02d-%02d %02d:%02d:%02d.%06d",
-           tm.tm_year + 1900,
-           tm.tm_mon + 1,
-           tm.tm_mday,
-           tm.tm_hour,
-           tm.tm_min,
-           tm.tm_sec,
+           (tm.tm_year + 1900)%10000,
+           (tm.tm_mon + 1)%100,
+           tm.tm_mday%100,
+           tm.tm_hour%100,
+           tm.tm_min%100,
+           tm.tm_sec%100,
            (int)(gavl_time % GAVL_TIME_SCALE));
   
   }
