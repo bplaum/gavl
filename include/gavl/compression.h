@@ -142,6 +142,7 @@ struct gavl_compression_info_s
   
   int video_buffer_size;   //!< VBV buffer size for video (in BYTES)
   uint32_t codec_tag;
+  int block_align; // Needed by MS audio codecs
   };
 
 /** \brief Initialize a compression info

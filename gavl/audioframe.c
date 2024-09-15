@@ -142,45 +142,89 @@ void gavl_audio_frame_destroy(gavl_audio_frame_t * frame)
   free(frame);
   }
 
-void gavl_audio_frame_mute_samples(gavl_audio_frame_t * frame,
-                                   const gavl_audio_format_t * format,
-                                   int num_samples)
+static void mute_samples(const gavl_audio_format_t * format,
+                         void * buf, int imax)
   {
   int i;
-  int imax;
-  imax = format->num_channels * num_samples;
-  
   switch(format->sample_format)
     {
     case GAVL_SAMPLE_NONE:
       break;
     case GAVL_SAMPLE_U8:
+      {
+      uint8_t * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.u_8[i] = 0x80;
+        ptr[i] = 0x80;
+      }
       break;
     case GAVL_SAMPLE_S8:
+      {
+      int8_t * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.u_8[i] = 0x00;
+        ptr[i] = 0x00;
+      }
       break;
     case GAVL_SAMPLE_U16:
+      {
+      uint16_t * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.u_16[i] = 0x8000;
+        ptr[i] = 0x8000;
+      }
       break;
     case GAVL_SAMPLE_S16:
+      {
+      int16_t * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.s_16[i] = 0x0000;
+        ptr[i] = 0x0000;
+      }
       break;
     case GAVL_SAMPLE_S32:
+      {
+      int32_t * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.s_32[i] = 0x00000000;
+        ptr[i] = 0x00000000;
+      }
       break;
     case GAVL_SAMPLE_FLOAT:
+      {
+      float * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.f[i] = 0.0;
+        ptr[i] = 0.0;
+      }
       break;
     case GAVL_SAMPLE_DOUBLE:
+      {
+      double * ptr = buf;
       for(i = 0; i < imax; i++)
-        frame->samples.d[i] = 0.0;
+        ptr[i] = 0.0;
+      }
+      break;
+    }
+  
+  }
+
+void gavl_audio_frame_mute_samples(gavl_audio_frame_t * frame,
+                                   const gavl_audio_format_t * format,
+                                   int num_samples)
+  {
+  int i;
+  
+  switch(format->interleave_mode)
+    {
+    case GAVL_INTERLEAVE_NONE:
+      for(i = 0; i < format->num_channels; i++)
+        mute_samples(format, frame->channels.u_8[i], num_samples);
+      break;
+    case GAVL_INTERLEAVE_ALL:
+      mute_samples(format, frame->samples.u_8, num_samples * format->num_channels);
+      break;
+    case GAVL_INTERLEAVE_2:
+      for(i = 0; i < format->num_channels / 2; i++)
+        mute_samples(format, frame->channels.u_8[i*2], num_samples * 2);
+      
+      if(format->num_channels % 2)
+        mute_samples(format, frame->channels.u_8[format->num_channels-1], num_samples);
+      
       break;
     }
   frame->valid_samples = num_samples;

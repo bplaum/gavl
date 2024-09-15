@@ -278,6 +278,7 @@ void gavl_compression_info_dumpi(const gavl_compression_info_t * info, int inden
     do_indent(indent+2);
     fprintf(stderr, "SBR:             %s\n",
             (info->flags & GAVL_COMPRESSION_SBR ? "Yes" : "No"));
+
     }
 
   

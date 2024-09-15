@@ -1857,6 +1857,22 @@ void gavl_track_set_gui_state(gavl_dictionary_t * track, const char * state, int
   gavl_dictionary_set_int(gui, state, val);
   }
 
+void gavl_tracks_set_gui_state(gavl_array_t * tracks, const char * state, int val, int start, int end)
+  {
+  int i;
+  gavl_dictionary_t * track;
+  
+  if(end < 0)
+    end = tracks->num_entries;
+
+  for(i = start; i < end; i++)
+    {
+    if((track = gavl_value_get_dictionary_nc(&tracks->entries[i])))
+      gavl_track_set_gui_state(track, state, val);
+    }
+  }
+
+
 int gavl_track_get_gui_state(const gavl_dictionary_t * track, const char * state)
   {
   int ret = 0;
@@ -2258,7 +2274,7 @@ void gavl_sort_tracks_by_quality(gavl_array_t * arr)
 #define COMPRESSION_INFO_KEY_BITRATE         "br"
 #define COMPRESSION_INFO_KEY_PALETTE_SIZE    "ps"
 #define COMPRESSION_INFO_KEY_TAG             "tag"
-
+#define COMPRESSION_INFO_KEY_BLOCK_ALIGN     "block_align"
 #define COMPRESSION_INFO_KEY_HEAD            "head"
 
 #define GET_INT(key, member) gavl_dictionary_get_int(cmp, key, &ret->member)
@@ -2287,6 +2303,7 @@ int gavl_stream_get_compression_info(const gavl_dictionary_t * s,
   GET_INT(COMPRESSION_INFO_KEY_FLAGS,   flags);
   GET_INT(COMPRESSION_INFO_KEY_BITRATE, bitrate);
   GET_INT(COMPRESSION_INFO_KEY_PALETTE_SIZE, palette_size);
+  GET_INT(COMPRESSION_INFO_KEY_BLOCK_ALIGN, block_align);
   
   if((buf = gavl_dictionary_get_binary(cmp, COMPRESSION_INFO_KEY_HEAD)) &&
      (buf->len > 0))
@@ -2336,6 +2353,7 @@ void gavl_stream_set_compression_info(gavl_dictionary_t * s, const gavl_compress
   SET_INT(COMPRESSION_INFO_KEY_TAG,     codec_tag);
   SET_INT(COMPRESSION_INFO_KEY_BITRATE, bitrate);
   SET_INT(COMPRESSION_INFO_KEY_PALETTE_SIZE, palette_size);
+  SET_INT(COMPRESSION_INFO_KEY_BLOCK_ALIGN, block_align);
   
   if(info->codec_header.len > 0)
     {

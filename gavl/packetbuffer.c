@@ -147,6 +147,8 @@ struct gavl_packet_buffer_s
   int ip_frames_seen;
   int keyframes_seen;
   
+  int duration_divisor;
+  
 #ifdef COUNT_PACKETS
   int in_count;
   int out_count;
@@ -253,6 +255,39 @@ static void update_timestamps_low_delay(gavl_packet_buffer_t * buf)
 
     if(buf->flags & FLAG_FLUSH)
       duration_from_pts(buf, buf->buf.packets[buf->buf.num-1], NULL);
+    }
+  
+  /* Duration from PES PTS */
+  if((buf->duration_divisor > 0) &&
+     (buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
+     (buf->buf.packets[buf->buf.num-1]->duration < 0) &&
+     (buf->buf.packets[buf->buf.num-1]->pes_pts != GAVL_TIME_UNDEFINED))
+    {
+    for(i = 0; i < buf->buf.num-1; i++)
+      {
+      int frames_per_packet;
+      int approx_samples;
+      
+      if(buf->buf.packets[i]->duration > 0)
+        continue;
+
+      approx_samples = gavl_time_rescale(buf->packet_scale,
+                                         buf->sample_scale,
+                                         buf->buf.packets[i+1]->pes_pts -
+                                         buf->buf.packets[i]->pes_pts);
+      frames_per_packet = (approx_samples + buf->duration_divisor/2) / buf->duration_divisor;
+      buf->buf.packets[i]->duration = frames_per_packet * buf->duration_divisor;
+      buf->last_duration = buf->buf.packets[i]->duration;
+
+      if(buf->buf.packets[i]->pts == GAVL_TIME_UNDEFINED)
+        pts_from_duration(buf, buf->buf.packets[i]);
+      }
+    if(buf->flags & FLAG_FLUSH)
+      {
+      buf->buf.packets[buf->buf.num-1]->duration = buf->last_duration;
+      if(buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED)
+        pts_from_duration(buf, buf->buf.packets[buf->buf.num-1]);
+      }
     }
   
   /* PTS from duration */
@@ -514,6 +549,11 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     
     gavl_dictionary_get_int(m, GAVL_META_STREAM_PACKET_TIMESCALE, &buf->packet_scale);
     gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &buf->sample_scale);
+
+    if(gavl_dictionary_get_int(m, GAVL_META_STREAM_PACKET_DURATION_DIVISOR, &buf->duration_divisor))
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got duration divisor %d", buf->duration_divisor);
+    else
+      buf->duration_divisor = 0;
     
     gavl_stream_get_compression_info(buf->stream, &buf->ci);
 
@@ -756,8 +796,9 @@ gavl_packet_buffer_create(const gavl_dictionary_t * stream_info)
   {
   int val_i = 0;
   gavl_packet_buffer_t * ret;
+  
   ret = calloc(1, sizeof(*ret));
-
+  
   ret->stream = stream_info;
   ret->src = gavl_packet_source_create(source_func, ret, GAVL_SOURCE_SRC_ALLOC, ret->stream);
   ret->sink = gavl_packet_sink_create(sink_get_func, sink_put_func, ret);
@@ -765,6 +806,7 @@ gavl_packet_buffer_create(const gavl_dictionary_t * stream_info)
   ret->type = val_i;
   ret->last_duration = -1;
   ret->pts = GAVL_TIME_UNDEFINED;
+  
   
   return ret;
   }

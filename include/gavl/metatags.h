@@ -395,6 +395,8 @@
 #define GAVL_META_STREAM_SAMPLE_TIMESCALE "sscale"
 #define GAVL_META_STREAM_ENABLED          "enabled"
 
+#define GAVL_META_STREAM_PACKET_DURATION_DIVISOR "packet_duration_divisor"
+
 /* Set to the absolute stream index offset by one by default
    but can be changed to anything */
 

@@ -456,6 +456,9 @@ GAVL_PUBLIC
 void gavl_track_set_gui_state(gavl_dictionary_t * track, const char * state, int val);
 
 GAVL_PUBLIC
+void gavl_tracks_set_gui_state(gavl_array_t * tracks, const char * state, int val, int start, int end);
+
+GAVL_PUBLIC
 void gavl_track_copy_gui_state(gavl_dictionary_t * dst, const gavl_dictionary_t * src);
 
 GAVL_PUBLIC
