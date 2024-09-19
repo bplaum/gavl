@@ -612,7 +612,8 @@ static int send_decoder_packet(gavl_v4l2_device_t * dev)
   
   if(((st = gavl_packet_source_read_packet(dev->psrc_src, &p)) != GAVL_SOURCE_OK))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "send_decoder_packet failed, got no packet (source status %d)", st);
+    // EOF is no error
+    // gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "send_decoder_packet failed, got no packet (source status %d)", st);
     
     if(!(dev->flags & DECODER_SENT_EOS))
       {
@@ -628,7 +629,7 @@ static int send_decoder_packet(gavl_v4l2_device_t * dev)
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "V4L2_DEC_CMD_STOP failed %s", strerror(errno));
         }
       dev->flags |= DECODER_SENT_EOS;
-      fprintf(stderr, "Sent EOS\n");
+      //      fprintf(stderr, "Sent EOS\n");
       return 1;
       }
     else
@@ -955,7 +956,7 @@ static void handle_decoder_event(gavl_v4l2_device_t * dev)
         break;
       case V4L2_EVENT_EOS:
         dev->flags |= DECODER_GOT_EOS;
-        fprintf(stderr, "Got EOS\n");
+        //       fprintf(stderr, "Got EOS\n");
         break;
       }
     }
