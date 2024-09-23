@@ -571,8 +571,11 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
       buf->keyframes_seen++;
     else if(!buf->keyframes_seen) // Non keyframe
       {
-#if 0
+#if 1
       /* Else: Skip, but allow synchronizing a low delay stream */
+      /* This can be the case for e.g. for Ogg theora files, when a keyframe is
+         not at the start of a page */
+      
       if(!(buf->ci.flags & GAVL_COMPRESSION_HAS_B_FRAMES))
         {
         if((buf->pts == GAVL_TIME_UNDEFINED) &&
