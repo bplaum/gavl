@@ -487,9 +487,10 @@ uint8_t * gavl_extract_xiph_header(gavl_buffer_t * codec_header,
   return ptr;
   }
 
+#if 0
 void
-gavl_packet_to_videoframe(const gavl_packet_t * p, 
-                          gavl_video_frame_t * f)
+gavl_packet_to_videoframe_metadata(const gavl_packet_t * p, 
+                                   gavl_video_frame_t * f)
   {
   f->timestamp = p->pts;
   f->duration = p->duration;
@@ -498,9 +499,22 @@ gavl_packet_to_videoframe(const gavl_packet_t * p,
   gavl_rectangle_i_copy(&f->src_rect, &p->src_rect);
   f->dst_x = p->dst_x;
   f->dst_y = p->dst_y;
-
   }
-                          
+
+void
+gavl_videoframe_to_packet_metadata(const gavl_video_frame_t * f, 
+                                   gavl_packet_t * p)
+  {
+  p->timestamp = f->pts;
+  p->duration = f->duration;
+  p->timecode = f->timecode;
+  p->interlace_mode = f->interlace_mode;
+  gavl_rectangle_i_copy(&p->src_rect, &f->src_rect);
+  p->dst_x = f->dst_x;
+  p->dst_y = f->dst_y;
+  }
+#endif
+
 static const char * coding_type_strings[4] =
   {
   "?",
