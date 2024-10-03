@@ -31,36 +31,58 @@
 
 #define LOG_DOMAIN "ptscache"
 
+#define ALLOC_SIZE 16
+
 struct gavl_packet_pts_cache_s
   {
   gavl_packet_t *packets;
   int packets_alloc;
   int num_packets;
+  
+  int dynamic;
   };
 
 gavl_packet_pts_cache_t * gavl_packet_pts_cache_create(int size)
   {
   gavl_packet_pts_cache_t * ret = calloc(1, sizeof(*ret));
-  ret->packets = calloc(size, sizeof(*ret->packets));
-  ret->packets_alloc = size;
+
+  if(size > 0)
+    {
+    ret->packets = calloc(size, sizeof(*ret->packets));
+    ret->packets_alloc = size;
+    }
+  else
+    ret->dynamic = 1;
+  
   return ret;
   }
 
 void gavl_packet_pts_cache_destroy(gavl_packet_pts_cache_t * c)
   {
-  free(c->packets);
+  if(c->packets)
+    free(c->packets);
   free(c);
   }
 
-void gavl_packet_pts_cache_push(gavl_packet_pts_cache_t *c, const gavl_packet_t * pkt)
+void gavl_packet_pts_cache_push_packet(gavl_packet_pts_cache_t *c, const gavl_packet_t * pkt)
   {
   if(c->num_packets == c->packets_alloc)
     {
-    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "PTS cache overflow");
-    gavl_packet_pts_cache_get_first(c, NULL);
+    if(c->dynamic)
+      {
+      c->packets_alloc += ALLOC_SIZE;
+      c->packets = realloc(c->packets, c->packets_alloc * sizeof(*c->packets));
+      memset(c->packets + c->num_packets, 0, (c->packets_alloc - c->num_packets) * sizeof(*c->packets));
+      }
+    else
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "PTS cache overflow");
+      gavl_packet_pts_cache_get_first(c, NULL);
+      }
+    
     }
   memcpy(&c->packets[c->num_packets], pkt, sizeof(*pkt));
-
+  
   memset(&c->packets[c->num_packets].buf, 0, sizeof(c->packets[c->num_packets].buf));
   c->num_packets++;
   }
@@ -93,11 +115,13 @@ static void return_video_frame(gavl_packet_pts_cache_t *c, int idx, gavl_video_f
   }
 #endif
 
-int gavl_packet_pts_cache_get_first(gavl_packet_pts_cache_t *c, gavl_packet_t * pkt)
+int gavl_packet_pts_cache_get_first(gavl_packet_pts_cache_t *c, gavl_video_frame_t * f)
   {
   int i;
   int min_idx = 0;
   int64_t min_pts;
+
+  gavl_packet_t pkt;
   
   if(c->num_packets == 0)
     return 0;
@@ -114,10 +138,11 @@ int gavl_packet_pts_cache_get_first(gavl_packet_pts_cache_t *c, gavl_packet_t * 
       }
     }
   
-  return_packet(c, min_idx, pkt);
+  return_packet(c, min_idx, &pkt);
+  gavl_packet_to_video_frame_metadata(&pkt, f);
+  
   return 1;
   }
-
 
 int gavl_packet_pts_cache_get_by_pts(gavl_packet_pts_cache_t *c, gavl_packet_t * pkt,
                                      int64_t pts)
