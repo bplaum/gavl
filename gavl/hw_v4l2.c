@@ -642,7 +642,7 @@ static int send_decoder_packet(gavl_v4l2_device_t * dev)
     return 0;
   
   dev->decoder_delay++;
-  gavl_packet_pts_cache_push(dev->cache, p);
+  gavl_packet_pts_cache_push_packet(dev->cache, p);
   return 1;
   }
 
@@ -811,7 +811,7 @@ gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev)
     goto fail;
     }
   
-  fprintf(stderr, "Opening %s\n", path);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opening %s", path);
   
   if((ret->fd = open(path, O_RDWR /* required */ | O_NONBLOCK, 0)) < 0)
     {
@@ -1144,7 +1144,6 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
     if(pollev & POLLIN)
       {
       int idx;
-      gavl_packet_t pkt;
       
       idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, NULL, NULL);
       
@@ -1156,9 +1155,8 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       buffer_to_video_frame_mmap(dev, dev->capture.current_buf, &dev->capture.fmt, dev->capture.format.pixelformat,
                                  dev->capture.buf_type);
       
-      gavl_packet_pts_cache_get_first(dev->cache, &pkt);
-      gavl_packet_to_videoframe(&pkt, dev->capture.vframe);
-
+      gavl_packet_pts_cache_get_first(dev->cache, dev->capture.vframe);
+      
       //      fprintf(stderr, "Frame pts: %"PRId64"\n", dev->vframe_cap->timestamp);
 
       if(frame)
