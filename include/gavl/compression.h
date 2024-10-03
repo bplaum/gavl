@@ -559,19 +559,6 @@ void gavl_packet_save(const gavl_packet_t * p,
                       const char * filename);
 
 
-GAVL_PUBLIC
-void
-gavl_packet_to_videoframe(const gavl_packet_t * p, 
-                          gavl_video_frame_t * f);
-  
-
-GAVL_PUBLIC
-void gavl_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
-                                         gavl_packet_t * pkt);
-
-GAVL_PUBLIC
-void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_frame_t * frame);
-
   
 typedef struct
   {
@@ -644,10 +631,13 @@ GAVL_PUBLIC
 void gavl_packet_pts_cache_destroy(gavl_packet_pts_cache_t *);
 
 GAVL_PUBLIC
-void gavl_packet_pts_cache_push(gavl_packet_pts_cache_t *m, const gavl_packet_t * pkt);
+void gavl_packet_pts_cache_push_packet(gavl_packet_pts_cache_t *m, const gavl_packet_t * pkt);
 
 GAVL_PUBLIC
-int gavl_packet_pts_cache_get_first(gavl_packet_pts_cache_t *m, gavl_packet_t * pkt);
+void gavl_packet_pts_cache_push_frame(gavl_packet_pts_cache_t *m, const gavl_video_frame_t * f);
+
+GAVL_PUBLIC
+int gavl_packet_pts_cache_get_first(gavl_packet_pts_cache_t *m, gavl_video_frame_t * f);
 
 GAVL_PUBLIC
 int gavl_packet_pts_cache_get_by_pts(gavl_packet_pts_cache_t *m, gavl_packet_t * pkt,
