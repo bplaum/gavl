@@ -3038,6 +3038,14 @@ void gavl_video_frame_normalize_orientation(const gavl_video_format_t * in_forma
                                             const gavl_video_format_t * out_format,
                                             const gavl_video_frame_t * in_frame,
                                             gavl_video_frame_t * out_frame);
+
+GAVL_PUBLIC
+void gavl_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
+                                         gavl_packet_t * pkt);
+
+GAVL_PUBLIC
+void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_frame_t * frame);
+
   
 /*****************************
  Conversion options
