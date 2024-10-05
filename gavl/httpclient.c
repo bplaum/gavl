@@ -1332,6 +1332,7 @@ gavl_http_client_open(gavl_io_t * io,
                       const char * method,
                       const char * uri1)
   {
+  int timeout = 10*1000; // 10 seconds
   int result;
   gavl_http_client_t * c = gavl_io_get_priv(io);
 
@@ -1343,9 +1344,12 @@ gavl_http_client_open(gavl_io_t * io,
   
   if(!gavl_http_client_run_async(io, method, uri1))
     return 0;
-
-  result = gavl_http_client_run_async_done(io, 10000);
-
+  
+  if(c->res_body)
+    timeout = 10*60*1000;
+  
+  result = gavl_http_client_run_async_done(io, timeout);
+  
   if(result > 0)
     return 1;
   else
