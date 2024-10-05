@@ -750,6 +750,30 @@ int gavl_value_from_string(gavl_value_t * v, const char * str)
     case GAVL_TYPE_STRING:
       v->v.str = gavl_strdup(str);
       break;
+    case GAVL_TYPE_COLOR_RGB:
+      {
+      if(sscanf(str, "%lf,%lf,%lf", &v->v.color[0], &v->v.color[1], &v->v.color[2]) == 3)
+        return 1;
+
+      if(str[0] == '#')
+        {
+        int hexvalue = strtol(str + 1, NULL, 16);
+        v->v.color[0] = ((hexvalue >> 16) & 0xFF) / 255.0;  // Extract the RR byte
+        v->v.color[1] = ((hexvalue >> 8) & 0xFF) / 255.0;   // Extract the GG byte
+        v->v.color[2] = ((hexvalue) & 0xFF) / 255.0;        // Extract the BB byte
+        }
+      else
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot parse rgb color %s", str);
+        return 1;
+        }
+      }
+      break;
+    case GAVL_TYPE_COLOR_RGBA:
+      {
+      if(sscanf(str, "%lf,%lf,%lf,%lf", &v->v.color[0], &v->v.color[1], &v->v.color[2], &v->v.color[3]) == 4)
+        return 1;
+      }
     default:
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set value of type %s from string %s", gavl_type_to_string(v->type),
                str);
