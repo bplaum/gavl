@@ -753,7 +753,7 @@ int gavl_value_from_string(gavl_value_t * v, const char * str)
     case GAVL_TYPE_COLOR_RGB:
       {
       if(sscanf(str, "%lf,%lf,%lf", &v->v.color[0], &v->v.color[1], &v->v.color[2]) == 3)
-        return 1;
+        break;
 
       if(str[0] == '#')
         {
@@ -761,11 +761,12 @@ int gavl_value_from_string(gavl_value_t * v, const char * str)
         v->v.color[0] = ((hexvalue >> 16) & 0xFF) / 255.0;  // Extract the RR byte
         v->v.color[1] = ((hexvalue >> 8) & 0xFF) / 255.0;   // Extract the GG byte
         v->v.color[2] = ((hexvalue) & 0xFF) / 255.0;        // Extract the BB byte
+        break;
         }
       else
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot parse rgb color %s", str);
-        return 1;
+        return 0;
         }
       }
       break;
