@@ -434,6 +434,7 @@ int64_t gavl_io_seek(gavl_io_t * io, int64_t pos, int whence)
   if(!io->seek_func)
     return -1;
   io->position = io->seek_func(io->priv, pos, whence);
+  io->flags &= ~GAVL_IO_EOF;
   return io->position;
   }
 

@@ -61,8 +61,11 @@ static int write_file(void * priv, const uint8_t * data, int len)
 
 static int64_t seek_file(void * priv, int64_t pos, int whence)
   {
-  GAVL_FSEEK((FILE*)priv, pos, whence);
-  return GAVL_FTELL((FILE*)priv);
+  if(feof(priv))
+    clearerr(priv);
+  
+  GAVL_FSEEK(priv, pos, whence);
+  return GAVL_FTELL(priv);
   }
 
 static int flush_file(void * priv)
