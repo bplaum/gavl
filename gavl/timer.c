@@ -22,7 +22,8 @@
 
 #include <config.h>
 
-#include <inttypes.h>
+#include <stdio.h>
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
@@ -97,9 +98,7 @@ int gavl_timer_is_running(gavl_timer_t * t)
 
 void gavl_timer_stop(gavl_timer_t * t)
   {
-  gavl_time_t tmp;
-  tmp = gavl_timer_get(t);
-  t->start_time = tmp;
+  t->start_time = gavl_timer_get(t);
   t->is_running = 0;
   }
 
@@ -109,8 +108,14 @@ gavl_time_t gavl_timer_get(gavl_timer_t * t)
   if(t->is_running)
     {
     get_time(&ret);
+    /* Time since gavl_timer_start() was called */
     ret -= t->start_time_real;
+    
+    /* Nominal time when gavl_timer_start() was called */
     ret += t->start_time;
+
+    //    fprintf(stderr, "gavl_timer_get %"PRId64"\n", ret);
+    
     return ret;
     }
   else
@@ -121,6 +126,8 @@ void gavl_timer_set(gavl_timer_t * t, gavl_time_t v)
   {
   int was_running = t->is_running;
 
+  //  fprintf(stderr, "gavl_timer_set %"PRId64"\n", v);
+  
   if(was_running)
     gavl_timer_stop(t);
 
