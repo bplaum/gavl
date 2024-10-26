@@ -1145,6 +1145,7 @@ deinterlace_modes[] =
     { "Scanline doubler", GAVL_DEINTERLACE_COPY },
     { "Upscale",          GAVL_DEINTERLACE_SCALE },
     { "Blend",            GAVL_DEINTERLACE_BLEND },
+    { /* End */ }
   };
 
 static void benchmark_deinterlace()
@@ -1306,9 +1307,6 @@ static void benchmark_deinterlace()
         }
       fflush(stdout);
       video_convert_context_cleanup(&ctx);
-
-      if(deinterlace_modes[j].mode == GAVL_DEINTERLACE_COPY)
-        continue;
       
       gavl_video_options_set_accel_flags(ctx.opt, GAVL_ACCEL_MMX);
 

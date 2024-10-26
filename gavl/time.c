@@ -427,7 +427,7 @@ gavl_time_prettyprint_absolute_full(gavl_time_t gavl_time, char * str, int local
   
   snprintf(str,
            GAVL_TIME_STRING_LEN_ABSOLUTE,
-           "%04d-%02d-%02d %02d:%02d:%02d.%06d",
+           "%04u-%02u-%02u %02u:%02u:%02u.%06u",
            (tm.tm_year + 1900)%10000,
            (tm.tm_mon + 1)%100,
            tm.tm_mday%100,
