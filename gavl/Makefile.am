@@ -142,6 +142,7 @@ bayer.c \
 blend.c \
 buffer.c \
 chapterlist.c \
+charset.c \
 colorchannel.c \
 colorspace.c \
 compression.c \

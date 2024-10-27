@@ -399,6 +399,21 @@ char * gavl_search_cache_dir(const char * package, const char * directory);
 GAVL_PUBLIC
 char * gavl_search_config_dir(const char * package, const char * directory);
 
+/* Character set conversion usiong iconv */
+
+typedef struct gavl_charset_converter_s gavl_charset_converter_t;
+
+GAVL_PUBLIC
+gavl_charset_converter_t * gavl_charset_converter_create(const char * from, const char * to);
+
+GAVL_PUBLIC
+char * gavl_convert_string(gavl_charset_converter_t * cnv,
+                           const char * str, int len,
+                           int * out_len);
+
+GAVL_PUBLIC
+void gavl_charset_converter_destroy(gavl_charset_converter_t * cnv);
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 
