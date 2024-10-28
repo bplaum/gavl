@@ -92,7 +92,8 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   int flags = 0;
   struct stat st;
   int fd = fileno(f);
-
+  gavl_io_t * ret;
+  
   if(isatty(fd))
     flags |= GAVL_IO_IS_TTY;
 
@@ -138,7 +139,10 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   else
     sf = NULL;
 
-  return gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
+  ret = gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
+
+  gavl_io_set_info(ret, st.st_size, NULL, NULL, 0);
+  return ret;
   }
 
 gavl_io_t * gavl_io_from_filename(const char * filename, int wr)
