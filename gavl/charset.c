@@ -29,61 +29,113 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "charset"
 
+// #define FLAG_HAS_BOM (1<<0)
 
 struct gavl_charset_converter_s
   {
   iconv_t cd;
+  char * to_charset;
+  int flags;
   };
 
 GAVL_PUBLIC
 gavl_charset_converter_t * gavl_charset_converter_create(const char * from, const char * to)
   {
   gavl_charset_converter_t * ret = calloc(1, sizeof(*ret));
-  ret->cd = iconv_open(to, from);
+
+  if(!strcmp(from, GAVL_UTF_BOM))
+    {
+    ret->cd = (iconv_t)-1;
+    ret->to_charset = gavl_strdup(to);
+    }
+  else
+    {
+    ret->cd = iconv_open(to, from);
+    if(ret->cd == (iconv_t)-1)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "iconv_open failed: %s", strerror(errno));
+      free(ret);
+      return NULL;
+      }
+    }
   return ret;
   }
 
 #define BYTES_INCREMENT 32
 #define ZEROTERMINATE_SIZE    4
 
-static char * do_convert(iconv_t cd, char * in_string, int len, int * out_len)
-  {
-  char * ret;
+char * gavl_convert_string_to_buffer(gavl_charset_converter_t * cnv,
+                                     const char * in_string1, int len, gavl_buffer_t * buf)
   
+  {
   char *inbuf;
   char *outbuf;
   int alloc_size;
   int output_pos;
+  char *in_string;
   
   size_t inbytesleft;
   size_t outbytesleft;
   int done = 0;
   int i;
   
+  if(len < 0)
+    len = strlen(in_string1);
+
+  in_string = malloc(len + 4);
+  memcpy(in_string, in_string1, len);
+  memset(in_string + len, 0, 4);
+  
+  if(cnv->cd == (iconv_t)-1)
+    {
+    if((len > 1) &&
+       ((uint8_t)in_string[0] == 0xff) &&
+       ((uint8_t)in_string[1] == 0xfe))
+      cnv->cd = iconv_open(cnv->to_charset, "UTF-16LE");
+    /* Byte order Big Endian */
+    else if((len > 1) &&
+            ((uint8_t)in_string[0] == 0xfe) &&
+            ((uint8_t)in_string[1] == 0xff))
+      cnv->cd = iconv_open(cnv->to_charset, "UTF-16BE");
+    /* UTF-8 */
+    else if(!strcmp(cnv->to_charset, "UTF-8"))
+      {
+      buf->len = 0;
+      gavl_buffer_append_data_pad(buf, (const uint8_t *)in_string, len, 1);
+      free(in_string);
+      return (char*)buf->buf;
+      }
+    else
+      cnv->cd = iconv_open(cnv->to_charset, "UTF-8");
+    }
+    
   alloc_size = len + BYTES_INCREMENT;
 
   inbytesleft  = len;
   outbytesleft = alloc_size;
+  
+  gavl_buffer_alloc(buf, alloc_size);
 
-  ret    = malloc(alloc_size);
+  //  ret    = malloc(alloc_size);
   inbuf  = in_string;
-  outbuf = ret;
+  outbuf = (char*)buf->buf;
   
   while(!done)
     {
-    if(iconv(cd, &inbuf, &inbytesleft,
+    if(iconv(cnv->cd, &inbuf, &inbytesleft,
              &outbuf, &outbytesleft) == (size_t)-1)
       {
       switch(errno)
         {
         case E2BIG:
-          output_pos = (int)(outbuf - ret);
+          output_pos = (int)(outbuf - (char*)buf->buf);
 
           alloc_size   += (len + BYTES_INCREMENT);
           outbytesleft += (len + BYTES_INCREMENT);
+
+          gavl_buffer_alloc(buf, alloc_size + ZEROTERMINATE_SIZE); // Make sure we can zero pad after
           
-          ret = realloc(ret, alloc_size + ZEROTERMINATE_SIZE); // Make sure we can zero pad after
-          outbuf = &ret[output_pos];
+          outbuf = (char*)buf->buf + output_pos;
           break;
         case EILSEQ:
           gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Invalid multibyte sequence");
@@ -105,10 +157,12 @@ static char * do_convert(iconv_t cd, char * in_string, int len, int * out_len)
   /* Zero terminate */
   for(i = 0; i < ZEROTERMINATE_SIZE; i++)
     outbuf[i] = '\0';
+
+  buf->len = outbuf - (char*)buf->buf;
+
+  free(in_string);
   
-  if(out_len)
-    *out_len = outbuf - ret;
-  return ret;
+  return (char*)buf->buf;
   }
 
 
@@ -117,22 +171,22 @@ char * gavl_convert_string(gavl_charset_converter_t * cnv,
                            int * out_len)
   {
   char * ret;
-  char * tmp_string;
-
-  if(len < 0)
-    len = strlen(str);
-
-  tmp_string = malloc(len+1);
-  memcpy(tmp_string, str, len);
-  tmp_string[len] = '\0';
-  ret = do_convert(cnv->cd, tmp_string, len, out_len);
-  free(tmp_string);
+  gavl_buffer_t buf;
+  gavl_buffer_init(&buf);
+  ret = gavl_convert_string_to_buffer(cnv, str, len, &buf);
+  if(out_len)
+    *out_len = buf.len;
   return ret;
   }
 
 void gavl_charset_converter_destroy(gavl_charset_converter_t * cnv)
   {
-  iconv_close(cnv->cd);
+  if(cnv->cd != (iconv_t)-1)
+    iconv_close(cnv->cd);
+
+  if(cnv->to_charset)
+    free(cnv->to_charset);
+  
   free(cnv);
   }
 

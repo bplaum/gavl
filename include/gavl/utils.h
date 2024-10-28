@@ -401,6 +401,9 @@ char * gavl_search_config_dir(const char * package, const char * directory);
 
 /* Character set conversion usiong iconv */
 
+#define GAVL_UTF8    "UTF-8"    // iconf string for UTF-8
+#define GAVL_UTF_BOM "GAVL-UTF" // Autodetect according to BOM
+
 typedef struct gavl_charset_converter_s gavl_charset_converter_t;
 
 GAVL_PUBLIC
@@ -410,6 +413,11 @@ GAVL_PUBLIC
 char * gavl_convert_string(gavl_charset_converter_t * cnv,
                            const char * str, int len,
                            int * out_len);
+
+GAVL_PUBLIC
+char * gavl_convert_string_to_buffer(gavl_charset_converter_t * cnv,
+                                     const char * in_string, int len,
+                                     gavl_buffer_t * buf);
 
 GAVL_PUBLIC
 void gavl_charset_converter_destroy(gavl_charset_converter_t * cnv);

@@ -31,6 +31,7 @@ $(png_programs) \
 $(libva_x11_programs) \
 $(v4l2_programs) \
 benchmark \
+charset \
 colorspace_time \
 deinterlace_time \
 dump_frame_table \
@@ -52,6 +53,9 @@ vaapi_x11_LDADD = ../gavl/libgavl.la @LIBVA_LIBS@ @X_LIBS@
 
 benchmark_SOURCES = benchmark.c
 benchmark_LDADD = ../gavl/libgavl.la @RT_LIBS@
+
+charset_SOURCES = charset.c
+charset_LDADD = ../gavl/libgavl.la
 
 volume_test_SOURCES = volume_test.c
 volume_test_LDADD = -lm ../gavl/libgavl.la
