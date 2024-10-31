@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <config.h>
 #include <gavl/gavl.h>
 #include <gavl/packetindex.h>
 #include <gavl/utils.h>
@@ -31,6 +32,9 @@
 #include <gavl/gavf.h>
 
 #define NUM_ALLOC 1024
+
+#include <gavl/log.h>
+#define LOG_DOMAIN "packetindex"
 
 
 gavl_packet_index_t * gavl_packet_index_create(int size)
@@ -210,7 +214,7 @@ void gavl_packet_index_sort_by_pts(gavl_packet_index_t * idx)
   {
   int i, n;
   int swapped;
-  uint8_t swp[sizeof(*idx->entries)];
+  uint8_t swp[sizeof(idx->entries[0])];
   
 #define SWAP(j) \
   memcpy(swp, idx->entries + j, sizeof(*idx->entries)); \
@@ -230,9 +234,8 @@ void gavl_packet_index_sort_by_pts(gavl_packet_index_t * idx)
         swapped = 1;
         }
       }
+    n--;
     } while(swapped);
-    
-  
   }
 
 void gavl_packet_index_extract_stream(const gavl_packet_index_t * src, gavl_packet_index_t * dst, int stream_id)
@@ -406,4 +409,33 @@ int gavl_packet_index_save(gavl_packet_index_t * idx, const char * filename)
   gavl_io_destroy(io);
   return 1;
   }
+
+int64_t gavl_packet_index_packet_number_to_pts(const gavl_packet_index_t * idx,
+                                               int stream_id,
+                                               int64_t number)
+  {
+  int64_t i;
+  int64_t idx_pos = 0;
+  
+  if(idx < 0)
+    return GAVL_TIME_UNDEFINED;
+
+  idx_pos = gavl_packet_index_get_next_packet(idx, stream_id, 0);
+
+  if(idx_pos < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No packets for stream %d in index", stream_id);
+    return GAVL_TIME_UNDEFINED;
+    }
+  for(i = 0; i < number; i++)
+    {
+    if((idx_pos = gavl_packet_index_get_next_packet(idx, stream_id, idx_pos+1)) < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No packet %"PRId64" in stream", number);
+      return GAVL_TIME_UNDEFINED;
+      }
+    }
+  return idx->entries[idx_pos].pts;
+  }
+
 

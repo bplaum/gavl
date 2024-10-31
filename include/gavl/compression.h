@@ -647,58 +647,6 @@ GAVL_PUBLIC
 void gavl_packet_pts_cache_clear(gavl_packet_pts_cache_t *m);
 
   
-#if 0
-GAVL_PUBLIC
-void gavl_compression_info_to_dictionary(const gavl_compression_info_t * info, gavl_dictionary_t * dict);
-
-GAVL_PUBLIC
-void gavl_compression_info_from_dictionary(gavl_compression_info_t * info, const gavl_dictionary_t * dict);
-
-  
-typedef struct
-  {
-  int num_entries;
-  int entries_alloc;
-
-  struct
-    {
-    int64_t position;
-    int64_t pts;
-    } * entries;
-  
-  } gavl_seek_index_t;
-  
-GAVL_PUBLIC
-void gavl_seek_index_append_packet(gavl_seek_index_t * idx,
-                                   const gavl_packet_t * pkt, int compression_flags);
-
-GAVL_PUBLIC
-void gavl_seek_index_append_pos_pts(gavl_seek_index_t * idx,  int64_t position, int64_t pts);
-  
-GAVL_PUBLIC
-int gavl_seek_index_seek(const gavl_seek_index_t * idx,
-                         int64_t pts);
-
-GAVL_PUBLIC
-void gavl_seek_index_free(gavl_seek_index_t * idx);
-
-GAVL_PUBLIC
-void gavl_seek_index_dump(gavl_seek_index_t * idx);
-  
-GAVL_PUBLIC
-void gavl_seek_index_to_buffer(const gavl_seek_index_t * idx, gavl_buffer_t * buf);
-
-GAVL_PUBLIC
-int gavl_seek_index_from_buffer(gavl_seek_index_t * idx, const gavl_buffer_t * buf);
-
-GAVL_PUBLIC
-int gavl_seek_index_read(gavl_seek_index_t * idx, gavl_io_t * io);
-
-GAVL_PUBLIC
-void gavl_seek_index_write(const gavl_seek_index_t * idx, gavl_io_t * io);
-
-#endif
-
   
 /**
  *  @}
