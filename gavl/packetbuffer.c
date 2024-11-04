@@ -42,7 +42,7 @@
 // #define DUMP_IN_PACKETS
 // #define DUMP_OUT_PACKETS
 
-// #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
+#define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
@@ -408,6 +408,9 @@ static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
   
   /* Get the first non B-frame with no duration */
   ip1 = get_next_ip_idx(buf, 0);
+  if(ip1 < 0)
+    return; // Shouldn't happen actually
+  
   while(buf->buf.packets[ip1]->duration > 0)
     {
     ip1 = get_next_ip_idx(buf, ip1+1);
