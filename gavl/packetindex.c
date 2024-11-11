@@ -320,7 +320,19 @@ int gavl_packet_index_get_next_packet(const gavl_packet_index_t * idx, int strea
   return -1;
   }
 
-
+int gavl_packet_index_get_previous_packet(const gavl_packet_index_t * idx, int stream_id, int pos)
+  {
+  if(pos < 0)
+    pos = idx->num_entries-1;
+  
+  while(pos > idx->num_entries)
+    {
+    if(idx->entries[pos].stream_id == stream_id)
+      return pos;
+    pos--;
+    }
+  return -1;
+  }
 
 /* Serialisation */
 
@@ -437,5 +449,4 @@ int64_t gavl_packet_index_packet_number_to_pts(const gavl_packet_index_t * idx,
     }
   return idx->entries[idx_pos].pts;
   }
-
 

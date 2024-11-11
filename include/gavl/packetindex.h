@@ -119,9 +119,15 @@ GAVL_PUBLIC
 int gavl_packet_index_get_next_packet(const gavl_packet_index_t * idx, int stream_id, int pos);
 
 GAVL_PUBLIC
+int gavl_packet_index_get_previous_packet(const gavl_packet_index_t * idx, int stream_id, int pos);
+
+
+
+GAVL_PUBLIC
 int64_t gavl_packet_index_packet_number_to_pts(const gavl_packet_index_t * idx,
                                                int stream_id,
                                                int64_t number);
+
 
 
 #endif // GAVLPACKETINDEX_H_INCLUDED
