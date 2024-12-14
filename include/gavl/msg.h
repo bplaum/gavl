@@ -109,7 +109,7 @@
 #define GAVL_MSG_SRC_RESTART_DISCONT       2 
 
 // Poor performance (network or hardware) restart with lower bitrate
-#define GAVL_MSG_SRC_RESTART_PERFORMANCE   3 
+// #define GAVL_MSG_SRC_RESTART_PERFORMANCE   3 
 
 #define GAVL_MSG_SRC_RESTART               1
 
@@ -139,16 +139,18 @@
 
 #define GAVL_MSG_SRC_AUTHENTICATE     4
 
-/** \brief Seek window
+// Some error, restart with same parameters
+#define GAVL_MSG_SRC_SKIP_NONE   0 // Decode all frames
+#define GAVL_MSG_SRC_SKIP_NONREF 1 // Skip non-reference frames
+#define GAVL_MSG_SRC_SKIP_NONKEY 2 // Skip non-keyframes
+
+/** \brief Skip mode changed
  *
- *  arg0: Long: Window start (absolute time)
- *  arg1: Long: Window end (absolute time)
+ *  arg0: Video stream index
+ *  arg1: Skip mode (see GAVL_SKIP_MODE)
  */
 
-// #define GAVL_MSG_SRC_SEEK_WINDOW          4
-// #define GAVL_MSG_SRC_DISPLAY_TIME_OFFSET  5
-
-
+#define GAVL_MSG_SRC_SKIP_MODE_CHANGED  5
 
 /** \brief Authentication request
  *
@@ -199,6 +201,9 @@
 
 #define GAVL_CMD_SRC_RESUME            107
 
+
+
+#define GAVL_CMD_SRC_SET_VIDEO_SKIP_MODE 108
 
 /* GUI Events */
 
