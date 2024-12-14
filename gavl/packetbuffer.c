@@ -39,7 +39,7 @@
 #define FLAG_MARK_LAST            (1<<3)
 #define FLAG_CALC_FRAME_DURATIONS (1<<4)
 
-//#define DUMP_IN_PACKETS
+// #define DUMP_IN_PACKETS
 // #define DUMP_OUT_PACKETS
 
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
