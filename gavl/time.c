@@ -339,6 +339,7 @@ int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret)
   int tz_hour = 0;
   int tz_minute = 0;
   struct tm tm;
+
   
   //  "2014-11-12T19:12:14.505Z"
 
@@ -371,6 +372,8 @@ int gavl_time_parse_iso8601(const char * str, gavl_time_t * ret)
   *ret *= GAVL_TIME_SCALE;
   *ret += microseconds;
 
+  //  fprintf(stderr, "gavl_time_parse_iso8601 %s %"PRId64"\n", str, *ret);
+  
   return 1;
   }
 
