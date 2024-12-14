@@ -732,6 +732,9 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
   struct timespec time_to_wait;
   struct timeval now;
   int64_t to;
+
+  if(!a->async)
+    return -1; // Cancelled by someone
   
   pthread_mutex_lock(&a->async->mutex);
 
@@ -785,7 +788,7 @@ void gavl_socket_address_set_async_cancel(gavl_socket_address_t * a)
   {
   if(!a->async)
     return;
-  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Cancelling asynchronous name lookup");
   pthread_mutex_lock(&a->async->mutex);
   a->async->waiting = 0;
   pthread_mutex_unlock(&a->async->mutex);
