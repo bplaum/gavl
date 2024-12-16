@@ -518,6 +518,12 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
   {
   gavl_packet_buffer_t * buf = priv;
 
+  if(!p)
+    {
+    buf_push(&buf->pool, &buf->in_packet);
+    return GAVL_SINK_OK;
+    }
+  
   if(!p->buf.len)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Packet has zero length");
 

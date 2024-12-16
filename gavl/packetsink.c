@@ -116,6 +116,12 @@ gavl_packet_sink_put_packet(gavl_packet_sink_t * s, gavl_packet_t * p)
   if(s->lock_func)
     s->lock_func(s->lock_priv);
 
+  if(!p)
+    {
+    s->pkt = NULL;
+    return GAVL_SINK_OK;
+    }
+  
   if(s->get_func)
     {
     if(!s->pkt)
@@ -129,19 +135,6 @@ gavl_packet_sink_put_packet(gavl_packet_sink_t * s, gavl_packet_t * p)
     }
   else
     st = s->put_func(s->priv, p);
-
-#if 0  
-  
-  if(!(s->flags & FLAG_GET_CALLED) &&
-     s->get_func &&
-     (dp = s->get_func(s->priv)))
-    {
-    gavl_packet_copy(dp, p);
-    st = s->put_func(s->priv, dp);
-    }
-  else  
-    st = s->put_func(s->priv, p);
-#endif
   
   if(s->unlock_func)
     s->unlock_func(s->lock_priv);
