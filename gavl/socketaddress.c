@@ -89,8 +89,8 @@ void gavl_socket_address_copy(gavl_socket_address_t * dst,
 
 void gavl_socket_address_destroy(gavl_socket_address_t * a)
   {
+  //  fprintf(stderr, "gavl_socket_address_destroy %p\n", a->async);
   gavl_socket_address_set_async_cancel(a);
-  
   free(a);
   }
 /* */
@@ -403,6 +403,12 @@ int gavl_socket_address_set_local(gavl_socket_address_t * a, int port, const cha
     {
     if(!(addr->ifa_flags & IFF_LOOPBACK))
       {
+      if(!addr->ifa_addr) // ifa_addr can be NULL for VPN interfaces
+        {
+        addr = addr->ifa_next;
+        continue;
+        }
+      
       if((addr->ifa_addr->sa_family == AF_INET) &&
          (!wildcard || (family_req == AF_INET)))
         a->len = sizeof(struct sockaddr_in);
@@ -472,7 +478,10 @@ static int addr_match(struct ifaddrs * a, int flags)
   if((a->ifa_flags & IFF_LOOPBACK) && !(flags & GAVL_NI_LOOPBACK))
     return 0;
 
-  if(a->ifa_addr->sa_family == AF_INET)
+  if(!a->ifa_addr)
+    return 0;
+  
+  if((a->ifa_addr->sa_family == AF_INET))
     {
     if(flags & GAVL_NI_IPV4)
       return 1;
@@ -558,6 +567,12 @@ static struct ifaddrs * iface_by_address(struct ifaddrs * addr, const gavl_socke
 
   while(addr)
     {
+    if(!addr->ifa_addr)
+      {
+      addr = addr->ifa_next;
+      continue;
+      }
+    
     if(addr->ifa_addr->sa_family == AF_INET6)
       len = sizeof(struct sockaddr_in6);
     else if(addr->ifa_addr->sa_family == AF_INET)
@@ -770,15 +785,16 @@ int gavl_socket_address_set_async_done(gavl_socket_address_t * a, int timeout)
     return finish_async(a);
     }
   
-  if(errno == ETIMEDOUT)
+  if((errno == ETIMEDOUT) || (errno == EINTR) || (errno == EAGAIN))
     {
     pthread_mutex_unlock(&a->async->mutex);
     return 0;
     }
   else
     {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "pthread_cond_timedwait failed: %s", strerror(errno));
     pthread_mutex_unlock(&a->async->mutex);
-    cleanup_async(a);
+    gavl_socket_address_set_async_cancel(a);
     return -1;
     }
     
