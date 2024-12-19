@@ -699,9 +699,10 @@ char * gavl_get_absolute_uri(const char * rel_uri, const char * abs_uri)
     else
       ret = gavl_sprintf("%s/%s", abs_uri, rel_uri);
     }
+  else
+    ret = gavl_strdup(rel_uri);
   
   return ret;
-
   }
 
 // https://stackoverflow.com/questions/44668774/reduce-fractions-in-c
