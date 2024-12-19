@@ -64,11 +64,12 @@
 
 // Low-Bitrate streams from ZDF need 32 packets to get the format!
 
-#define MAX_BUFFERS 16  
-#define DECODER_NUM_PACKETS 16
+#define DECODER_NUM_PACKETS 24
 #define DECODER_NUM_FRAMES  16
 
-#define MAX_FORMAT_FRAMES 16
+#define MAX_BUFFERS DECODER_NUM_PACKETS
+
+// #define MAX_FORMAT_FRAMES 32
 
 // #define DUMP_PACKETS
 // #define DUMP_EXTRADATA
@@ -157,6 +158,26 @@ capabilities[] =
    { /* End */ },
    
   };
+
+static char * buf_type_to_string(int buf_type)
+  {
+  switch(buf_type)
+    {
+    case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+      return "output";
+      break;
+    case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+      return "capture";
+      break;
+    case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
+      return "output (planar)";
+      break;
+    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
+      return "capture (planar)";
+      break;
+    }
+  return NULL;
+  }
 
 static void enum_formats(int fd, int type)
   {
@@ -667,7 +688,7 @@ static int request_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count, g
     return 0;
     }
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Requested %d buffers, got %d", count, req.count);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Requested %d buffers for %s, got %d", count, buf_type_to_string(type), req.count);
 
   for(i = 0; i < req.count; i++)
     {
@@ -860,11 +881,12 @@ static void dump_fmt(gavl_v4l2_device_t * dev, const struct v4l2_format * fmt)
   }
 #endif
 
+
 static int stream_on(gavl_v4l2_device_t * dev, int type)
   {
   if(my_ioctl(dev->fd, VIDIOC_STREAMON, &type) == -1)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_STREAMON failed: %s", strerror(errno));
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_STREAMON failed for %s: %s", buf_type_to_string(type), strerror(errno));
     return 0;
     }
   return 1;
@@ -1720,7 +1742,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   
   /* Wait for source_change event */
 
-  while(!(dev->flags & DECODER_HAVE_FORMAT) && (format_packets < MAX_FORMAT_FRAMES))
+  while(!(dev->flags & DECODER_HAVE_FORMAT) && (format_packets < DECODER_NUM_PACKETS))
     {
     do_poll(dev, POLLOUT | POLLPRI, &pollev);
 
