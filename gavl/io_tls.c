@@ -465,7 +465,7 @@ gavl_io_t * gavl_io_create_tls_client_async(int fd, const char * server_name, in
 
   p->timer = gavl_timer_create();
   
-  gavl_socket_set_block(p->fd, 0);
+  gavl_fd_set_block(p->fd, 0);
   
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Establishing TLS connection with %s", server_name);
   

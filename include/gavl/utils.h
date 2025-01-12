@@ -378,6 +378,12 @@ GAVL_PUBLIC
 int gavl_fd_can_write(int fd, int milliseconds);
 
 GAVL_PUBLIC
+int gavl_fd_set_block(int fd, int block);
+
+GAVL_PUBLIC
+int gavl_fd_get_block(int fd);
+
+GAVL_PUBLIC
 int gavl_host_is_us(const char * hostname);
 
 

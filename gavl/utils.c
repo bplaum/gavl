@@ -34,6 +34,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
 
 
 #include <gavl/gavl.h>
@@ -798,6 +799,32 @@ int gavl_fd_can_write(int fd, int milliseconds)
     }
   return 1;
   }
+
+int gavl_fd_set_block(int fd, int block)
+  {
+  int flags;
+
+  if(!block)
+    flags = O_NONBLOCK;
+  else
+    flags = 0;
+
+  if(fcntl(fd, F_SETFL, flags) < 0)
+    {
+    if(block)
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set blocking mode: %s", strerror(errno));
+    else
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set non-blocking mode: %s", strerror(errno));
+    return 0;
+    }
+  return 1;
+  }
+
+int gavl_fd_get_block(int fd)
+  {
+  return !(fcntl(fd, F_GETFL, 0) & O_NONBLOCK);
+  }
+
 
 int gavl_host_is_us(const char * hostname)
   {
