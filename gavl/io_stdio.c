@@ -77,6 +77,19 @@ static int flush_file(void * priv)
   return 0;
   }
 
+static int poll_file(void * priv, int timeout, int wr)
+  {
+  int fd;
+  FILE * f = priv;
+
+  fd = fileno(f);
+  
+  if(wr)
+    return gavl_fd_can_write(fd, timeout);
+  else
+    return gavl_fd_can_read(fd, timeout);
+  }
+
 static void close_file(void * priv)
   {
   fclose((FILE*)priv);
@@ -119,9 +132,6 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   if(!(flags & GAVL_IO_IS_REGULAR))
     can_seek = 0;
   
-  if(can_seek)
-    flags |= GAVL_IO_CAN_SEEK;
-  
   if(wr)
     {
     wf = write_file;
@@ -135,11 +145,16 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
     ff = NULL;
     }
   if(can_seek)
+    {
     sf = seek_file;
+    flags |= GAVL_IO_CAN_SEEK;
+    }
   else
     sf = NULL;
 
   ret = gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
+
+  gavl_io_set_poll_func(ret, poll_file);
 
   gavl_io_set_info(ret, st.st_size, NULL, NULL, 0);
   return ret;
