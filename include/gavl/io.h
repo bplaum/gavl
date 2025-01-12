@@ -125,6 +125,10 @@ void gavl_io_skip(gavl_io_t * io, int bytes);
 GAVL_PUBLIC
 gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int do_close);
 
+/* Simple read() / write() poll() based I/0 */
+GAVL_PUBLIC
+gavl_io_t * gavl_io_create_fd(int fd, int wr, int do_close);
+  
 GAVL_PUBLIC
 gavl_io_t * gavl_io_from_filename(const char * filename, int wr);
 
