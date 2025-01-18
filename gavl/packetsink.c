@@ -115,9 +115,11 @@ gavl_packet_sink_put_packet(gavl_packet_sink_t * s, gavl_packet_t * p)
   
   if(s->lock_func)
     s->lock_func(s->lock_priv);
-
+  
   if(!p)
     {
+    if(s->pkt)
+      s->put_func(s->priv, NULL);
     s->pkt = NULL;
     return GAVL_SINK_OK;
     }
