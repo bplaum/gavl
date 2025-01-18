@@ -569,7 +569,6 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     if(!gavl_stream_is_continuous(buf->stream))
       buf->flags |= FLAG_NON_CONTINUOUS;
     
-    //    buf->ts_mode = gavl_stream_get_ts_mode(buf->stream);
     buf->flags |= FLAG_GOT_CI;
     }
   
