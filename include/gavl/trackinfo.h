@@ -610,10 +610,10 @@ GAVL_PUBLIC
 const gavl_dictionary_t * gavl_track_get_variant(const gavl_dictionary_t * dict, int idx);
 
 GAVL_PUBLIC
-gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const char * mimetype, const char * location);
+gavl_dictionary_t * gavl_track_get_variant_nc(gavl_dictionary_t * dict, int idx);
 
 GAVL_PUBLIC
-void gavl_track_sort_variants(gavl_dictionary_t * dict);
+gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const char * mimetype, const char * location);
 
 // Multipart support
 GAVL_PUBLIC

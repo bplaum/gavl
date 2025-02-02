@@ -2991,6 +2991,11 @@ const gavl_dictionary_t * gavl_track_get_variant(const gavl_dictionary_t * dict,
   return get_track(dict, GAVL_META_VARIANTS, idx);
   }
 
+gavl_dictionary_t * gavl_track_get_variant_nc(gavl_dictionary_t * dict, int idx)
+  {
+  return get_track_nc(dict, GAVL_META_VARIANTS, idx);
+  }
+
 gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const char * mimetype, const char * location)
   {
   gavl_dictionary_t * new_track = append_track(dict, GAVL_META_VARIANTS);
@@ -2998,10 +3003,6 @@ gavl_dictionary_t * gavl_track_append_variant(gavl_dictionary_t * dict, const ch
   return new_track;
   }
 
-void gavl_track_sort_variants(gavl_dictionary_t * dict)
-  {
-  
-  }
 
 // Multipart support
 int gavl_track_get_num_parts(const gavl_dictionary_t * dict)
