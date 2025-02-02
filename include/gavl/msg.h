@@ -102,16 +102,17 @@
  *  arg0: reason (int)
  */
 
-// Some error, restart with same parameters
-#define GAVL_MSG_SRC_RESTART_ERROR         1 
-
-// Discontinuity (e.g. format change)
-#define GAVL_MSG_SRC_RESTART_DISCONT       2 
-
 // Poor performance (network or hardware) restart with lower bitrate
 // #define GAVL_MSG_SRC_RESTART_PERFORMANCE   3 
 
-#define GAVL_MSG_SRC_RESTART               1
+/*
+ *  Set the URL variables to append when the source is re-started.
+ *  This can be set by HLS streams to play across discontinuitites
+ *
+ *  arg0: Variables to append to the URI when it's loaded (dictionary)
+ */
+
+#define GAVL_MSG_SRC_RESTART_VARS       1
 
 
 /** \brief Pixel aspect ratio changed
