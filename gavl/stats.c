@@ -20,10 +20,14 @@
 
 
 #include <string.h>
+#include <stdio.h>
 
 
-#include <gavfprivate.h>
+#include <gavl/gavl.h>
+#include <gavl/compression.h>
 #include <gavl/metatags.h>
+#include <gavl/utils.h>
+#include <gavl/trackinfo.h>
 
 
 

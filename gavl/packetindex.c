@@ -29,7 +29,6 @@
 #include <gavl/utils.h>
 #include <gavl/io.h>
 
-#include <gavl/gavf.h>
 
 #define NUM_ALLOC 1024
 

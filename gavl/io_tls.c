@@ -29,15 +29,14 @@
 
 #include <unistd.h>
 #include <fcntl.h>
-
-#include <gavl/gavf.h>
-#include <gavl/log.h>
-#include <gavl/gavlsocket.h>
-
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 
+#include <gavl/log.h>
 #include <gavl/io.h>
+#include <gavl/gavlsocket.h>
+#include <gavl/utils.h>
+
 #include <io_private.h>
 
 /* Global initialization */

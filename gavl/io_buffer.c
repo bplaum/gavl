@@ -24,8 +24,9 @@
 
 #include <config.h>
 #define LOG_DOMAIN "io_buffer"
-#include <gavf.h>
-#include <gavfprivate.h>
+
+#include <gavl/gavl.h>
+#include <gavl/io.h>
 
 typedef struct
   {

@@ -29,7 +29,6 @@
 
 #include <gavl/edl.h>
 #include <gavl/utils.h>
-// #include <gavl/gavf.h>
 
 #include <stdio.h>
 #include <stdlib.h>

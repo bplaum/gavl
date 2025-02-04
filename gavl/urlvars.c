@@ -26,11 +26,10 @@
 #include <config.h>
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
+#include <gavl/io.h>
 
 #include <gavl/log.h>
 #define LOG_DOMAIN "urlvars"
-
-#include <gavl/gavf.h>
 
 
 /* URI variables */

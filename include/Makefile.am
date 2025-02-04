@@ -12,7 +12,6 @@ countrycodes.h \
 deinterlace.h \
 dsp.h \
 float_cast.h \
-gavfprivate.h \
 gavlshm.h \
 hw_private.h \
 interleave.h \

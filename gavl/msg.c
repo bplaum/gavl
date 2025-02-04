@@ -28,7 +28,6 @@
 #include <gavl/metadata.h>
 #include <gavl/utils.h>
 #include <gavl/msg.h>
-#include <gavl/gavf.h>
 #include <gavl/trackinfo.h>
 
 

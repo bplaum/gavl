@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include <gavl/gavl.h>
-#include <gavl/gavf.h>
 #include <gavl/compression.h>
 
 void gavl_seek_index_append_pos_pts(gavl_seek_index_t * idx,

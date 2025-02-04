@@ -28,7 +28,12 @@
 #include <stdlib.h>
 
 #include <config.h>
-#include <gavfprivate.h>
+
+#include <gavl/gavl.h>
+#include <gavl/buffer.h>
+#include <gavl/io.h>
+#include <gavl/utils.h>
+
 #include <io_private.h>
 
 #include <gavl/log.h>

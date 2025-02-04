@@ -25,9 +25,12 @@
 
 typedef struct gavl_io_s gavl_io_t;
 
-
 #define GAVL_PACKET_INDEX_INTERLEAVED (1<<0)
 #define GAVL_PACKET_INDEX_SPARSE      (1<<1) // Not all packets are here, use only for seeking
+
+#define GAVL_PACKET_INDEX_SPARSE      (1<<1) // Not all packets are here, use only for seeking
+
+#define GAVF_TAG_PACKET_INDEX "gavfpidx"
 
 typedef struct 
   {

@@ -25,10 +25,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <stdio.h>
 
 #include <config.h>
-#include <gavfprivate.h>
 
+#include <gavl/gavl.h>
+#include <gavl/utils.h>
+#include <gavl/io.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "io_stdio"
 

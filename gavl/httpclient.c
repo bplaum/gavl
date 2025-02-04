@@ -28,11 +28,12 @@
 
 #include <config.h>
 
-#include <gavl/gavf.h>
+#include <gavl/gavl.h>
+#include <gavl/buffer.h>
+#include <gavl/utils.h>
 #include <gavl/http.h>
 #include <gavl/log.h>
 #include <gavl/gavlsocket.h>
-// #include <gavfprivate.h>
 #include <gavl/metatags.h>
 
 #include <gavl/io.h>
