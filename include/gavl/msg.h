@@ -204,7 +204,15 @@
 
 
 
-#define GAVL_CMD_SRC_SET_VIDEO_SKIP_MODE 108
+#define GAVL_CMD_SRC_SET_VIDEO_SKIP_MODE 108 // Not implemented for now
+
+/*
+ *  arg0: Type (gavl_stream_type_t)
+ *  arg1: Index (starting with 0)
+ *  arg2: Enable (1 or 0)
+ */
+
+#define GAVL_CMD_SRC_SET_STREAM_ACTION   109
 
 /* GUI Events */
 
