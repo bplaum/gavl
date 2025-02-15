@@ -130,7 +130,6 @@ $(hw_v4l2_sources) \
 absdiff.c \
 arith128.c \
 array.c \
-audioconnector.c \
 audioconverter.c \
 audioformat.c \
 audioframe.c \
@@ -182,7 +181,6 @@ numptr.c \
 orientation.c \
 packet.c \
 packetbuffer.c \
-packetconnector.c \
 packetindex.c \
 packetsink.c \
 packetsource.c \
@@ -212,7 +210,6 @@ transform_context.c \
 transform_table.c \
 urlvars.c \
 utils.c \
-videoconnector.c \
 videoconverter.c \
 videoformat.c \
 videoframe.c \
