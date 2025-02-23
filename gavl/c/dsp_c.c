@@ -742,6 +742,34 @@ static void shift_down_16_c(void * _ptr, int num, int bits)
   
   }
 
+static void shift_up_copy_16_c(void * _dst, const void * _src, int num, int bits)
+  {
+  int i = num+1;
+  const uint16_t * src  = _src;
+  uint16_t * dst  = _dst;
+
+  while(--i)
+    {
+    *dst = *src << bits;
+    src++;
+    dst++;
+    }
+  }
+
+static void shift_down_copy_16_c(void * _dst, const void * _src, int num, int bits)
+  {
+  int i = num+1;
+  const uint16_t * src  = _src;
+  uint16_t * dst  = _dst;
+
+  while(--i)
+    {
+    *dst = *src >> bits;
+    src++;
+    dst++;
+    }
+  }
+
 static void shuffle_8_4_c(void * ptr, int num, uint8_t * mask)
   {
   union
@@ -825,6 +853,9 @@ void gavl_dsp_init_c(gavl_dsp_funcs_t * funcs,
   funcs->shift_up_16       = shift_up_16_c;
   funcs->shift_down_16     = shift_down_16_c;
 
+  funcs->shift_up_copy_16   = shift_up_copy_16_c;
+  funcs->shift_down_copy_16 = shift_down_copy_16_c;
+  
   funcs->shuffle_8_4       = shuffle_8_4_c;
   
   }

@@ -452,6 +452,23 @@ typedef struct
    */
   void (*shift_down_16)(void * ptr, int num, int bits);
 
+  /** \brief Shift up and copy
+   *  \param src Source
+   *  \param dst Destination
+   *  \param len Number of 16 bit elements
+   *  \param bits Number of bits to shift
+   */
+  void (*shift_up_copy_16)(void * dst, const void * src, int num, int bits);
+
+  /** \brief Shift down
+   *  \param src Source
+   *  \param dst Destination
+   *  \param len Number of 16 bit elements
+   *  \param bits Number of bits to shift
+   */
+  void (*shift_down_copy_16)(void * dst, const void * src, int num, int bits);
+
+  
   /** \brief Shuffle bytes in 4 byte words
    *  \param ptr Pointer
    *  \param len Number of 32 bit elements
@@ -613,6 +630,13 @@ GAVL_PUBLIC void
 gavl_dsp_video_frame_shift_bits(gavl_dsp_context_t * ctx,
                                 gavl_video_frame_t * frame,
                                 const gavl_video_format_t * format, int bits);
+
+
+GAVL_PUBLIC void
+gavl_dsp_video_frame_shift_bits_copy(gavl_dsp_context_t * ctx,
+                                     gavl_video_frame_t * dst,
+                                     const gavl_video_frame_t * src,
+                                     const gavl_video_format_t * format, int bits);
 
 
 /*!

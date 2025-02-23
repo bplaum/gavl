@@ -348,8 +348,8 @@ int gavl_dsp_video_frame_swap_endian(gavl_dsp_context_t * ctx,
 
 void
 gavl_dsp_video_frame_shift_bits(gavl_dsp_context_t * ctx,
-                                     gavl_video_frame_t * frame,
-                                     const gavl_video_format_t * format, int bits)
+                                gavl_video_frame_t * frame,
+                                const gavl_video_format_t * format, int bits)
   {
   int i, j;
   int sub_h = 1, sub_v = 1;
@@ -406,6 +406,76 @@ gavl_dsp_video_frame_shift_bits(gavl_dsp_context_t * ctx,
       {
       shift_func(src, len, bits);
       src += frame->strides[i];
+      }
+    }
+  
+  }
+
+
+void
+gavl_dsp_video_frame_shift_bits_copy(gavl_dsp_context_t * ctx,
+                                     gavl_video_frame_t * dst,
+                                     const gavl_video_frame_t * src,
+                                     const gavl_video_format_t * format, int bits)
+  {
+  int i, j;
+  int sub_h = 1, sub_v = 1;
+  int len;
+  int height;
+  int channels;
+  const uint8_t * src_ptr;
+  uint8_t * dst_ptr;
+
+  void (*shift_func)(void *, const void *, int, int);
+  
+  int planes;
+
+  if(!bits)
+    return;
+  
+  planes = gavl_pixelformat_num_planes(format->pixelformat);
+    
+  if(planes > 1)
+    {
+    if(gavl_pixelformat_bytes_per_component(format->pixelformat) != 2)
+      return;
+    channels = 1;
+    }
+  else
+    {
+    channels = gavl_pixelformat_num_channels(format->pixelformat);
+    if(gavl_pixelformat_bytes_per_pixel(format->pixelformat) != 2*channels)
+      return;
+    gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
+    }
+
+  if(bits < 0)
+    {
+    shift_func = ctx->funcs.shift_down_copy_16;
+    bits = -bits;
+    }
+  else
+    shift_func = ctx->funcs.shift_up_copy_16;
+  
+  len = format->image_width * channels;
+  height = format->image_height;
+  
+  for(i = 0; i < planes; i++)
+    {
+    if(i == 1)
+      {
+      height /= sub_v;
+      len /= sub_h;
+      }
+
+    src_ptr = src->planes[i];
+    dst_ptr = dst->planes[i];
+    
+    for(j = 0; j < height; j++)
+      {
+      shift_func(dst_ptr, src_ptr, len, bits);
+      src_ptr += src->strides[i];
+      dst_ptr += dst->strides[i];
       }
     }
   
