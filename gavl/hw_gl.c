@@ -44,23 +44,22 @@ static const struct
   }
 pixelformats[] =
   {
-    { GAVL_RGB_24,     GL_RGB,  GL_RGB,  GL_UNSIGNED_BYTE },
-    { GAVL_RGBA_32,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_BYTE },
-    { GAVL_RGB_48,     GL_RGB,  GL_RGB,  GL_UNSIGNED_SHORT },
-    { GAVL_RGBA_64,    GL_RGBA, GL_RGBA,  GL_UNSIGNED_SHORT },
-    { GAVL_RGB_FLOAT,  GL_RGB,  GL_RGB,  GL_FLOAT },
-    { GAVL_RGBA_FLOAT, GL_RGBA, GL_RGBA, GL_FLOAT },
-    
-    { GAVL_YUV_420_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_410_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_411_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_422_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_422_P_16, GL_RED,  GL_RED, GL_UNSIGNED_SHORT },
-    { GAVL_YUV_444_P,    GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUV_444_P_16, GL_RED,  GL_RED, GL_UNSIGNED_SHORT },
-    { GAVL_YUVJ_420_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUVJ_422_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
-    { GAVL_YUVJ_444_P,   GL_RED,  GL_RED, GL_UNSIGNED_BYTE  },
+    { GAVL_RGB_24,       GL_RGB,  GL_RGB,  GL_UNSIGNED_BYTE },
+    { GAVL_RGBA_32,      GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE },
+    { GAVL_RGB_48,       GL_RGB,  GL_RGB,  GL_UNSIGNED_SHORT },
+    { GAVL_RGBA_64,      GL_RGBA, GL_RGBA, GL_UNSIGNED_SHORT },
+    { GAVL_RGB_FLOAT,    GL_RGB,  GL_RGB,  GL_FLOAT },
+    { GAVL_RGBA_FLOAT,   GL_RGBA, GL_RGBA, GL_FLOAT },
+    { GAVL_YUV_420_P,    GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_410_P,    GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_411_P,    GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_422_P,    GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_422_P_16, GL_RED,  GL_RED,  GL_UNSIGNED_SHORT },
+    { GAVL_YUV_444_P,    GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUV_444_P_16, GL_RED,  GL_RED,  GL_UNSIGNED_SHORT },
+    { GAVL_YUVJ_420_P,   GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUVJ_422_P,   GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
+    { GAVL_YUVJ_444_P,   GL_RED,  GL_RED,  GL_UNSIGNED_BYTE  },
     { GAVL_PIXELFORMAT_NONE    /* End */ },
   };
 
@@ -89,20 +88,30 @@ int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * interna
 
 gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx)
   {
-  int idx = 0;
+  int src_idx = 0;
+  int dst_idx = 0;
   
   gavl_pixelformat_t * ret;
   //  glx_t * priv = ctx->native;
 
   ret = calloc(NUM_PIXELFORMATS, sizeof(*ret));
 
-  while(1)
+  while(pixelformats[src_idx].fmt)
     {
-    ret[idx] = pixelformats[idx].fmt;
-    if(pixelformats[idx].fmt == GAVL_PIXELFORMAT_NONE)
-      break;
-    idx++;
+    /* Seems that GL ES supports no 16 bit colors */
+    if((ctx->type == GAVL_HW_EGL_GLES_X11) &&
+       (pixelformats[src_idx].type != GL_UNSIGNED_BYTE))
+      {
+      src_idx++;
+      continue;
+      }
+    ret[dst_idx] = pixelformats[src_idx].fmt;
+    
+    src_idx++;
+    dst_idx++;
+
     }
+  ret[dst_idx] = GAVL_PIXELFORMAT_NONE;
   return ret;
   }
 
@@ -121,12 +130,22 @@ gavl_pixelformat_t * gavl_gl_get_overlay_formats(gavl_hw_context_t * ctx)
     if(pixelformats[idx1].fmt == GAVL_PIXELFORMAT_NONE)
       break;
     
-    if(gavl_pixelformat_has_alpha(pixelformats[idx1].fmt))
+    if(!gavl_pixelformat_has_alpha(pixelformats[idx1].fmt))
       {
-      ret[idx2] = pixelformats[idx1].fmt;
-      idx2++;
+      idx1++;
+      continue;
       }
+
+    if((ctx->type == GAVL_HW_EGL_GLES_X11) &&
+       (pixelformats[idx1].type != GL_UNSIGNED_BYTE))
+      {
+      idx1++;
+      continue;
+      }
+    
+    ret[idx2] = pixelformats[idx1].fmt;
     idx1++;
+    idx2++;
     }
 
   ret[idx2] = GAVL_PIXELFORMAT_NONE;
