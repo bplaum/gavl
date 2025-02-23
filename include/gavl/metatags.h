@@ -202,6 +202,44 @@
 
 #define GAVL_META_VIDEO_BPP   "BitsPerPixel"
 
+/** \brief H.264 profile_idc
+ *
+ *  Raw value from the header
+ */
+
+#define GAVL_META_H264_PROFILE     "H264Profile"
+
+#define GAVL_META_H264_PROFILE_BASELINE             "Baseline"
+#define GAVL_META_H264_PROFILE_CONSTRAINED_BASELINE "ConstrainedBaseline"
+#define GAVL_META_H264_PROFILE_MAIN                 "Main"
+#define GAVL_META_H264_PROFILE_EXTENDED             "Extended"
+#define GAVL_META_H264_PROFILE_HIGH                 "High"
+#define GAVL_META_H264_PROFILE_CONSTRAINED_HIGH     "ConstrainedHigh"
+#define GAVL_META_H264_PROFILE_PROGRESSIVE_HIGH     "ProgressiveHigh"
+#define GAVL_META_H264_PROFILE_HIGH_10              "High10"
+#define GAVL_META_H264_PROFILE_HIGH_10_INTRA        "High10Intra"
+#define GAVL_META_H264_PROFILE_HIGH_422             "High422"
+#define GAVL_META_H264_PROFILE_HIGH_422_INTRA       "High422Intra"
+#define GAVL_META_H264_PROFILE_HIGH_444_PREDICTIVE  "High444Predictive"
+#define GAVL_META_H264_PROFILE_HIGH_444_INTRA       "High444Intra"
+#define GAVL_META_H264_PROFILE_CAVLC_444_INTRA      "CAVLC444Intra"
+#define GAVL_META_H264_PROFILE_SCALABLE_BASELINE             "ScalableBaseline"
+#define GAVL_META_H264_PROFILE_SCALABLE_CONSTRAINED_BASELINE "ScalableConstrainedBaseline"
+#define GAVL_META_H264_PROFILE_SCALABLE_HIGH                 "ScalableHigh"
+#define GAVL_META_H264_PROFILE_SCALABLE_CONSTRAINED_HIGH     "ScalableConstrainedHigh"
+#define GAVL_META_H264_PROFILE_SCALABLE_HIGH_INTRA           "ScalableHighIntra"
+#define GAVL_META_H264_PROFILE_STEREO_HIGH                   "StereoHigh"
+#define GAVL_META_H264_PROFILE_MULTIVIEW_HIGH                "MultiviewHigh"
+#define GAVL_META_H264_PROFILE_MULTIVIEW_DEPTH_HIGH          "MultiviewDepthHigh"
+
+
+/** \brief H.264 level_idc
+ *
+ *  Raw value from the header
+ */
+
+#define GAVL_META_H264_LEVEL "H264Level"
+
 /** \brief Vendor of the device/software, which created the file
  */
 
