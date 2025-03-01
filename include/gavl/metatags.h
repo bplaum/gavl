@@ -207,8 +207,46 @@
  *  Raw value from the header
  */
 
-#define GAVL_META_H264_PROFILE     "H264Profile"
+#define GAVL_META_PROFILE    "Profile"
+#define GAVL_META_LEVEL     "Level"
 
+/* MPEG-2 Profiles */
+
+#define GAVL_META_MPEG2_PROFILE_422                "422"
+#define GAVL_META_MPEG2_PROFILE_HIGH               "High"
+#define GAVL_META_MPEG2_PROFILE_SPATIALLY_SCALABLE "SpatiallyScalable"
+#define GAVL_META_MPEG2_PROFILE_SNR_SCALABLE       "SNRScalable"
+#define GAVL_META_MPEG2_PROFILE_MAIN               "Main"
+#define GAVL_META_MPEG2_PROFILE_SIMPLE             "Simple"
+
+/* MPEG-2 Levels */
+
+#define GAVL_META_MPEG2_LEVEL_HIGH                 "High"
+#define GAVL_META_MPEG2_LEVEL_HIGH1440             "High1440"
+#define GAVL_META_MPEG2_LEVEL_MAIN                 "Main"
+#define GAVL_META_MPEG2_LEVEL_LOW                  "Low"
+
+/* MPEG-4 Profiles */
+
+#define GAVL_META_MPEG4_PROFILE_SIMPLE                    "Simple"
+#define GAVL_META_MPEG4_PROFILE_SIMPLE_SCALABLE           "SimpleScalable"
+#define GAVL_META_MPEG4_PROFILE_CORE                      "Core"
+#define GAVL_META_MPEG4_PROFILE_MAIN                      "Main"
+#define GAVL_META_MPEG4_PROFILE_N_BIT                     "N-Bit"
+#define GAVL_META_MPEG4_PROFILE_SCALABLE_TEXTURE          "ScalableTexture"
+#define GAVL_META_MPEG4_PROFILE_SIMPLE_FACE_ANIMATION     "SimpleFaceAnimation"
+#define GAVL_META_MPEG4_PROFILE_BASIC_ANIMATED_TEXTURE    "BasicAnimatedTexture"
+#define GAVL_META_MPEG4_PROFILE_HYBRID                    "Hybrid"
+#define GAVL_META_MPEG4_PROFILE_ADVANCED_REAL_TIME        "AdvancedRealTime"
+#define GAVL_META_MPEG4_PROFILE_CORE_SCALABLE             "CoreScalable"
+#define GAVL_META_MPEG4_PROFILE_ADVANCED_CODING           "AdvancedCoding"
+#define GAVL_META_MPEG4_PROFILE_ADVANCED_CORE             "AdvancedCore"
+#define GAVL_META_MPEG4_PROFILE_ADVANCED_SCALABLE_TEXTURE "AdvancedScalableTexture"
+#define GAVL_META_MPEG4_PROFILE_SIMPLE_STUDIO             "AdvancedSimpleStudio"
+#define GAVL_META_MPEG4_PROFILE_ADVANCED_SIMPLE           "AdvancedSimple"
+
+
+/* H.264 Profiles */
 #define GAVL_META_H264_PROFILE_BASELINE             "Baseline"
 #define GAVL_META_H264_PROFILE_CONSTRAINED_BASELINE "ConstrainedBaseline"
 #define GAVL_META_H264_PROFILE_MAIN                 "Main"
@@ -232,13 +270,7 @@
 #define GAVL_META_H264_PROFILE_MULTIVIEW_HIGH                "MultiviewHigh"
 #define GAVL_META_H264_PROFILE_MULTIVIEW_DEPTH_HIGH          "MultiviewDepthHigh"
 
-
-/** \brief H.264 level_idc
- *
- *  Raw value from the header
- */
-
-#define GAVL_META_H264_LEVEL "H264Level"
+#define GAVL_META_LEVEL "Level"
 
 /** \brief Vendor of the device/software, which created the file
  */
