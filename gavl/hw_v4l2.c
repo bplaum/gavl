@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <config.h>
 
 #include <sys/ioctl.h>
@@ -60,6 +58,9 @@
 #endif
 #endif // !HAVE_DRM_DRM_FOURCC_H 
 
+// #define DUMP_CONTROLS
+
+
 // #define MAX_BUFFERS 16 // From libavcodec
 
 // Low-Bitrate streams from ZDF need 32 packets to get the format!
@@ -79,8 +80,9 @@
 #define DECODER_HAVE_FORMAT (1<<0)
 #define DECODER_SENT_EOS    (1<<1)
 #define DECODER_GOT_EOS     (1<<2)
-
 #define DECODER_HAVE_FRAME  (1<<3)
+#define OUTPUT_STREAM_ON    (1<<4)
+#define CAPTURE_STREAM_ON   (1<<5)
 
 #define GAVL_V4L2_BUFFER_FLAG_QUEUED (1<<0)
 #define GAVL_V4L2_BUFFER_FLAG_VALID  (1<<1)
@@ -93,7 +95,103 @@ static void format_gavl_to_v4l2(const gavl_video_format_t * gavl,
 static void format_v4l2_to_gavl(const struct v4l2_format * v4l,
                                 const struct v4l2_streamparm * parm,
                                 gavl_video_format_t * gavl, int type);
+
+static void query_controls(gavl_v4l2_device_t * dev);
+static void free_controls(gavl_v4l2_device_t * dev);
+
+#ifdef DUMP_CONTROLS
+static void dump_controls(gavl_v4l2_device_t * dev);
+#endif
+
+typedef struct
+  {
+  const char * gavl;
+  int v4l2;
+  } str_int_map_t;
+
+typedef struct
+  {
+  int num_bufs;
+  gavl_v4l2_buffer_t bufs[MAX_BUFFERS]; // Output
+  gavl_v4l2_buffer_t * current_buf;
+  gavl_video_frame_t * vframe;
   
+  gavl_packet_t packet;
+
+  int buf_type;
+  struct v4l2_format fmt;
+  struct v4l2_streamparm parm;
+  
+  gavl_video_format_t format;
+  gavl_compression_info_t ci;
+  
+  } port_t; // Output or capture
+
+struct gavl_v4l2_device_s
+  {
+  port_t output;
+  port_t capture;
+  
+  gavl_dictionary_t dev;
+  int fd;
+
+  int64_t pts;
+  gavl_timer_t * timer;
+  
+  int decoder_delay; // packets sent - frames read
+  
+  gavl_packet_t packet;
+
+  int timescale;
+
+  gavl_packet_source_t * psrc_src;
+  
+  gavl_packet_source_t * psrc_priv;
+  gavl_video_source_t * vsrc_priv;
+  gavl_video_sink_t * vsink_priv;
+  
+  //  gavl_packet_source_t * psrc_priv;
+  
+  gavl_packet_pts_cache_t * cache;
+  
+  int flags;
+
+  /* hwctx we belong to */
+  gavl_hw_context_t * hwctx;
+
+  gavl_dictionary_t * s; // Stream (not owned by us)
+  
+#ifdef HAVE_DRM
+  /* For importig DMA buffers */
+  gavl_hw_context_t * hwctx_dmabuf;
+#endif // HAVE_DRM
+
+  gavl_v4l2_control_t * controls;
+  int num_controls;
+  };
+
+static const gavl_v4l2_control_t * control_by_id(const gavl_v4l2_device_t * dev, int id)
+  {
+  int i;
+  for(i = 0; i < dev->num_controls; i++)
+    {
+    if(dev->controls[i].ctrl.id == id)
+      return &dev->controls[i];
+    }
+  return NULL;
+  }
+
+static const struct v4l2_querymenu * item_by_id(const gavl_v4l2_control_t * ctrl, int id)
+  {
+  int i;
+  for(i = 0; i < ctrl->num_menu_items; i++)
+    {
+    if(ctrl->menu_items[i].index + ctrl->ctrl.minimum == id)
+      return &ctrl->menu_items[i];
+    }
+  return NULL;
+  }
+
 static int my_ioctl(int fd, int request, void * arg)
   {
   int r;
@@ -206,21 +304,29 @@ static void enum_formats(int fd, int type)
 void gavl_v4l2_device_info(const char * dev)
   {
   char * flag_str = NULL;
-  int fd;
   int idx;
-  
+  gavl_v4l2_device_t device;
+
   struct v4l2_capability cap;
 
-  if((fd = open(dev, O_RDWR /* required */ | O_NONBLOCK, 0)) < 0)
+  memset(&device, 0, sizeof(device));
+
+  if((device.fd = open(dev, O_RDWR /* required */ | O_NONBLOCK, 0)) < 0)
     {
     return;
     }
-
-  if(my_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
+  
+  if(my_ioctl(device.fd, VIDIOC_QUERYCAP, &cap) == -1)
     {
     
     }
 
+  query_controls(&device);
+
+#ifdef DUMP_CONTROLS
+  dump_controls(&device);
+#endif
+  
   gavl_dprintf("Device:       %s\n", dev);
   gavl_dprintf("Driver:       %s\n", cap.driver);
   gavl_dprintf("Card:         %s\n", cap.card);
@@ -244,35 +350,36 @@ void gavl_v4l2_device_info(const char * dev)
   if(flag_str)
     free(flag_str);
 
-
   if(cap.capabilities & (V4L2_CAP_VIDEO_OUTPUT | V4L2_CAP_VIDEO_M2M))
     {
     gavl_dprintf("Output formats\n");
-    enum_formats(fd, V4L2_BUF_TYPE_VIDEO_OUTPUT);
+    enum_formats(device.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT);
     }
   
   if(cap.capabilities & (V4L2_CAP_VIDEO_OUTPUT_MPLANE | V4L2_CAP_VIDEO_M2M_MPLANE))
     {
     gavl_dprintf("Output formats (planar)\n");
-    enum_formats(fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+    enum_formats(device.fd, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
     }
 
   if(cap.capabilities & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_M2M))
     {
     gavl_dprintf("Capture formats\n");
-    enum_formats(fd, V4L2_BUF_TYPE_VIDEO_CAPTURE);
+    enum_formats(device.fd, V4L2_BUF_TYPE_VIDEO_CAPTURE);
     }
   
   if(cap.capabilities & (V4L2_CAP_VIDEO_CAPTURE_MPLANE | V4L2_CAP_VIDEO_M2M_MPLANE))
     {
     gavl_dprintf("Capture formats (planar)\n");
-    enum_formats(fd, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+    enum_formats(device.fd, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
     }
-  
-  close(fd);
 
   gavl_dprintf("\n");
+
+  //  dump_controls(&device);
+  free_controls(&device);
   
+  close(device.fd);
   }
 
 void gavl_v4l2_device_infos()
@@ -324,6 +431,204 @@ static void query_formats(int fd, int buf_type, gavl_array_t * ret)
     gavl_array_splice_val_nocopy(ret, -1, 0, &val);
     }
   
+  }
+
+#ifdef DUMP_CONTROLS
+
+static struct
+  {
+  enum v4l2_ctrl_type type;
+  const char * name;
+  }
+control_types[] =
+  {
+    { V4L2_CTRL_TYPE_INTEGER,      "INTEGER"      },
+    { V4L2_CTRL_TYPE_BOOLEAN,      "BOOLEAN"      },
+    { V4L2_CTRL_TYPE_MENU,         "MENU"         },
+    { V4L2_CTRL_TYPE_BUTTON,       "BUTTON"       },
+    { V4L2_CTRL_TYPE_INTEGER64,    "INTEGER64"    },
+    { V4L2_CTRL_TYPE_CTRL_CLASS,   "CTRL_CLASS"   },
+    { V4L2_CTRL_TYPE_STRING,       "STRING"       },
+    { V4L2_CTRL_TYPE_BITMASK,      "BITMASK"      },
+    { V4L2_CTRL_TYPE_INTEGER_MENU, "INTEGER_MENU" },
+    { V4L2_CTRL_TYPE_U8,           "U8"           },
+    { V4L2_CTRL_TYPE_U16,          "U16"          },
+    { V4L2_CTRL_TYPE_U32,          "U32"          },
+    { V4L2_CTRL_TYPE_AREA,         "AREA"         },
+    { },
+  };
+
+static const char * control_type_name(enum v4l2_ctrl_type type)
+  {
+  int idx = 0;
+  while(control_types[idx].type)
+    {
+    if(control_types[idx].type == type)
+      return control_types[idx].name;
+    idx++;
+    }
+  return "Unknown";
+  }
+
+static struct
+  {
+  int flag;
+  const char * name;
+  }
+control_flag_names[] =
+  {
+    { V4L2_CTRL_FLAG_DISABLED,         "Disabled" },
+    { V4L2_CTRL_FLAG_GRABBED,          "Grabbed" },
+    { V4L2_CTRL_FLAG_READ_ONLY,        "ReadOnly" },
+    { V4L2_CTRL_FLAG_UPDATE,           "Update" },
+    { V4L2_CTRL_FLAG_INACTIVE,         "Inactive" },
+    { V4L2_CTRL_FLAG_SLIDER,           "Slider" },
+    { V4L2_CTRL_FLAG_WRITE_ONLY,       "WriteOnly" },
+    { V4L2_CTRL_FLAG_VOLATILE,         "Volatile" },
+    { V4L2_CTRL_FLAG_HAS_PAYLOAD,      "HasPayload" },
+    { V4L2_CTRL_FLAG_EXECUTE_ON_WRITE, "ExecuteOnWrite" },
+    { V4L2_CTRL_FLAG_MODIFY_LAYOUT,    "ModifyLayout" },
+    { V4L2_CTRL_FLAG_DYNAMIC_ARRAY,    "DynamicArray" },
+    { },
+  };
+
+static void print_flag_names(int flags)
+  {
+  int printed = 0;
+  int idx = 0;
+  
+  while(control_flag_names[idx].flag)
+    {
+    if(control_flag_names[idx].flag & flags)
+      {
+      if(printed)
+        gavl_dprintf(", ");
+
+      gavl_dprintf("%s", control_flag_names[idx].name);
+      
+      printed = 1;
+      }
+    idx++;
+    }
+  }
+
+
+static void dump_control(gavl_v4l2_control_t * ctrl)
+  {
+  int i;
+  gavl_dprintf("Control %s Type: %s [%04x]\n", ctrl->ctrl.name,
+               control_type_name(ctrl->ctrl.type),
+               ctrl->ctrl.type);
+    
+  if((ctrl->ctrl.type != V4L2_CTRL_TYPE_BOOLEAN) &&
+     (ctrl->ctrl.minimum != ctrl->ctrl.maximum))
+    gavl_dprintf("  Range: %l"PRId64" - %l"PRId64"\n",
+                 ctrl->ctrl.minimum,
+                 ctrl->ctrl.maximum);
+
+  if(ctrl->ctrl.flags)
+    {
+    gavl_dprintf("  Flags: ");
+    print_flag_names(ctrl->ctrl.flags);
+    gavl_dprintf("\n");
+    }
+
+  if(ctrl->menu_items)
+    {
+    gavl_dprintf("  Menu items:\n");
+
+    for(i = 0; i < ctrl->num_menu_items; i++)
+      gavl_dprintf("    %s\n", ctrl->menu_items[i].name);
+    }
+  }
+
+static void dump_controls(gavl_v4l2_device_t * dev)
+  {
+  int i;
+  for(i = 0; i < dev->num_controls; i++)
+    dump_control(&dev->controls[i]);
+  }
+#endif
+
+static void query_menu(int fd, gavl_v4l2_control_t * ctrl)
+  {
+  int i;
+  int num = ctrl->ctrl.maximum - ctrl->ctrl.minimum + 1;
+  ctrl->menu_items = calloc(num, sizeof(*ctrl->menu_items));
+  
+  for(i = 0; i < num; i++)
+    {
+    ctrl->menu_items[ctrl->num_menu_items].id    = ctrl->ctrl.id;
+    ctrl->menu_items[ctrl->num_menu_items].index = ctrl->ctrl.minimum + i;
+    
+    if(my_ioctl(fd, VIDIOC_QUERYMENU, &ctrl->menu_items[ctrl->num_menu_items]) == 0)
+      ctrl->num_menu_items++;
+    }
+  }
+ 
+static void query_controls(gavl_v4l2_device_t * dev)
+  {
+  int idx = 0;
+  struct v4l2_query_ext_ctrl query_ext_ctrl;
+
+  memset(&query_ext_ctrl, 0, sizeof(query_ext_ctrl));
+
+  query_ext_ctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND;
+  while(my_ioctl(dev->fd, VIDIOC_QUERY_EXT_CTRL, &query_ext_ctrl) == 0)
+    {
+    if(!(query_ext_ctrl.flags & V4L2_CTRL_FLAG_DISABLED))
+      dev->num_controls++;
+    
+    query_ext_ctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND;
+    }
+
+  if(!dev->num_controls)
+    return;
+  
+  if(errno != EINVAL)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_QUERY_EXT_CTRL failed");
+    return;
+    }
+  
+  memset(&query_ext_ctrl, 0, sizeof(query_ext_ctrl));
+
+  dev->controls = calloc(dev->num_controls, sizeof(*dev->controls));
+  
+  dev->controls[0].ctrl.id = V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND;
+  while(0 == ioctl(dev->fd, VIDIOC_QUERY_EXT_CTRL, &dev->controls[idx].ctrl))
+    {
+    if(query_ext_ctrl.flags & V4L2_CTRL_FLAG_DISABLED)
+      {
+      dev->controls[idx].ctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND;
+      continue;
+      }
+
+    if(dev->controls[idx].ctrl.type == V4L2_CTRL_TYPE_MENU)
+      query_menu(dev->fd, &dev->controls[idx]);
+    
+    idx++;
+
+    if(idx < dev->num_controls)
+      {
+      dev->controls[idx].ctrl.id = dev->controls[idx-1].ctrl.id;
+      dev->controls[idx].ctrl.id |= (V4L2_CTRL_FLAG_NEXT_CTRL | V4L2_CTRL_FLAG_NEXT_COMPOUND);
+      }
+    }
+  //  dump_controls(dev);
+  }
+
+static void free_controls(gavl_v4l2_device_t * dev)
+  {
+  int i;
+  if(!dev->controls)
+    return;
+  for(i = 0; i < dev->num_controls; i++)
+    {
+    if(dev->controls[i].menu_items)
+      free(dev->controls[i].menu_items);
+    }
+  free(dev->controls);
   }
 
 #if 0
@@ -380,64 +685,6 @@ static int formats_compressed(const gavl_array_t * arr)
     return 0;
   }
 
-typedef struct
-  {
-  int num_bufs;
-  gavl_v4l2_buffer_t bufs[MAX_BUFFERS]; // Output
-  gavl_v4l2_buffer_t * current_buf;
-  gavl_video_frame_t * vframe;
-  
-  gavl_packet_t packet;
-
-  int buf_type;
-  struct v4l2_format fmt;
-  struct v4l2_streamparm parm;
-  
-  gavl_video_format_t format;
-  gavl_compression_info_t ci;
-  
-  } port_t; // Output or capture
-
-struct gavl_v4l2_device_s
-  {
-  port_t output;
-  port_t capture;
-  
-  gavl_dictionary_t dev;
-  int fd;
-
-  int64_t pts;
-  gavl_timer_t * timer;
-  
-  int decoder_delay; // packets sent - frames read
-  
-  gavl_packet_t packet;
-
-  int timescale;
-
-  gavl_packet_source_t * psrc_src;
-  
-  gavl_packet_source_t * psrc_priv;
-  gavl_video_source_t * vsrc_priv;
-  gavl_video_sink_t * vsink_priv;
-  
-  //  gavl_packet_source_t * psrc_priv;
-  
-  gavl_packet_pts_cache_t * cache;
-  
-  int flags;
-
-  /* hwctx we belong to */
-  gavl_hw_context_t * hwctx;
-
-  gavl_dictionary_t * s; // Stream (not owned by us)
-  
-#ifdef HAVE_DRM
-  /* For importig DMA buffers */
-  gavl_hw_context_t * hwctx_dmabuf;
-#endif // HAVE_DRM
-  
-  };
 
 #define IS_PLANAR(buf_type) \
   ((buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) || (buf_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE))
@@ -839,6 +1086,10 @@ gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Couldn't open %s: %s", path, strerror(errno));
     goto fail;
     }
+  query_controls(ret);
+#ifdef DUMP_CONTROLS
+  dump_controls(ret);
+#endif
   
   return ret;
 
@@ -889,6 +1140,11 @@ static int stream_on(gavl_v4l2_device_t * dev, int type)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_STREAMON failed for %s: %s", buf_type_to_string(type), strerror(errno));
     return 0;
     }
+  if(IS_CAPTURE(type))
+    dev->flags |= CAPTURE_STREAM_ON;
+  else if(IS_OUTPUT(type))
+    dev->flags |= OUTPUT_STREAM_ON;
+  
   return 1;
   }
 
@@ -899,6 +1155,12 @@ static int stream_off(gavl_v4l2_device_t * dev, int type)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_STREAMOFF failed: %s", strerror(errno));
     return 0;
     }
+
+  if(IS_CAPTURE(type))
+    dev->flags &= ~CAPTURE_STREAM_ON;
+  else if(IS_OUTPUT(type))
+    dev->flags &= ~OUTPUT_STREAM_ON;
+  
   return 1;
   }
 
@@ -1506,6 +1768,213 @@ int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev)
   return 1;
   }
 
+static const str_int_map_t h264_profiles[] =
+  {
+    { GAVL_META_H264_PROFILE_BASELINE,                  V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE },
+    { GAVL_META_H264_PROFILE_CONSTRAINED_BASELINE,      V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE },
+    { GAVL_META_H264_PROFILE_MAIN,                      V4L2_MPEG_VIDEO_H264_PROFILE_MAIN },
+    { GAVL_META_H264_PROFILE_EXTENDED,                  V4L2_MPEG_VIDEO_H264_PROFILE_EXTENDED },
+    { GAVL_META_H264_PROFILE_HIGH,                      V4L2_MPEG_VIDEO_H264_PROFILE_HIGH },
+    { GAVL_META_H264_PROFILE_HIGH_10,                   V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10 },
+    { GAVL_META_H264_PROFILE_HIGH_422,                  V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_422 },
+    { GAVL_META_H264_PROFILE_HIGH_444_PREDICTIVE,       V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_PREDICTIVE },
+    { GAVL_META_H264_PROFILE_HIGH_10_INTRA,             V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10_INTRA },
+    { GAVL_META_H264_PROFILE_HIGH_422_INTRA,            V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_422_INTRA },
+    { GAVL_META_H264_PROFILE_HIGH_444_INTRA,            V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_444_INTRA },
+    { GAVL_META_H264_PROFILE_CAVLC_444_INTRA,           V4L2_MPEG_VIDEO_H264_PROFILE_CAVLC_444_INTRA },
+    { GAVL_META_H264_PROFILE_SCALABLE_BASELINE,         V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_BASELINE },
+    { GAVL_META_H264_PROFILE_SCALABLE_HIGH,             V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH },
+    { GAVL_META_H264_PROFILE_SCALABLE_HIGH_INTRA,       V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH_INTRA },
+    { GAVL_META_H264_PROFILE_STEREO_HIGH,               V4L2_MPEG_VIDEO_H264_PROFILE_STEREO_HIGH },
+    { GAVL_META_H264_PROFILE_MULTIVIEW_HIGH,            V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH },
+    { GAVL_META_H264_PROFILE_CONSTRAINED_HIGH,          V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH },
+    { /* */ }
+  };
+
+
+
+static const str_int_map_t h264_levels[] =
+  {
+    { "1", V4L2_MPEG_VIDEO_H264_LEVEL_1_0 },
+    { "1b",  V4L2_MPEG_VIDEO_H264_LEVEL_1B  },
+    { "1.1", V4L2_MPEG_VIDEO_H264_LEVEL_1_1 },
+    { "1.2", V4L2_MPEG_VIDEO_H264_LEVEL_1_2 },
+    { "1.3", V4L2_MPEG_VIDEO_H264_LEVEL_1_3 },
+    { "2", V4L2_MPEG_VIDEO_H264_LEVEL_2_0 },
+    { "2.1", V4L2_MPEG_VIDEO_H264_LEVEL_2_1 },
+    { "2.2", V4L2_MPEG_VIDEO_H264_LEVEL_2_2 },
+    { "3", V4L2_MPEG_VIDEO_H264_LEVEL_3_0 },
+    { "3.1", V4L2_MPEG_VIDEO_H264_LEVEL_3_1 },
+    { "3.2", V4L2_MPEG_VIDEO_H264_LEVEL_3_2 },
+    { "4", V4L2_MPEG_VIDEO_H264_LEVEL_4_0 },
+    { "4.1", V4L2_MPEG_VIDEO_H264_LEVEL_4_1 },
+    { "4.2", V4L2_MPEG_VIDEO_H264_LEVEL_4_2 },
+    { "5", V4L2_MPEG_VIDEO_H264_LEVEL_5_0 },
+    { "5.1", V4L2_MPEG_VIDEO_H264_LEVEL_5_1 },
+    { "5.2", V4L2_MPEG_VIDEO_H264_LEVEL_5_2 },
+    { "6", V4L2_MPEG_VIDEO_H264_LEVEL_6_0 },
+    { "6.1", V4L2_MPEG_VIDEO_H264_LEVEL_6_1 },
+    { "6.2", V4L2_MPEG_VIDEO_H264_LEVEL_6_2 },
+    { /* End */                             }
+  };
+
+static const str_int_map_t mpeg2_profiles[] =
+  {
+    //    { GAVL_META_MPEG2_PROFILE_422, 
+    { GAVL_META_MPEG2_PROFILE_HIGH,               V4L2_MPEG_VIDEO_MPEG2_PROFILE_HIGH },
+    { GAVL_META_MPEG2_PROFILE_SPATIALLY_SCALABLE, V4L2_MPEG_VIDEO_MPEG2_PROFILE_SPATIALLY_SCALABLE },
+    { GAVL_META_MPEG2_PROFILE_SNR_SCALABLE,       V4L2_MPEG_VIDEO_MPEG2_PROFILE_SNR_SCALABLE },
+    { GAVL_META_MPEG2_PROFILE_MAIN,               V4L2_MPEG_VIDEO_MPEG2_PROFILE_MAIN },
+    { GAVL_META_MPEG2_PROFILE_SIMPLE,             V4L2_MPEG_VIDEO_MPEG2_PROFILE_SIMPLE },
+    { }
+  };
+
+static const str_int_map_t mpeg2_levels[] =
+  {
+    { GAVL_META_MPEG2_LEVEL_HIGH,     V4L2_MPEG_VIDEO_MPEG2_LEVEL_HIGH },
+    { GAVL_META_MPEG2_LEVEL_HIGH1440, V4L2_MPEG_VIDEO_MPEG2_LEVEL_HIGH_1440 },
+    { GAVL_META_MPEG2_LEVEL_MAIN,     V4L2_MPEG_VIDEO_MPEG2_LEVEL_MAIN },
+    { GAVL_META_MPEG2_LEVEL_LOW,      V4L2_MPEG_VIDEO_MPEG2_LEVEL_LOW },
+    { }
+  };
+
+static const str_int_map_t mpeg4_profiles[] =
+  {
+    { GAVL_META_MPEG4_PROFILE_SIMPLE,          V4L2_MPEG_VIDEO_MPEG4_PROFILE_SIMPLE },
+    { GAVL_META_MPEG4_PROFILE_ADVANCED_SIMPLE, V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_SIMPLE },
+    { GAVL_META_MPEG4_PROFILE_CORE,            V4L2_MPEG_VIDEO_MPEG4_PROFILE_CORE },
+    { GAVL_META_MPEG4_PROFILE_SIMPLE_SCALABLE, V4L2_MPEG_VIDEO_MPEG4_PROFILE_SIMPLE_SCALABLE },
+    { GAVL_META_MPEG4_PROFILE_ADVANCED_CODING, V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_CODING_EFFICIENCY },
+    { }
+  };
+
+static const str_int_map_t mpeg4_levels[] =
+  {
+    { "0", V4L2_MPEG_VIDEO_MPEG4_LEVEL_0	},
+    //{ "", V4L2_MPEG_VIDEO_MPEG4_LEVEL_0B },
+    { "1", V4L2_MPEG_VIDEO_MPEG4_LEVEL_1 },
+    { "2", V4L2_MPEG_VIDEO_MPEG4_LEVEL_2 },
+    { "3", V4L2_MPEG_VIDEO_MPEG4_LEVEL_3 },
+    //    { "", V4L2_MPEG_VIDEO_MPEG4_LEVEL_3B },
+    { "4", V4L2_MPEG_VIDEO_MPEG4_LEVEL_4 },
+    { "5", V4L2_MPEG_VIDEO_MPEG4_LEVEL_5 },
+    { }
+  };
+
+static int str_to_int(const str_int_map_t * map,
+                      const char * str, int * ret)
+  {
+  int idx = 0;
+  while(map[idx].gavl)
+    {
+    if(!strcmp(map[idx].gavl, str))
+      {
+      *ret = map[idx].v4l2;
+      return 1;
+      }
+    idx++;
+    }
+  return 0;
+  }
+
+static int check_str(const gavl_v4l2_device_t * dev,
+                      const char * str,
+                      const str_int_map_t * map,
+                      int control_id, int profile)
+  {
+  int id = 0;
+  const gavl_v4l2_control_t * ctrl;
+  char * var = profile ? "profile" : "level";
+  
+  if(!str_to_int(map, str, &id))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unkown %s: %s", var,
+             str);
+    return 0;
+    }
+  
+  if(!(ctrl = control_by_id(dev, control_id)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Control for %s missing", var);
+    return 0;
+    }
+  
+  if(!item_by_id(ctrl, id))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "%s %s not supported", var, str);
+    return 0;
+    }
+  return 1;
+  }
+
+static int check_compat(const gavl_dictionary_t * device,
+                        const gavl_dictionary_t * dict, gavl_codec_id_t codec_id)
+  {
+  const char * profile;
+  const char * level;
+  int ret = 0;
+  gavl_v4l2_device_t * dev = NULL;
+  
+  if(dict)
+    {
+    gavl_compression_info_t ci;
+    gavl_compression_info_init(&ci);
+    if(!gavl_stream_get_compression_info(dict, &ci))
+      goto fail;
+    codec_id = ci.id;
+    } 
+  
+  if(!(dict = gavl_stream_get_metadata(dict)))
+    goto fail;
+  
+  if(!(profile = gavl_dictionary_get_string(dict, GAVL_META_PROFILE)))
+    goto fail;
+
+  if(!(level = gavl_dictionary_get_string(dict, GAVL_META_LEVEL)))
+    goto fail;
+
+  dev = gavl_v4l2_device_open(device);
+  
+  switch(codec_id)
+    {
+    case GAVL_CODEC_ID_JPEG:
+      /* Always supoported? */
+      break;
+    case GAVL_CODEC_ID_MPEG2:
+      if(!check_str(dev, profile, mpeg2_profiles,
+                    V4L2_CID_MPEG_VIDEO_MPEG2_PROFILE, 1) ||
+         !check_str(dev, level, mpeg2_levels,
+                    V4L2_CID_MPEG_VIDEO_MPEG2_LEVEL, 0))
+        goto fail;
+      break;
+    case GAVL_CODEC_ID_MPEG4_ASP:
+      if(!check_str(dev, profile, mpeg4_profiles,
+                    V4L2_CID_MPEG_VIDEO_MPEG4_PROFILE, 1) ||
+         !check_str(dev, level, mpeg4_levels,
+                    V4L2_CID_MPEG_VIDEO_MPEG4_LEVEL, 0))
+        goto fail;
+      break;
+    case GAVL_CODEC_ID_H264:
+      if(!check_str(dev, profile, h264_profiles,
+                    V4L2_CID_MPEG_VIDEO_H264_PROFILE, 1) ||
+         !check_str(dev, level, h264_levels,
+                    V4L2_CID_MPEG_VIDEO_H264_LEVEL, 0))
+        goto fail;
+      break;
+    default:
+      goto fail;
+      break;
+    }
+
+  ret = 1;
+  fail:
+
+  if(dev)
+    gavl_v4l2_device_close(dev);
+  
+  return ret;
+  }
+
 int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
                                   gavl_packet_source_t * psrc)
   {
@@ -1551,7 +2020,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no compression info");
     goto fail;
     }
-
+  
   //  if(ci.flags & GAVL_COMPRESSION_HAS_P_FRAMES)
   //    {
     sub.type = V4L2_EVENT_EOS;
@@ -2095,9 +2564,11 @@ int gavl_v4l2_device_get_fd(gavl_v4l2_device_t * dev)
 
 void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   {
-  stream_off(dev, dev->output.buf_type);
-  stream_off(dev, dev->capture.buf_type);
-
+  if(dev->flags & CAPTURE_STREAM_ON)
+    stream_off(dev, dev->capture.buf_type);
+  if(dev->flags & OUTPUT_STREAM_ON)
+    stream_off(dev, dev->output.buf_type);
+  
 #ifdef HAVE_DRM  
   if(dev->hwctx_dmabuf)
     release_buffers_dmabuf(dev, dev->output.buf_type, dev->output.num_bufs, dev->output.bufs);
@@ -2135,7 +2606,8 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   
   if(dev->timer)
     gavl_timer_destroy(dev->timer);
-
+  
+  free_controls(dev);
   free(dev);
   }
 
@@ -2187,12 +2659,11 @@ int v4l_device_init_encoder(gavl_v4l2_device_t * dev,
 
 int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev)
   {
-  int fd;
   gavl_v4l2_device_type_t type;
   struct v4l2_capability cap;
   gavl_array_t * src_formats;
   gavl_array_t * sink_formats;
-  
+  int fd;
   
   memset(&cap, 0, sizeof(cap));
   
@@ -2205,6 +2676,8 @@ int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev)
              path, strerror(errno));
     return 0;
     }
+
+  //  query_controls(fd);
   
   if(my_ioctl(fd, VIDIOC_QUERYCAP, &cap) == -1)
     {
@@ -2304,6 +2777,8 @@ int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev)
   gavl_dictionary_set_string(dev, GAVL_V4L2_TYPE_STRING, get_type_label(type));
 
   /* Query controls */
+
+  //  query_controls(fd, NULL);
   
   close(fd);
   
@@ -2340,17 +2815,25 @@ void gavl_v4l2_devices_scan_by_type(int type_mask, gavl_array_t * ret)
   globfree(&g);
   }
 
-const gavl_dictionary_t * gavl_v4l2_get_decoder(const gavl_array_t * arr, gavl_codec_id_t id)
+const gavl_dictionary_t * gavl_v4l2_get_decoder(const gavl_array_t * arr, gavl_codec_id_t id, const gavl_dictionary_t * stream)
   {
   int i, j;
-
   const gavl_array_t * formats;
-  
+
   const gavl_dictionary_t * dev;
   const gavl_dictionary_t * fmt;
-
+    
   int type = GAVL_V4L2_DEVICE_UNKNOWN;
   int codec_id;
+
+  if(stream)
+    {
+    gavl_compression_info_t ci;
+    gavl_compression_info_init(&ci);
+    gavl_stream_get_compression_info(stream, &ci);
+    id = ci.id;
+    gavl_compression_info_free(&ci);
+    }
   
   for(i = 0; i < arr->num_entries; i++)
     {
@@ -2364,7 +2847,10 @@ const gavl_dictionary_t * gavl_v4l2_get_decoder(const gavl_array_t * arr, gavl_c
         if((fmt = gavl_value_get_dictionary(&formats->entries[j])) &&
            gavl_dictionary_get_int(fmt, GAVL_V4L2_FORMAT_GAVL_CODEC_ID, &codec_id) &&
            (codec_id == id))
-          return dev;
+          {
+          if(!stream || check_compat(dev, stream, GAVL_CODEC_ID_NONE))
+            return dev;
+          }
         }
       }
     }

@@ -63,6 +63,13 @@ typedef struct
   int bytesused; // For packets
   } gavl_v4l2_buffer_t;
 
+typedef struct
+  {
+  struct v4l2_query_ext_ctrl ctrl;
+  struct v4l2_querymenu * menu_items;
+  int num_menu_items;
+  } gavl_v4l2_control_t;
+
 
 /*
  * Metadata tags for devices.
@@ -110,9 +117,11 @@ GAVL_PUBLIC void gavl_v4l2_device_close(gavl_v4l2_device_t * dev);
 
 GAVL_PUBLIC int gavl_v4l2_device_get_fd(gavl_v4l2_device_t * dev);
 
+GAVL_PUBLIC const gavl_v4l2_control_t *
+gavl_v4l2_device_get_controls(gavl_v4l2_device_t * dev, int * num_controls);
 
-GAVL_PUBLIC const gavl_dictionary_t * gavl_v4l2_get_decoder(const gavl_array_t * arr, gavl_codec_id_t id);
-
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_v4l2_get_decoder(const gavl_array_t * arr, gavl_codec_id_t id, const gavl_dictionary_t * stream);
 
 GAVL_PUBLIC gavl_packet_sink_t * gavl_v4l2_device_get_packet_sink(gavl_v4l2_device_t * dev);
 
