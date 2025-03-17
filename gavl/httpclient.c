@@ -893,6 +893,8 @@ static int prepare_connection(gavl_io_t * io,
   if((c->flags & FLAG_GOT_REDIRECTION) &&
      c->redirect_uri)
     c->real_uri = c->redirect_uri;
+  else
+    c->real_uri = c->uri;
   
   if(c->io_int)
     {
@@ -1222,6 +1224,11 @@ static int handle_response(gavl_io_t * io)
     
     if(location)
       {
+      if(!c->real_uri)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Bug: Need to create an absolute uri but real_uri is not set");
+        goto fail;
+        }
       new_uri = gavl_get_absolute_uri(location, c->real_uri);
       }
     else
@@ -1543,6 +1550,7 @@ int gavl_http_client_run_async(gavl_io_t * io,
   c->method = gavl_strrep(c->method, method);
   c->uri = gavl_strrep(c->uri, uri);
   c->uri = gavl_url_extract_http_vars(c->uri, &c->vars_from_uri);
+  /* Needs to be set again after close_connection or reset_connection */
   c->real_uri = c->uri;
 
   //  fprintf(stderr, "gavl_http_client_run_async %s %s\n", c->uri, c->real_uri);
