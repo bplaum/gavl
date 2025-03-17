@@ -77,22 +77,31 @@
 #define GAVL_MSG_PROGRESS      101
 
 /**
- *  \brief Ressource added
+ *  \brief Resource added
  *  context_id: ID (string)
  *
- *  arg0: Added ressource (dictionary)
+ *  arg0: Added resource (dictionary)
  *
  */
 
 #define GAVL_MSG_RESOURCE_ADDED    102
 
 /**
- *  \brief Ressource deleted
+ *  \brief Resource deleted
  *
  *  context_id: ID (string)
  */
 
 #define GAVL_MSG_RESOURCE_DELETED  103
+
+/**
+ *  \brief Command for changing a resource (e.g. a sink)
+ *
+ *  context_id: Object class of the resource
+ *  arg0: resource (dictionary)
+ */
+
+#define GAVL_CMD_SET_RESOURCE      104
 
 /*
  *  GAVL_MSG_NS_SRC
