@@ -20,12 +20,15 @@
 
 
 
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
 
 #include <vaapi.h>
 #include <gavl/hw_vaapi.h>
+#include <gavl/metatags.h>
+#include <gavl/trackinfo.h>
 
 // #define DUMP_FORMATS
 
@@ -637,4 +640,118 @@ void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
                                     gavl_video_format_t * fmt)
   {
   gavl_video_format_set_frame_size(fmt, 16, 16);
+  }
+
+typedef struct
+  {
+  VAProfile va;
+  const char * gavl;
+  } profile_map_t;  
+
+static const profile_map_t h264_profiles[] =
+  {
+    //    { VAProfileH264Baseline, GAVL_META_H264_PROFILE_BASELINE             },
+    //    { VAProfileH264Baseline, GAVL_META_H264_PROFILE_CONSTRAINED_BASELINE },
+    { VAProfileH264Main,     GAVL_META_H264_PROFILE_MAIN                 },
+    
+    { VAProfileH264High,     GAVL_META_H264_PROFILE_HIGH },
+    { VAProfileH264High,     GAVL_META_H264_PROFILE_CONSTRAINED_HIGH },
+    { },
+  };
+
+static const profile_map_t mpeg2_profiles[] =
+  {
+    { VAProfileMPEG2Simple, GAVL_META_MPEG2_LEVEL_LOW },
+    { VAProfileMPEG2Main, GAVL_META_MPEG2_LEVEL_MAIN },
+    { },
+  };
+
+static const profile_map_t mpeg4_profiles[] =
+  {
+    { VAProfileMPEG4Simple,         GAVL_META_MPEG4_PROFILE_SIMPLE          },
+    { VAProfileMPEG4AdvancedSimple, GAVL_META_MPEG4_PROFILE_ADVANCED_SIMPLE },
+    { VAProfileMPEG4Main,           GAVL_META_MPEG4_PROFILE_MAIN            },
+    { }
+  };
+    
+VAProfile gavl_vaapi_get_profile(const gavl_dictionary_t * dict)
+  {
+  int i;
+  const char * profile;
+  const profile_map_t * map = NULL;
+  gavl_codec_id_t id;
+  gavl_compression_info_t ci;
+  gavl_compression_info_init(&ci);
+  
+  if(!gavl_stream_get_compression_info(dict, &ci))
+    return VAProfileNone;
+  id = ci.id;
+  gavl_compression_info_free(&ci);
+
+  switch(id)
+    {
+    case GAVL_CODEC_ID_MPEG2:
+      map = mpeg2_profiles;
+      break;
+    case GAVL_CODEC_ID_MPEG4_ASP:
+      map = mpeg4_profiles;
+      break;
+    case GAVL_CODEC_ID_H264:
+      map = h264_profiles;
+      break;
+    default:
+      break;
+    }
+
+  if(!map)
+    return VAProfileNone;
+  
+  if(!(dict = gavl_stream_get_metadata(dict)))
+    return VAProfileNone;
+
+  if(!(profile = gavl_dictionary_get_string(dict, GAVL_META_PROFILE)))
+    return VAProfileNone;
+  
+  i = 0;
+  while(map[i].gavl)
+    {
+    if(!strcmp(profile, map[i].gavl))
+      return map[i].va;
+    }
+  
+  return VAProfileNone;
+  }
+  
+int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * dict)
+  {
+  int i;
+  int ret = 0;
+  VAProfile profile;
+  int num_entrypoints = 0;
+  VAEntrypoint *entrypoints = NULL;
+  
+  if((profile = gavl_vaapi_get_profile(dict)) == VAProfileNone)
+    return 0;
+
+  entrypoints = calloc(vaMaxNumEntrypoints(dpy), sizeof(*entrypoints));
+
+  vaQueryConfigEntrypoints(dpy,
+                           profile,
+                           entrypoints,  /* out */
+                           &num_entrypoints);        /* out */
+
+  for(i = 0; i < num_entrypoints; i++)
+    {
+    if(entrypoints[i] == VAEntrypointVLD)
+      {
+      ret = 1;
+      break;
+      }
+    }
+  
+  if(entrypoints)
+    free(entrypoints);
+
+  return ret;
+  
   }

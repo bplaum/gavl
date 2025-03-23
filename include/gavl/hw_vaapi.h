@@ -46,4 +46,9 @@ GAVL_PUBLIC void gavl_vaapi_video_frame_swap_bytes(const gavl_video_format_t * f
                                                    gavl_video_frame_t * f,
                                                    int to_gavl);
 
+GAVL_PUBLIC VAProfile gavl_vaapi_get_profile(const gavl_dictionary_t * dict);
+
+GAVL_PUBLIC int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * dict);
+
+
 #endif // GAVL_HW_VAAPI_H_INCLUDED
