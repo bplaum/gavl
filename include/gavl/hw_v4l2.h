@@ -38,6 +38,7 @@ typedef enum
    GAVL_V4L2_DEVICE_ENCODER   = (1<<2),
    GAVL_V4L2_DEVICE_DECODER   = (1<<3),
    GAVL_V4L2_DEVICE_CONVERTER = (1<<4),
+   GAVL_V4L2_DEVICE_LOOPBACK  = (1<<5),
   } gavl_v4l2_device_type_t;
 
 /* Video frames have a gavl_v4l2_buffer_t as storage */
@@ -46,21 +47,27 @@ typedef struct
   {
   /* MMapped frame */
   void * buf;
-  size_t size;   // For munmap
+  //  size_t size;   // For munmap
   } gavl_v4l2_plane_t;
 
 typedef struct
   {
-  int type;
-  int index;
+  //  int type;
+  //  int index;
   int total; /* Total number of buffers */
   
-  gavl_v4l2_plane_t planes[GAVL_MAX_PLANES];
-  int num_planes;
-
-  int flags;
+  //  gavl_v4l2_plane_t planes[GAVL_MAX_PLANES];
+  //  int num_planes;
   
+  int flags;
   int bytesused; // For packets
+
+  struct v4l2_buffer buf;
+  struct v4l2_plane planes[GAVL_MAX_PLANES];
+
+  /* mmapped pointers */
+  void * ptrs[GAVL_MAX_PLANES];
+  
   } gavl_v4l2_buffer_t;
 
 typedef struct
@@ -80,9 +87,10 @@ typedef struct
  *
  */
 
-#define GAVL_V4L2_TYPE       "type"
-#define GAVL_V4L2_TYPE_STRING "typestr"
+#define GAVL_V4L2_TYPE         "type"
+#define GAVL_V4L2_TYPE_STRING  "typestr"
 #define GAVL_V4L2_CAPABILITIES "caps"
+#define GAVL_V4L2_DRIVER       "driver"
 
 #define GAVL_V4L2_SRC_FORMATS  "src_fmts"
 #define GAVL_V4L2_SINK_FORMATS "sink_fmts"
@@ -108,11 +116,6 @@ GAVL_PUBLIC uint32_t gavl_v4l2_codec_id_to_pix_fmt(gavl_codec_id_t id);
 GAVL_PUBLIC int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev);
 
 
-// GAVL_PUBLIC gavl_packet_t * gavl_v4l2_device_get_packet_write(gavl_v4l2_device_t * dev);
-// GAVL_PUBLIC gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t * dev);
-// GAVL_PUBLIC gavl_source_status_t gavl_v4l2_device_read_frame(gavl_v4l2_device_t * dev, gavl_video_frame_t ** frame);
-
-
 GAVL_PUBLIC void gavl_v4l2_device_close(gavl_v4l2_device_t * dev);
 
 GAVL_PUBLIC int gavl_v4l2_device_get_fd(gavl_v4l2_device_t * dev);
@@ -132,12 +135,14 @@ GAVL_PUBLIC gavl_video_source_t * gavl_v4l2_device_get_video_source(gavl_v4l2_de
 GAVL_PUBLIC int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * dict);
 GAVL_PUBLIC int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev);
 
+GAVL_PUBLIC int gavl_v4l2_device_init_output(gavl_v4l2_device_t * dev,
+                                             gavl_video_format_t * fmt);
 
 GAVL_PUBLIC int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream,
                                               gavl_packet_source_t * psrc);
 
 GAVL_PUBLIC int gavl_v4l2_device_init_converter(gavl_v4l2_device_t * dev,
-                                                const gavl_video_format_t * in_format,
+                                                gavl_video_format_t * in_format,
                                                 gavl_video_format_t * out_format);
 
 GAVL_PUBLIC void gavl_v4l2_device_resync_decoder(gavl_v4l2_device_t * dev);
