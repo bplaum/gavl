@@ -677,3 +677,28 @@ void gavl_audio_frame_from_data(gavl_audio_frame_t * f,
   for(i = 0; i < format->num_channels; i++)
     f->channels.u_8[i] = data + i * stride;
   }
+
+
+void gavl_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
+                                         gavl_packet_t * pkt)
+  {
+  pkt->pts = frame->timestamp;
+  pkt->duration = frame->valid_samples;
+  }
+
+void gavl_packet_to_audio_frame_metadata(const gavl_packet_t * p,
+                                         gavl_audio_frame_t * frame)
+  {
+  frame->timestamp     = p->pts;
+  frame->valid_samples = p->duration;
+  }
+
+void gavl_audio_frame_set_from_packet(gavl_audio_frame_t * frame,
+                                      const gavl_audio_format_t * format,
+                                      gavl_packet_t * p)
+  {
+  gavl_packet_to_audio_frame_metadata(p, frame);
+  gavl_packet_alloc(p, gavl_audio_format_buffer_size(format));
+
+  gavl_audio_frame_from_data(frame, format, p->buf.buf, p->buf.len);
+  }
