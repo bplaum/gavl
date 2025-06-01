@@ -301,6 +301,7 @@ gavl_chroma_placement_t gavl_short_string_to_chroma_placement(const char * mode)
   return chroma_placement_tab[0].mode;
   }
 
+
 void gavl_video_format_get_chroma_offset(const gavl_video_format_t * format,
                                          int field, int plane,
                                          float * off_x, float * off_y)
@@ -420,6 +421,62 @@ int gavl_video_format_get_image_size(const gavl_video_format_t * format)
     }
   return ret;
   }
+
+void gavl_video_format_get_frame_layout(const gavl_video_format_t * format,
+                                        int * offsets,
+                                        int * strides,
+                                        int * buffersizes,
+                                        int multiplane)
+  {
+  int i;
+  int num_planes;
+  int bytes_per_line;
+  int height;
+  int sub_h = 0, sub_v = 0;
+  int size;
+  int64_t off = 0;
+  num_planes = gavl_pixelformat_num_planes(format->pixelformat);
+  bytes_per_line = (num_planes > 1) ?
+    format->frame_width * gavl_pixelformat_bytes_per_component(format->pixelformat) :
+    format->frame_width * gavl_pixelformat_bytes_per_pixel(format->pixelformat);
+  
+  gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
+  
+  height = format->frame_height;
+
+  size = bytes_per_line * height;
+  
+  for(i = 0; i < num_planes; i++)
+    {
+    if(strides)
+      strides[i] = bytes_per_line;
+
+    if(offsets)
+      {
+      if(multiplane)
+        offsets[i] = 0;
+      else
+        offsets[i] = off;
+      }
+
+    if(buffersizes && multiplane)
+      buffersizes[i] = size;
+
+    off += size;
+    
+    if(!i)
+      {
+      bytes_per_line /= sub_h;
+      size /= (sub_h*sub_v);
+      }
+    
+    }
+
+  if(buffersizes && !multiplane)
+    buffersizes[0] = off;
+  
+  }
+
 
 void gavl_get_field_format(const gavl_video_format_t * frame_format,
                            gavl_video_format_t * field_format,

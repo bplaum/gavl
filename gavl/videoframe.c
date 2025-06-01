@@ -128,7 +128,7 @@ void gavl_video_frame_destroy(gavl_video_frame_t * frame)
   {
   if(frame->hwctx)
     {
-    gavl_hw_destroy_video_frame(frame->hwctx, frame);
+    gavl_hw_destroy_video_frame(frame->hwctx, frame, 1);
     return;
     }
   
@@ -1570,54 +1570,50 @@ void gavl_video_frame_copy_metadata(gavl_video_frame_t * dst,
 void gavl_video_frame_set_strides(gavl_video_frame_t * frame,
                                   const gavl_video_format_t * format)
   {
-  int i;
-  int bytes_per_line;
-  int sub_h, sub_v;
-  int num_planes = gavl_pixelformat_num_planes(format->pixelformat);
-  bytes_per_line = (num_planes > 1) ?
-    format->frame_width * gavl_pixelformat_bytes_per_component(format->pixelformat) :
-    format->frame_width * gavl_pixelformat_bytes_per_pixel(format->pixelformat);
-
-  gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
-
-  for(i = 0; i < num_planes; i++)
-    {
-    frame->strides[i] = bytes_per_line;
-    if(i)
-      frame->strides[i] /= sub_h;
-    }
+  gavl_video_format_get_frame_layout(format,
+                                     NULL,
+                                     frame->strides,
+                                     NULL,
+                                     0);
   }
   
 void gavl_video_frame_set_planes(gavl_video_frame_t * frame,
                                  const gavl_video_format_t * format,
                                  uint8_t * buffer)
   {
+  int offsets[GAVL_MAX_PLANES];
+  
   int i;
-  int sub_h, sub_v;
-  int advance;
   int num_planes;
-  if(!frame->strides[0])
-    gavl_video_frame_set_strides(frame, format);
+
+  gavl_video_format_get_frame_layout(format,
+                                     offsets,
+                                     frame->strides,
+                                     NULL,
+                                     0);
 
   if(buffer)
     {
     num_planes = gavl_pixelformat_num_planes(format->pixelformat);
-    gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
-  
+    
     for(i = 0; i < num_planes; i++)
-      {
-      frame->planes[i] = buffer;
-      advance = frame->strides[i] * format->frame_height;
-      if(i)
-        advance /= sub_v;
-      buffer += advance;
-      }
+      frame->planes[i] = buffer + offsets[i];
     }
   else
     {
     video_frame_alloc(frame, format, 0);
     }
   }
+
+void gavl_video_frame_set_from_packet(gavl_video_frame_t * frame,
+                                      const gavl_video_format_t * format,
+                                      gavl_packet_t * p)
+  {
+  gavl_packet_to_video_frame_metadata(p, frame);
+  gavl_packet_alloc(p, gavl_video_format_get_image_size(format));
+  gavl_video_frame_set_planes(frame, format, p->buf.buf);
+  }
+  
 
 int gavl_video_frames_equal(const gavl_video_format_t * format,
                             const gavl_video_frame_t * f1,
@@ -1659,41 +1655,27 @@ int gavl_video_frame_continuous(const gavl_video_format_t * format,
                                 const gavl_video_frame_t * frame)
   {
   int i;
-  int bytes_per_line;
-  int bytes_per_plane;
-  int sub_h, sub_v;
+
+  int offsets[GAVL_MAX_PLANES];
+  int strides[GAVL_MAX_PLANES];
   
   int planes = gavl_pixelformat_num_planes(format->pixelformat);
 
-  if(planes > 1)
-    bytes_per_line = format->frame_width * gavl_pixelformat_bytes_per_component(format->pixelformat);
-  else
-    bytes_per_line = format->frame_width * gavl_pixelformat_bytes_per_pixel(format->pixelformat);
+  gavl_video_format_get_frame_layout(format,
+                                     offsets,
+                                     strides,
+                                     NULL,
+                                     0);
   
-  if(frame->strides[0] != bytes_per_line)
-    return 0;
-  
-  if(planes == 1)
-    return 1;
-
-  gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
-  bytes_per_plane = bytes_per_line * format->frame_height;
-  
-  for(i = 1; i < planes; i++)
+  for(i = 0; i < planes; i++)
     {
-    if(frame->planes[i] - frame->planes[i-1] != bytes_per_plane)
+    if(frame->strides[i] != strides[i])
       return 0;
-    
-    if(i == 1)
-      {
-      bytes_per_line /= sub_h;
-      bytes_per_plane = bytes_per_line * (format->frame_height / sub_v);
-      }
 
-    if(frame->strides[i] != bytes_per_line)
+    if(i && (int)(frame->planes[i] - frame->planes[0]) != offsets[i])
       return 0;
-        
     }
+  
   return 1;
   }
 
@@ -1747,7 +1729,6 @@ void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_fra
   gavl_rectangle_i_copy(&frame->src_rect, &p->src_rect);
   frame->dst_x = p->dst_x;
   frame->dst_y = p->dst_y;
-  
   }
 
 

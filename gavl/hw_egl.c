@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,18 +50,6 @@
 #define EGL_PLATFORM_X11_EXT 0x31D5
 #endif
 
-#ifdef HAVE_DRM_DRM_FOURCC_H 
-#include <drm/drm_fourcc.h>
-#define HAVE_DRM
-#else // !HAVE_DRM_DRM_FOURCC_H 
-
-#ifdef HAVE_LIBDRM_DRM_FOURCC_H 
-#include <libdrm/drm_fourcc.h>
-#define HAVE_DRM
-#endif
-
-#endif // !HAVE_DRM_DRM_FOURCC_H 
-
 #ifdef HAVE_DRM
 #include <gavl/hw_v4l2.h>
 #include <gavl/hw_dmabuf.h>
@@ -73,6 +59,8 @@
 #define GL_TEXTURE_EXTERNAL_OES 0x8D65
 #endif
 
+static const char* egl_strerror(EGLint error);
+
 #ifdef HAVE_DRM
 static int egl_import_dmabuf(gavl_hw_context_t * ctx,
                              const gavl_video_format_t * fmt,
@@ -80,13 +68,13 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
                              gavl_video_frame_t * dst);
 #endif
 
-
 typedef struct
   {
   EGLDisplay display;
   EGLConfig  config;
   EGLContext  context;
-
+  GLint max_texture_size;
+  
   /* If off-screen rendering is used */
   EGLSurface surf;
 
@@ -96,6 +84,7 @@ typedef struct
   void * native_display;
   void * native_display_priv;
 
+  
   /* Function pointers */
 
   /* Originally the last argument the next 2 functions  const EGLAttrib*.
@@ -105,8 +94,12 @@ typedef struct
    */
   
   EGLDisplay (*eglGetPlatformDisplay)(EGLenum, void *, const void*);
-  EGLSurface (*eglCreatePlatformWindowSurface)(EGLDisplay, EGLConfig, void *, const void*);
 
+  EGLSurface (*eglCreatePlatformWindowSurface)(EGLDisplay, EGLConfig,
+                                               void *, const void*);
+
+  
+  
   void * (*eglCreateImage)(EGLDisplay dpy, EGLContext ctx, EGLenum target,
                            EGLClientBuffer buffer, const EGLint *attrib_list);
   
@@ -114,7 +107,11 @@ typedef struct
 
   void (*glEGLImageTargetTexture2DOES)(GLenum target, void * image);
 
-
+  EGLBoolean (*eglQueryDmaBufFormatsEXT)(EGLDisplay dpy,
+                                         EGLint max_formats,
+                                         EGLint *formats,
+                                         EGLint *num_formats);
+  
   EGLBoolean (*eglExportDMABUFImageQueryMESA)(EGLDisplay dpy,
                                               EGLImageKHR image,
                                               int *fourcc,
@@ -126,7 +123,20 @@ typedef struct
                                          int *fds,
                                          EGLint *strides,
                                          EGLint *offsets);
+
   
+  EGLSync (*eglCreateSyncKHR)(EGLDisplay display,
+                              EGLenum type,
+                              EGLAttrib const * attrib_list);
+
+  
+  EGLint (*eglClientWaitSyncKHR)(EGLDisplay dpy,
+                                 EGLSyncKHR sync,
+                                 EGLint flags,
+                                 EGLTimeKHR timeout);
+
+  EGLBoolean (*eglDestroySyncKHR)(EGLDisplay dpy,
+                                  EGLSyncKHR sync);
   
   } egl_t;
 
@@ -143,10 +153,9 @@ static void destroy_native_egl(void * native)
   
   free(priv);
   }
-  
 
-static gavl_video_frame_t * video_frame_create_hw_egl(gavl_hw_context_t * ctx,
-                                                      gavl_video_format_t * fmt)
+static gavl_video_frame_t *
+video_frame_create_hw_egl(gavl_hw_context_t * ctx, int alloc_resource)
   {
   gavl_video_frame_t * ret;
   
@@ -154,44 +163,50 @@ static gavl_video_frame_t * video_frame_create_hw_egl(gavl_hw_context_t * ctx,
   //  gavl_video_format_dump(fmt);
   
   gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
-  ret = gavl_gl_create_frame(fmt);
+
+  if(alloc_resource)
+    ret = gavl_gl_create_frame(&ctx->vfmt);
+  else
+    ret = gavl_gl_create_frame(NULL);
+  
   gavl_hw_egl_unset_current(ctx);
   return ret;
   }
 
-static void video_frame_destroy_egl(gavl_video_frame_t * f)
+
+static void video_frame_destroy_egl(gavl_video_frame_t * f, int destroy_resource)
   {
   gavl_hw_context_t * hw = f->hwctx;
   gavl_hw_egl_set_current(hw, EGL_NO_SURFACE);
-  gavl_gl_destroy_frame(f);
+  gavl_gl_destroy_frame(f, destroy_resource);
   gavl_hw_egl_unset_current(hw);
   return;
   }
 
-static int video_frame_to_ram_egl(const gavl_video_format_t * fmt,
-                                  gavl_video_frame_t * dst,
+static int video_frame_to_ram_egl(gavl_video_frame_t * dst,
                                   gavl_video_frame_t * src)
   {
   gavl_hw_egl_set_current(src->hwctx, EGL_NO_SURFACE);
-  gavl_gl_frame_to_ram(fmt, dst, src);
+  gavl_gl_frame_to_ram(&src->hwctx->vfmt, dst, src);
   gavl_hw_egl_unset_current(src->hwctx);
   return 1;
   }
 
-static int video_frame_to_hw_egl(const gavl_video_format_t * fmt,
-                                 gavl_video_frame_t * dst,
+static int video_frame_to_hw_egl(gavl_video_frame_t * dst,
                                  gavl_video_frame_t * src)
   {
   gavl_hw_egl_set_current(dst->hwctx, EGL_NO_SURFACE);
-  gavl_gl_frame_to_hw(fmt, dst, src);
+  gavl_gl_frame_to_hw(&dst->hwctx->vfmt, dst, src);
   gavl_hw_egl_unset_current(dst->hwctx);
   return 1;
   }
 
-static int exports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+static int exports_type_egl(gavl_hw_context_t * ctx, const gavl_hw_context_t * to)
   {
   const char * extensions;
   egl_t * priv = ctx->native;
+  gavl_hw_type_t hw = gavl_hw_ctx_get_type(to);
+
   extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
   
   switch(hw)
@@ -206,34 +221,20 @@ static int exports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
   return 0;
   }
 
-static int imports_type_egl(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+static int imports_type_egl(gavl_hw_context_t * ctx, const gavl_hw_context_t * from)
   {
   const char * extensions;
   egl_t * priv = ctx->native;
+  gavl_hw_type_t hw = gavl_hw_ctx_get_type(from);
   extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
   
   switch(hw)
     {
-    case GAVL_HW_DMABUFFER:
-      if(strstr(extensions, "EGL_EXT_image_dma_buf_import"))
-        return 1;
-      break;
-    default:
-      break;
-    }
-  return 0;
-  }
-
-static int import_video_frame_egl(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
-                                  gavl_video_frame_t * src, gavl_video_frame_t * dst)
-  {
-  gavl_hw_type_t src_hw_type = gavl_hw_ctx_get_type(src->hwctx);
-  
-  switch(src_hw_type)
-    {
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
-      return egl_import_dmabuf(ctx, fmt, src, dst);
+      if(strstr(extensions, "EGL_EXT_image_dma_buf_import") &&
+         strstr(extensions, "EGL_EXT_image_dma_buf_import_modifiers"))
+        return 1;
       break;
 #endif
     default:
@@ -242,17 +243,99 @@ static int import_video_frame_egl(gavl_hw_context_t * ctx, const gavl_video_form
   return 0;
   }
 
+static int import_video_frame_egl(const gavl_video_format_t * vfmt,
+                                  gavl_video_frame_t * src,
+                                  gavl_video_frame_t * dst)
+  {
+  gavl_hw_type_t src_hw_type = gavl_hw_ctx_get_type(src->hwctx);
+  
+  switch(src_hw_type)
+    {
+#ifdef HAVE_DRM
+    case GAVL_HW_DMABUFFER:
+      return egl_import_dmabuf(dst->hwctx, vfmt, src, dst);
+      break;
+#endif
+    default:
+      break;
+    }
+  return 0;
+  }
+
+static int get_num_dma_import_formats(gavl_hw_context_t * ctx)
+  {
+#ifdef HAVE_DRM
+  egl_t * priv = ctx->native;
+  EGLint num_formats;
+  const char * extensions;
+
+  if(ctx->type != GAVL_HW_EGL_GLES_X11)
+    return 0;
+  
+  extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
+
+  if(strstr(extensions, "EGL_EXT_image_dma_buf_import_modifiers"))
+    {
+    if(priv->eglQueryDmaBufFormatsEXT(priv->display, 0, NULL, &num_formats))
+      return num_formats;
+    }
+#endif
+  return 0;
+  }
+
+uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx)
+  {
+  EGLint *formats = NULL;
+#ifdef HAVE_DRM
+  int i = 0;
+  EGLint max_formats;
+  egl_t * priv = ctx->native;
+  int num_formats = get_num_dma_import_formats(ctx);
+  
+  if(!num_formats)
+    return NULL;
+
+  formats = calloc(num_formats+1, sizeof(*formats));
+  max_formats = num_formats;
+  
+  priv->eglQueryDmaBufFormatsEXT(priv->display, max_formats, formats, &num_formats);
+
+  while(i < num_formats)
+    {
+    if(gavl_drm_pixelformat_from_fourcc(formats[i], NULL, NULL) == GAVL_PIXELFORMAT_NONE)
+      {
+      /* We move the trailing zero */
+      memmove(formats + i, formats + i + 1, (num_formats - i)*sizeof(*formats));
+      num_formats--;
+      }
+    else
+      i++;
+    }
+#endif
+  return (uint32_t*)formats;
+  }
+
+static gavl_pixelformat_t * get_image_formats_egl(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
+  {
+  int num;
+  if(mode == GAVL_HW_FRAME_MODE_TRANSFER)
+    return gavl_gl_get_image_formats(ctx, &num);
+  else
+    return NULL;
+  }
+
 static const gavl_hw_funcs_t funcs =
   {
     .destroy_native         = destroy_native_egl,
-    .get_image_formats      = gavl_gl_get_image_formats,
-    .get_overlay_formats    = gavl_gl_get_overlay_formats,
-    .video_frame_create_hw  = video_frame_create_hw_egl,
+    //    .video_format_adjust    = adjust_video_format_egl,
+
+    //    .get_image_formats      = gavl_gl_get_image_formats,
+    .get_image_formats      = get_image_formats_egl,
+    .video_frame_create      = video_frame_create_hw_egl,
     .video_frame_destroy    = video_frame_destroy_egl,
     .video_frame_to_ram     = video_frame_to_ram_egl,
     .video_frame_to_hw      = video_frame_to_hw_egl,
-    .video_format_adjust    = gavl_gl_adjust_video_format,
-    .overlay_format_adjust  = gavl_gl_adjust_video_format,
+    
     .can_export             = exports_type_egl,
     .can_import             = imports_type_egl,
     .import_video_frame     = import_video_frame_egl
@@ -270,6 +353,7 @@ gles_attributes[] =
   };
 
 
+
 gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t type, void * native_display)
   {
   int support_flags;
@@ -278,11 +362,11 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
 
   void * native_display_priv = NULL;
   EGLenum platform;
-
   const EGLint * attributes = NULL;
-  
-  //  
+  gavl_hw_context_t * ctx = NULL;
 
+  const char * extensions;
+  
   support_flags = GAVL_HW_SUPPORTS_VIDEO;
   
   switch(type)
@@ -333,15 +417,8 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
 
   priv->native_display = native_display;
   priv->native_display_priv = native_display_priv;
-
   
   priv->eglGetPlatformDisplay          = (void*)eglGetProcAddress("eglGetPlatformDisplayEXT");
-  priv->eglCreatePlatformWindowSurface = (void*)eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
-
-  priv->glEGLImageTargetTexture2DOES = (void*)eglGetProcAddress("glEGLImageTargetTexture2DOES");
-  priv->eglCreateImage = (void*)eglGetProcAddress("eglCreateImageKHR");
-  priv->eglDestroyImage = (void*)eglGetProcAddress("eglDestroyImageKHR");
-  
   
   if((priv->display = priv->eglGetPlatformDisplay(platform, native_display, NULL)) == EGL_NO_DISPLAY)
     goto fail;
@@ -362,8 +439,40 @@ gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t 
     goto fail;
   
   priv->surf = EGL_NO_SURFACE;
+
+  priv->eglCreatePlatformWindowSurface = (void*)eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT");
   
-  return gavl_hw_context_create_internal(priv, &funcs, type, support_flags);
+  priv->glEGLImageTargetTexture2DOES = (void*)eglGetProcAddress("glEGLImageTargetTexture2DOES");
+  priv->eglQueryDmaBufFormatsEXT = (void*)eglGetProcAddress("eglQueryDmaBufFormatsEXT");
+  
+  priv->eglCreateImage = (void*)eglGetProcAddress("eglCreateImageKHR");
+  priv->eglDestroyImage = (void*)eglGetProcAddress("eglDestroyImageKHR");
+
+  extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
+
+  /* Synchronization */
+  if(strstr(extensions, "EGL_KHR_fence_sync"))
+    {
+    priv->eglCreateSyncKHR     = (void*)eglGetProcAddress("eglCreateSyncKHR");
+    priv->eglClientWaitSyncKHR = (void*)eglGetProcAddress("eglClientWaitSyncKHR");
+    priv->eglDestroySyncKHR    = (void*)eglGetProcAddress("eglDestroySyncKHR");
+    }
+  
+  ctx = gavl_hw_context_create_internal(priv, &funcs, type, support_flags);
+
+  gavl_hw_egl_set_current(ctx, NULL);
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &priv->max_texture_size);
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created GL context");
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Type: %s", gavl_hw_type_to_string(type));
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "GL Version: %s", glGetString(GL_VERSION) );
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION) );
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Renderer: %s", glGetString(GL_RENDERER) );
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Vendor: %s", glGetString(GL_VENDOR) );
+  
+  gavl_hw_egl_unset_current(ctx);
+  
+  return ctx;
   
   fail:
 
@@ -380,7 +489,14 @@ void * gavl_hw_ctx_egl_get_native_display(gavl_hw_context_t * ctx)
   return p->native_display;
   }
 
-EGLSurface gavl_hw_ctx_egl_create_window_surface(gavl_hw_context_t * ctx, void * native_window)
+int gavl_hw_egl_get_max_texture_size(gavl_hw_context_t * ctx)
+  {
+  egl_t * p = ctx->native;
+  return p->max_texture_size;
+  }
+
+EGLSurface gavl_hw_ctx_egl_create_window_surface(gavl_hw_context_t * ctx,
+                                                 void * native_window)
   {
   egl_t * p = ctx->native;
   return p->eglCreatePlatformWindowSurface(p->display, p->config, native_window, NULL);
@@ -428,7 +544,9 @@ void gavl_hw_egl_set_current(gavl_hw_context_t * ctx, EGLSurface surf)
     p->current_surf = surf;
   
   if(!eglMakeCurrent(p->display, p->current_surf, p->current_surf, p->context))
-    fprintf(stderr, "eglMakeCurrent failed\n");
+    {
+    fprintf(stderr, "eglMakeCurrent failed: %s\n", egl_strerror(eglGetError()));
+    }
   }
 
 void gavl_hw_egl_unset_current(gavl_hw_context_t * ctx)
@@ -447,6 +565,25 @@ void gavl_hw_egl_swap_buffers(gavl_hw_context_t * ctx)
   
   eglSwapBuffers(p->display, p->current_surf);
  
+  }
+
+void gavl_hw_egl_wait(gavl_hw_context_t * ctx)
+  {
+  egl_t * p = ctx->native;
+
+  glFlush();
+  
+  /* Use fence synchronization */
+  if(p->eglCreateSyncKHR)
+    {
+    EGLSyncKHR sync = p->eglCreateSyncKHR(p->display, EGL_SYNC_FENCE_KHR, NULL);
+    p->eglClientWaitSyncKHR(p->display, sync, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR, EGL_FOREVER);
+    p->eglDestroySyncKHR(p->display, sync);
+    }
+  else
+    {
+    glFinish();
+    }
   }
 
 #ifdef HAVE_DRM
@@ -474,15 +611,23 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
 
   attrs[aidx++] = EGL_LINUX_DRM_FOURCC_EXT;
   attrs[aidx++] = dmabuf->fourcc;
+#if 0
+  fprintf(stderr, "Importing frame: %c%c%c%c\n",
+          (dmabuf->fourcc) & 0xff,
+          (dmabuf->fourcc >> 8) & 0xff,
+          (dmabuf->fourcc >> 16) & 0xff,
+          (dmabuf->fourcc >> 24) & 0xff);
+#endif
+  if(gavl_pixelformat_is_yuv(fmt->pixelformat))
+    {
+    attrs[aidx++] = EGL_SAMPLE_RANGE_HINT_EXT;
+    if(gavl_pixelformat_is_jpeg_scaled(fmt->pixelformat))
+      attrs[aidx++] = EGL_YUV_FULL_RANGE_EXT;
+    else
+      attrs[aidx++] = EGL_YUV_NARROW_RANGE_EXT;
+    }
   
-  attrs[aidx++] = EGL_SAMPLE_RANGE_HINT_EXT;
-  if(gavl_pixelformat_is_jpeg_scaled(fmt->pixelformat))
-    attrs[aidx++] = EGL_YUV_FULL_RANGE_EXT;
-  else
-    attrs[aidx++] = EGL_YUV_NARROW_RANGE_EXT;
-
-  /* TODO: Chroma placement */
-  // 
+  /* Chroma placement */
 
   gavl_pixelformat_chroma_sub(fmt->pixelformat, &sub_h, &sub_v);
   
@@ -571,7 +716,7 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   glGenTextures(1, &info->textures[0]);
   
   glBindTexture(GL_TEXTURE_EXTERNAL_OES, info->textures[0]);
-  egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
+  egl->glEGLImageTargetTexture2DOES (GL_TEXTURE_EXTERNAL_OES, image);
   
   /* Destroy image */
 
@@ -584,3 +729,39 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   }
 #endif
 
+static const char* egl_strerror(EGLint error) {
+    switch (error) {
+        case EGL_SUCCESS:
+            return "EGL_SUCCESS";
+        case EGL_NOT_INITIALIZED:
+            return "EGL_NOT_INITIALIZED";
+        case EGL_BAD_ACCESS:
+            return "EGL_BAD_ACCESS";
+        case EGL_BAD_ALLOC:
+            return "EGL_BAD_ALLOC";
+        case EGL_BAD_ATTRIBUTE:
+            return "EGL_BAD_ATTRIBUTE";
+        case EGL_BAD_CONTEXT:
+            return "EGL_BAD_CONTEXT";
+        case EGL_BAD_CONFIG:
+            return "EGL_BAD_CONFIG";
+        case EGL_BAD_CURRENT_SURFACE:
+            return "EGL_BAD_CURRENT_SURFACE";
+        case EGL_BAD_DISPLAY:
+            return "EGL_BAD_DISPLAY";
+        case EGL_BAD_SURFACE:
+            return "EGL_BAD_SURFACE";
+        case EGL_BAD_MATCH:
+            return "EGL_BAD_MATCH";
+        case EGL_BAD_PARAMETER:
+            return "EGL_BAD_PARAMETER";
+        case EGL_BAD_NATIVE_PIXMAP:
+            return "EGL_BAD_NATIVE_PIXMAP";
+        case EGL_BAD_NATIVE_WINDOW:
+            return "EGL_BAD_NATIVE_WINDOW";
+        case EGL_CONTEXT_LOST:
+            return "EGL_CONTEXT_LOST";
+        default:
+            return "Unknown EGL error";
+    }
+}

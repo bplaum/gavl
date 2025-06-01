@@ -32,10 +32,16 @@
 
 // gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs);
 
-GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t type, void * native_display);
+GAVL_PUBLIC gavl_hw_context_t *
+gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t type, void * native_display);
+
 GAVL_PUBLIC void * gavl_hw_ctx_egl_get_native_display(gavl_hw_context_t * ctx);
 
 GAVL_PUBLIC void gavl_hw_egl_swap_buffers(gavl_hw_context_t * ctx);
+
+/* Returned value (zero termiated) must be free()d */
+GAVL_PUBLIC 
+uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx);
 
 GAVL_PUBLIC EGLSurface gavl_hw_ctx_egl_create_window_surface(gavl_hw_context_t * ctx, void * native_window);
 GAVL_PUBLIC void gavl_hw_ctx_egl_destroy_surface(gavl_hw_context_t * ctx, EGLSurface surf);
@@ -45,13 +51,9 @@ GAVL_PUBLIC EGLDisplay gavl_hw_ctx_egl_get_egl_display(gavl_hw_context_t * ctx);
 GAVL_PUBLIC void gavl_hw_egl_set_current(gavl_hw_context_t * ctx, EGLSurface surf);
 GAVL_PUBLIC void gavl_hw_egl_unset_current(gavl_hw_context_t * ctx);
 
-#if 0
-/* Works only with OpenGL ES contexts! */
+/* Wait until drawing operations are done */
+GAVL_PUBLIC void gavl_hw_egl_wait(gavl_hw_context_t * ctx);
 
-GAVL_PUBLIC int gavl_hw_egl_import_v4l2_buffer(gavl_hw_context_t * ctx,
-                                               const gavl_video_format_t * fmt,
-                                               GLuint texture,
-                                               gavl_video_frame_t * v4l2_frame);
-#endif
+GAVL_PUBLIC int gavl_hw_egl_get_max_texture_size(gavl_hw_context_t * ctx);
 
 #endif // GAVL_HW_EGL_H_INCLUDED

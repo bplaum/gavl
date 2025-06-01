@@ -83,39 +83,19 @@ dnl
 OLD_LIBS=$LIBS
 
 have_GL="true"
-AC_SEARCH_LIBS([glBegin], [GL], [], [have_GL="false"], [])
+AC_SEARCH_LIBS([glBegin], [GL], [], AC_MSG_ERROR([OpenGL not found]), [])
 
 if test "x$have_GL" = "xtrue"; then
 AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <GL/gl.h>
 				 int main()
 				 {
-				     if(0)
-				       glBegin(GL_QUADS);
-				       return 0; } ]])],
-	       [],[have_GL="false"])
-dnl AC_LINK_IFELSE(AC_LANG_SOURCE([]),[],[have_GL="false"])
+				 if(0)
+				   glBegin(GL_QUADS); return 0;
+				 } ]])],
+	       [],AC_MSG_ERROR([Linking OpenGL program failed]))
 fi
 
 GL_LIBS=$LIBS
-
-LIBS="$OLD_LIBS"
-
-dnl
-dnl Check for GLX
-dnl
-
-OLD_LIBS=$LIBS
-
-have_GLX="true"
-AC_SEARCH_LIBS([glXCreateContext], [GL glx], [], [have_GLX="false"], [])
-
-if test "x$have_GL" = "xtrue"; then
-AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <GL/glx.h>
-				 int main() { if(0) glXChooseFBConfig(NULL, 0, NULL, NULL); return 0;} ]])],
-	       [],[have_GLX="false"])
-fi
-
-GLX_LIBS=$LIBS
 
 LIBS="$OLD_LIBS"
 
@@ -126,28 +106,26 @@ dnl
 OLD_LIBS=$LIBS
 
 have_EGL="true"
-AC_SEARCH_LIBS([eglGetCurrentDisplay], [GL EGL], [], [have_EGL="false"], [])
+AC_SEARCH_LIBS([eglGetCurrentDisplay], [GL EGL], [], AC_MSG_ERROR([EGL not found]), [])
 
 if test "x$have_GL" = "xtrue"; then
 AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <EGL/egl.h>
-				 int main() { 
-				     if(0) eglGetCurrentDisplay(); return 0;
+				 int main()
+				 {
+				 if(0)
+				   eglGetCurrentDisplay();
+				 return 0;
 				 }
-				]])],
-               [],[have_EGL="false"])
+				 ]])],
+               [],AC_MSG_ERROR([Linking EGL program failed]))
 fi
 
 EGL_LIBS=$LIBS
 
 LIBS="$OLD_LIBS"
 
-
 if test "x$have_GL" = "xtrue"; then
 AC_DEFINE(HAVE_GL)
-
-if test "x$have_GLX" = "xtrue"; then
-AC_DEFINE(HAVE_GLX)
-fi
 
 if test "x$have_EGL" = "xtrue"; then
 AC_DEFINE(HAVE_EGL)
@@ -156,17 +134,14 @@ fi
 fi
 
 AM_CONDITIONAL(HAVE_GL, test x$have_GL = xtrue)
-AM_CONDITIONAL(HAVE_GLX, test x$have_GLX = xtrue)
 AM_CONDITIONAL(HAVE_EGL, test x$have_EGL = xtrue)
 
 AC_SUBST(GL_CFLAGS)
 AC_SUBST(GL_LIBS)
-AC_SUBST(GLX_CFLAGS)
-AC_SUBST(GLX_LIBS)
 AC_SUBST(EGL_CFLAGS)
 AC_SUBST(EGL_LIBS)
-])
 
+])
 
 dnl
 dnl GLU

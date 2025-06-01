@@ -45,19 +45,7 @@ typedef enum
 
 typedef struct
   {
-  /* MMapped frame */
-  void * buf;
-  //  size_t size;   // For munmap
-  } gavl_v4l2_plane_t;
-
-typedef struct
-  {
-  //  int type;
-  //  int index;
   int total; /* Total number of buffers */
-  
-  //  gavl_v4l2_plane_t planes[GAVL_MAX_PLANES];
-  //  int num_planes;
   
   int flags;
   int bytesused; // For packets

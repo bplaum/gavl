@@ -154,8 +154,7 @@ gavl_io_t * gavl_io_create_fd(int fd, int wr, int close)
   gavl_io_set_poll_func(ret, poll_fd);
   gavl_io_set_nonblock_read(ret, read_nonblock_fd);
   
-  
-  gavl_io_set_info(ret, st.st_size, NULL, NULL, 0);
+  gavl_io_set_info(ret, st.st_size, NULL, NULL, flags);
   
   return ret;
   }

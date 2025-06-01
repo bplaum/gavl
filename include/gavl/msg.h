@@ -162,6 +162,13 @@
 
 #define GAVL_MSG_SRC_SKIP_MODE_CHANGED  5
 
+/** \brief Started
+ *
+ *  arg0: Track info with actual format
+ */
+
+#define GAVL_MSG_SRC_STARTED            6
+
 /** \brief Authentication request
  *
  *  arg0: Username (string)
@@ -222,6 +229,13 @@
  */
 
 #define GAVL_CMD_SRC_SET_STREAM_ACTION   109
+
+/*
+ *  arg0: audio_storage 
+ *  arg1: video_storage 
+ */
+
+#define GAVL_CMD_SRC_SET_FRAME_STORAGE   110
 
 /* GUI Events */
 

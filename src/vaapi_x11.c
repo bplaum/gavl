@@ -44,8 +44,9 @@ int main(int argc, char ** argv)
   fmt.pixel_height = 1;
   fmt.pixelformat = GAVL_YUV_420_P;
 
-  f = gavl_hw_video_frame_create_ram(ctx, &fmt);
-
+  gavl_hw_ctx_set_video(ctx, &fmt, GAVL_HW_FRAME_MODE_TRANSFER);
+  
+  f = gavl_hw_video_frame_create(ctx, 1);
   gavl_video_frame_destroy(f);
   
   gavl_hw_ctx_destroy(ctx);

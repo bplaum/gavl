@@ -23,7 +23,12 @@
 #ifndef GAVL_HW_VAAPI_H_INCLUDED
 #define GAVL_HW_VAAPI_H_INCLUDED
 
-
+typedef struct
+  {
+  VASurfaceID surface;
+  VAImage image; /* Only valid while the frame is mapped */
+  int wr;
+  } gavl_vaapi_video_frame_t;
 
 /* VA-API specific backend functions */
 
@@ -34,21 +39,19 @@ GAVL_PUBLIC VASurfaceID gavl_vaapi_get_surface_id(const gavl_video_frame_t *);
 /* Use only in specific create routines */
 GAVL_PUBLIC void gavl_vaapi_set_surface_id(gavl_video_frame_t *, VASurfaceID id);
 
-GAVL_PUBLIC VASubpictureID gavl_vaapi_get_subpicture_id(const gavl_video_frame_t *);
-
 /* Map into userspace for CPU access */
-GAVL_PUBLIC void gavl_vaapi_map_frame(gavl_video_frame_t *);
+GAVL_PUBLIC int gavl_vaapi_map_frame(gavl_video_frame_t *, int wr);
 
 /* Unmap */
-GAVL_PUBLIC void gavl_vaapi_unmap_frame(gavl_video_frame_t *);
+GAVL_PUBLIC int gavl_vaapi_unmap_frame(gavl_video_frame_t *);
 
-GAVL_PUBLIC void gavl_vaapi_video_frame_swap_bytes(const gavl_video_format_t * fmt,
-                                                   gavl_video_frame_t * f,
-                                                   int to_gavl);
 
 GAVL_PUBLIC VAProfile gavl_vaapi_get_profile(const gavl_dictionary_t * dict);
 
 GAVL_PUBLIC int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * dict);
+
+// GAVL_PUBLIC gavl_video_frame_t *
+// gavl_vaapi_import_surface(gavl_hw_context_t * ctx, VASurfaceID surf);
 
 
 #endif // GAVL_HW_VAAPI_H_INCLUDED

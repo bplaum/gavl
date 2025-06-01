@@ -158,8 +158,8 @@ gavl_io_t * gavl_io_create_file(FILE * f, int wr, int can_seek, int close)
   ret = gavl_io_create(rf, wf, sf, close ? close_file : NULL, ff, flags, f);
 
   gavl_io_set_poll_func(ret, poll_file);
-
-  gavl_io_set_info(ret, st.st_size, NULL, NULL, 0);
+  
+  gavl_io_set_info(ret, st.st_size, NULL, NULL, flags);
   return ret;
   }
 

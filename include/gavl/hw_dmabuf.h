@@ -29,12 +29,17 @@ typedef struct
   struct
     {
     int fd;
+
+    uint8_t * map_ptr;
+    size_t map_len;
+    
     } buffers[GAVL_MAX_PLANES];
   
   struct
     {
     int buf_idx;
     int64_t offset;
+    int stride;
     } planes[GAVL_MAX_PLANES];
   
   uint32_t fourcc; // drm fourcc
@@ -45,7 +50,19 @@ typedef struct
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_dma(void);
 
+GAVL_PUBLIC uint32_t gavl_drm_fourcc_from_gavl(gavl_hw_context_t *, gavl_pixelformat_t pfmt);
 
-GAVL_PUBLIC uint32_t gavl_drm_fourcc_from_gavl(gavl_pixelformat_t pfmt);
+GAVL_PUBLIC gavl_pixelformat_t gavl_drm_pixelformat_from_fourcc(uint32_t fourcc, int * flags, int * drm_indices);
+GAVL_PUBLIC void gavl_hw_ctx_dma_set_supported_formats(gavl_hw_context_t * ctx, uint32_t * formats);
+
+
+
+
+// GAVL_PUBLIC uint32_t gavl_drm_fourcc_from_gavl(gavl_pixelformat_t pfmt);
+
+
+
+#define GAVL_DMABUF_FLAG_SWAP_CHROMA (1<<0)
+#define GAVL_DMABUF_FLAG_SHUFFLE     (1<<1)
 
 #endif // GAVL_HW_DMABUF_H_INCLUDED

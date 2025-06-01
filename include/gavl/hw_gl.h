@@ -37,18 +37,17 @@ typedef struct
 GAVL_PUBLIC int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format,
                                    GLenum * internalformat, GLenum * type);
 
-GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx);
-GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_overlay_formats(gavl_hw_context_t * ctx);
-
+GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx,
+                                                           int * num);
 
 GAVL_PUBLIC void gavl_gl_adjust_video_format(gavl_hw_context_t * ctx,
-                                 gavl_video_format_t * fmt);
+                                             gavl_video_format_t * fmt);
 
 
 /* The following functions require a current GL context */
 GAVL_PUBLIC gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt);
 
-GAVL_PUBLIC void gavl_gl_destroy_frame(gavl_video_frame_t * f);
+GAVL_PUBLIC void gavl_gl_destroy_frame(gavl_video_frame_t * f, int destroy_resource);
 
 
 GAVL_PUBLIC void gavl_gl_frame_to_ram(const gavl_video_format_t * fmt,

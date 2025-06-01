@@ -31,23 +31,44 @@
  * external api header.
  */
 
+/* Each context is either in map or in transfer modes */
+
+typedef enum
+  {
+    /* Make a frame pool with mappable frames. Use this for
+       sources, which write into user supplied memory */
+    GAVL_HW_FRAME_MODE_MAP      = 1,
+
+    /* Transfer frames from RAM to the hardware or back */
+    GAVL_HW_FRAME_MODE_TRANSFER = 2,
+
+    /* Import frames from another context */
+    GAVL_HW_FRAME_MODE_IMPORT   = 3,
+  } gavl_hw_frame_mode_t;
+
 /* Support flags for hardware contexts */
 
 #define GAVL_HW_SUPPORTS_AUDIO       (1<<0)
 #define GAVL_HW_SUPPORTS_VIDEO       (1<<1)
-#define GAVL_HW_SUPPORTS_PACKETS     (1<<2)
+#define GAVL_HW_SUPPORTS_VIDEO_MAP   (1<<3)
+#define GAVL_HW_SUPPORTS_VIDEO_IO    (1<<4)
+#define GAVL_HW_SUPPORTS_VIDEO_POOL  (1<<5)
 
 typedef enum
   {
     GAVL_HW_NONE = 0,  // Frames in RAM
-    GAVL_HW_EGL_GL_X11,     // EGL Texture (associated with X11 connection)
-    GAVL_HW_EGL_GLES_X11,   // EGL Texture (associated with X11 connection)
-    // GAVL_HW_EGL_WAYLAND, // EGL Texture (wayland) Not implemented yet
-    GAVL_HW_VAAPI_X11,
-    GAVL_HW_V4L2_BUFFER, // V4L2 buffers (mmapped)
-    GAVL_HW_DMABUFFER,   // DMA handles, can be exported by V4L and im- and exported by OpenGL
-    GAVL_HW_SHM,         // Shared memory, which can be sent to other processes
+    GAVL_HW_EGL_GL_X11 =   (1<<0), // OpenGL Texture in an EGL/X11 context
+    GAVL_HW_EGL_GLES_X11 = (1<<1), // OpenGL ES Texture in an EGL/X11 context
+    
+    GAVL_HW_VAAPI_X11 =    (1<<2),
+    GAVL_HW_V4L2_BUFFER =  (1<<3), // V4L2 buffers (mmapped)
+    GAVL_HW_DMABUFFER =    (1<<4), // DMA handles, can be exported by V4L and im- and exported by OpenGL
+    GAVL_HW_SHM =          (1<<5), // Shared memory, which can be sent to other processes
   } gavl_hw_type_t;
+
+/* Add wayland types here too */
+#define GAVL_HW_GL_MASK (GAVL_HW_EGL_GL_X11)
+#define GAVL_HW_GLES_MASK (GAVL_HW_EGL_GLES_X11)
 
 /* Global handle for accessing a piece of hardware */
 typedef struct gavl_hw_context_s gavl_hw_context_t;
@@ -59,71 +80,90 @@ GAVL_PUBLIC const char * gavl_hw_type_to_string(gavl_hw_type_t type);
 GAVL_PUBLIC const char * gavl_hw_type_to_id(gavl_hw_type_t type);
 GAVL_PUBLIC gavl_hw_type_t gavl_hw_type_from_id(const char * id);
 
-GAVL_PUBLIC int gavl_hw_ctx_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
-GAVL_PUBLIC int gavl_hw_ctx_imports_type(gavl_hw_context_t * ctx, gavl_hw_type_t type);
+GAVL_PUBLIC int gavl_hw_ctx_can_export(gavl_hw_context_t * ctx, const gavl_hw_context_t * to);
+GAVL_PUBLIC int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context_t * from);
+
 
 GAVL_PUBLIC void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx);
 
+/* Reset to the initial state (after creating) */
+GAVL_PUBLIC void gavl_hw_ctx_reset(gavl_hw_context_t * ctx);
+
 GAVL_PUBLIC int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx);
+
+/*
+ * If *frame2 == NULL, a frame is allocated in the
+ * imported pool and owned by the hw context.
+ *
+ *  
+ */
 
 GAVL_PUBLIC int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
                                                  gavl_hw_context_t * ctx2,
                                                  gavl_video_frame_t ** frame2,
                                                  const gavl_video_format_t * fmt);
 
+GAVL_PUBLIC 
+gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
+                                                     int buf_idx);
 
-/* Returned array must be free()d */
-GAVL_PUBLIC gavl_pixelformat_t *
-gavl_hw_ctx_get_image_formats(gavl_hw_context_t * ctx);
+GAVL_PUBLIC gavl_video_frame_t *
+gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx, int buf_idx);
 
-/* Returned array must be free()d */
-GAVL_PUBLIC gavl_pixelformat_t *
-gavl_hw_ctx_get_overlay_formats(gavl_hw_context_t * ctx);
 
-GAVL_PUBLIC gavl_hw_type_t gavl_hw_ctx_get_type(gavl_hw_context_t * ctx);
+GAVL_PUBLIC const gavl_pixelformat_t *
+gavl_hw_ctx_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode);
+
+GAVL_PUBLIC gavl_hw_type_t gavl_hw_ctx_get_type(const gavl_hw_context_t * ctx);
+
+GAVL_PUBLIC void gavl_hw_video_format_adjust(gavl_hw_context_t * ctx,
+                                             gavl_video_format_t * fmt,
+                                             gavl_hw_frame_mode_t mode);
 
 /* Format will be adjusted if it's not supported by the hardware */
-GAVL_PUBLIC void gavl_hw_video_format_adjust(gavl_hw_context_t * ctx,
-                                             gavl_video_format_t * fmt);
 
-GAVL_PUBLIC void gavl_hw_overlay_format_adjust(gavl_hw_context_t * ctx,
-                                               gavl_video_format_t * fmt);
+//GAVL_PUBLIC void gavl_hw_ctx_set_audio(gavl_hw_context_t * ctx, gavl_audio_format_t * fmt, gavl_hw_frame_mode_t mode);
+GAVL_PUBLIC void gavl_hw_ctx_set_video(gavl_hw_context_t * ctx, gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode);
 
+/*
+ *  Create a video frame. The frame will be a reference for a hardware surface.
+ *  If alloc_resource is 1, an actual hardware frame is created. Else, just
+ *  the storage pointer is allocated for importing hardware surfaces created elsewhere
+ */
 
-/* Create a video frame. The frame will be a reference for a hardware surface */
-GAVL_PUBLIC gavl_video_frame_t * gavl_hw_video_frame_create_hw(gavl_hw_context_t * ctx,
-                                                               gavl_video_format_t * fmt);
+GAVL_PUBLIC gavl_video_frame_t *
+gavl_hw_video_frame_create(gavl_hw_context_t * ctx, int alloc_resource);
 
-/* Create a video frame. The frame will have data available for CPU access but is
- suitable for transfer to a hardware surface */
-GAVL_PUBLIC gavl_video_frame_t * gavl_hw_video_frame_create_ram(gavl_hw_context_t * ctx,
-                                                                gavl_video_format_t * fmt);
+GAVL_PUBLIC int
+gavl_hw_video_frame_map(gavl_video_frame_t * frame, int wr);
 
-/* Create a video frame for use as an overlay */
-GAVL_PUBLIC gavl_video_frame_t * gavl_hw_video_frame_create_ovl(gavl_hw_context_t * ctx,
-                                                                gavl_video_format_t * fmt);
+GAVL_PUBLIC int
+gavl_hw_video_frame_unmap(gavl_video_frame_t * frame);
+
+/* Get a frame for writing (this enables the frame pool) */
+GAVL_PUBLIC gavl_video_frame_t *
+gavl_hw_video_frame_get(gavl_hw_context_t * ctx);
+
+GAVL_PUBLIC void gavl_hw_video_frame_ref(gavl_video_frame_t*);
+GAVL_PUBLIC void gavl_hw_video_frame_unref(gavl_video_frame_t*);
+GAVL_PUBLIC int gavl_hw_video_frame_refcount(gavl_video_frame_t*);
+
 
 /* Load a video frame from RAM into the hardware */
-GAVL_PUBLIC int gavl_video_frame_ram_to_hw(const gavl_video_format_t * fmt,
-                                           gavl_video_frame_t * dst,
+GAVL_PUBLIC int gavl_video_frame_ram_to_hw(gavl_video_frame_t * dst,
                                            gavl_video_frame_t * src);
 
 /* Load a video frame from the hardware into RAM */
-GAVL_PUBLIC int gavl_video_frame_hw_to_ram(const gavl_video_format_t * fmt,
-                                           gavl_video_frame_t * dst,
+GAVL_PUBLIC int gavl_video_frame_hw_to_ram(gavl_video_frame_t * dst,
                                            gavl_video_frame_t * src);
-
-GAVL_PUBLIC int gavl_video_frame_hw_to_packet(gavl_hw_context_t * ctx,
-                                              const gavl_video_format_t * fmt,
-                                              const gavl_video_frame_t * src,
-                                              gavl_packet_t * p);
-
-GAVL_PUBLIC gavl_video_frame_t * gavl_video_frame_hw_from_packet(gavl_hw_context_t * ctx,
-                                                                 const gavl_video_format_t * fmt,
-                                                                 const gavl_packet_t * src);
-
 
 GAVL_PUBLIC int gavl_video_frame_hw_can_transfer(gavl_hw_context_t * from,
                                                  gavl_hw_context_t * to);
+
+/* Store in a stream structure */
+GAVL_PUBLIC void
+gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict);
+
+GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict);
 
 #endif // GAVL_HW_H_INCLUDED

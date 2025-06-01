@@ -6,6 +6,7 @@ else
 libva_x11_programs = 
 endif
 
+
 if HAVE_V4L2
 v4l2_programs = v4linfo v4l_m2m_converter
 else
@@ -34,6 +35,7 @@ benchmark \
 charset \
 colorspace_time \
 deinterlace_time \
+dma2egl \
 dump_frame_table \
 httptest \
 orientationtest \
@@ -50,6 +52,9 @@ pixelformat_penalty_LDADD = ../gavl/libgavl.la
 vaapi_x11_CFLAGS = @X_CFLAGS@ @LIBVA_CFLAGS@
 vaapi_x11_SOURCES = vaapi_x11.c
 vaapi_x11_LDADD = ../gavl/libgavl.la @LIBVA_LIBS@ @X_LIBS@
+
+dma2egl_SOURCES = dma2egl.c
+dma2egl_LDADD = ../gavl/libgavl.la @X_LIBS@
 
 benchmark_SOURCES = benchmark.c
 benchmark_LDADD = ../gavl/libgavl.la @RT_LIBS@

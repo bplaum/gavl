@@ -70,11 +70,11 @@
 
 GAVL_PUBLIC
 void gavl_msg_set_state(gavl_msg_t * msg,
-                      int id,
-                      int last,
-                      const char * ctx,
-                      const char * var,
-                      const gavl_value_t * val);
+                        int id,
+                        int last,
+                        const char * ctx,
+                        const char * var,
+                        const gavl_value_t * val);
 
 GAVL_PUBLIC
 void gavl_msg_set_state_nocopy(gavl_msg_t * msg,

@@ -92,6 +92,9 @@ gavl_video_sink_s gavl_video_sink_t;
 typedef struct 
 gavl_packet_sink_s gavl_packet_sink_t;
 
+typedef struct 
+gavl_packet_s gavl_packet_t;
+  
 /*! \ingroup video_format
  *\brief Video format
  */
@@ -840,6 +843,20 @@ void gavl_audio_frame_from_data(gavl_audio_frame_t * f,
                                 const gavl_audio_format_t * format,
                                 uint8_t * data, int len);
 
+
+GAVL_PUBLIC
+void gavl_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
+                                         gavl_packet_t * pkt);
+
+GAVL_PUBLIC
+void gavl_packet_to_audio_frame_metadata(const gavl_packet_t * p, gavl_audio_frame_t * frame);
+
+GAVL_PUBLIC
+void gavl_audio_frame_set_from_packet(gavl_audio_frame_t * frame,
+                                      const gavl_audio_format_t * format,
+                                      gavl_packet_t * p);
+
+  
   
 /*!
   \ingroup audio_frame
@@ -1506,6 +1523,13 @@ void gavl_rectangle_crop_to_format_scale(gavl_rectangle_f_t * src_rect,
                                          const gavl_video_format_t * src_format,
                                          const gavl_video_format_t * dst_format);
 
+GAVL_PUBLIC
+void gavl_rectangle_crop_to_format_scale_f(gavl_rectangle_f_t * src_rect,
+                                           gavl_rectangle_f_t * dst_rect,
+                                           const gavl_video_format_t * src_format,
+                                           const gavl_video_format_t * dst_format);
+
+  
   
 
 /*! \brief Let an integer rectangle span the whole image size of a video format
@@ -1722,6 +1746,14 @@ void gavl_rectangle_fit_aspect(gavl_rectangle_i_t * dst_rect,
                                const gavl_video_format_t * dst_format,
                                float zoom, float squeeze);
 
+GAVL_PUBLIC
+void gavl_rectangle_fit_aspect_f(gavl_rectangle_f_t * r,
+                                 const gavl_video_format_t * src_format,
+                                 const gavl_rectangle_f_t * src_rect,
+                                 const gavl_video_format_t * dst_format,
+                                 float zoom, float squeeze, int do_orient);
+
+  
 /*! \brief Dump a rectangle to stderr
  * \ingroup rectangle
  * \param r Rectangle
@@ -2457,12 +2489,20 @@ void gavl_video_format_fit_to_source(gavl_video_format_t * dst,
   \ingroup video_format
   \brief Get the unpadded image size
   \param format A video format
-  \return The image size in bytes of an unpadded frame
- */
+  \return The image size in bytes of a video frame (all planes combined)
+*/
   
 GAVL_PUBLIC
 int gavl_video_format_get_image_size(const gavl_video_format_t * format);
+  
+GAVL_PUBLIC
+void gavl_video_format_get_frame_layout(const gavl_video_format_t * format,
+                                        int * offsets,
+                                        int * strides,
+                                        int * buffersizes,
+                                        int multiplane);
 
+  
 /*! 
   \ingroup video_format
   \brief Set the frame size from the image size
@@ -2552,8 +2592,12 @@ GAVL_PUBLIC
 void gavl_video_format_normalize_orientation(gavl_video_format_t * in_format,
                                              gavl_video_format_t * out_format);
 
+  
 GAVL_PUBLIC const char *
 gavl_image_orientation_to_string(gavl_image_orientation_t orient);
+
+GAVL_PUBLIC int 
+gavl_image_orientation_is_transposed(gavl_image_orientation_t orient);
 
   
 /** \defgroup video_frame Video frames
@@ -3046,6 +3090,10 @@ void gavl_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
 GAVL_PUBLIC
 void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_frame_t * frame);
 
+GAVL_PUBLIC
+void gavl_video_frame_set_from_packet(gavl_video_frame_t * frame,
+                                      const gavl_video_format_t * format,
+                                      gavl_packet_t * p);
   
 /*****************************
  Conversion options

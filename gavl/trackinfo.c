@@ -198,7 +198,6 @@ gavl_track_get_stream_nc(gavl_dictionary_t * d, gavl_stream_type_t type, int i)
 const gavl_dictionary_t *
 gavl_track_get_stream(const gavl_dictionary_t * d, gavl_stream_type_t type, int i)
   {
-
   const gavl_array_t * arr;
   const gavl_value_t * val;
   const gavl_dictionary_t * dict;
@@ -1908,6 +1907,59 @@ void gavl_track_copy_gui_state(gavl_dictionary_t * dst, const gavl_dictionary_t 
   gavl_dictionary_move(dst_gui, &tmp);
   }
 
+void gavl_track_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
+  {
+  int num_streams;
+  int i;
+  const gavl_audio_format_t * afmt_src;
+  gavl_audio_format_t * afmt_dst;
+
+  const gavl_video_format_t * vfmt_src;
+  gavl_video_format_t * vfmt_dst;
+  
+  const gavl_dictionary_t * src_m;
+  gavl_dictionary_t * dst_m;
+  
+  const gavl_dictionary_t * src_s;
+  gavl_dictionary_t * dst_s;
+
+  gavl_compression_info_t ci;
+  
+  src_m = gavl_track_get_metadata(src);
+  dst_m = gavl_track_get_metadata_nc(dst);
+
+  gavl_dictionary_merge2(dst_m, src_m);
+
+  num_streams = gavl_track_get_num_streams_all(src);
+
+  for(i = 0; i < num_streams; i++)
+    {
+    if(!(src_s = gavl_track_get_stream_all(src, i)) ||
+       !(dst_s = gavl_track_get_stream_all_nc(dst, i)))
+      break;
+
+    src_m = gavl_stream_get_metadata(src_s);
+    dst_m = gavl_stream_get_metadata_nc(dst_s);
+    gavl_dictionary_merge2(dst_m, src_m);
+
+    if((afmt_src = gavl_stream_get_audio_format(src_s)) &&
+       (afmt_dst = gavl_stream_get_audio_format_nc(dst_s)))
+      gavl_audio_format_copy(afmt_dst, afmt_src);
+    
+    if((vfmt_src = gavl_stream_get_video_format(src_s)) &&
+       (vfmt_dst = gavl_stream_get_video_format_nc(dst_s)))
+      gavl_video_format_copy(vfmt_dst, vfmt_src);
+
+    gavl_compression_info_init(&ci);
+    if(gavl_stream_get_compression_info(src, &ci))
+      {
+      gavl_stream_set_compression_info(dst, &ci);
+      gavl_compression_info_free(&ci);
+      }
+    }
+  
+  }
+
 void gavl_track_update_children(gavl_dictionary_t * dict)
   {
   int i;
@@ -2344,6 +2396,14 @@ int gavl_track_get_overlay_compression_info(const gavl_dictionary_t * t, int idx
 void gavl_stream_set_compression_info(gavl_dictionary_t * s, const gavl_compression_info_t * info)
   {
   gavl_dictionary_t * cmp;
+
+#if 0  
+  if(info->codec_header.len && !info->id)
+    {
+    fprintf(stderr, "gavl_stream_set_compression_info: %p\n", s);
+    gavl_compression_info_dump(info);
+    }
+#endif
   
   cmp = gavl_dictionary_get_dictionary_create(s, COMPRESSION_INFO_KEY);
   gavl_dictionary_reset(cmp);
@@ -2760,18 +2820,23 @@ gavl_time_t gavl_track_get_start_time(const gavl_dictionary_t * dict)
   }
 
 
-#define COMPRESSION_TAG_KEY "compression_tag"
 
 int gavl_stream_get_compression_tag(const gavl_dictionary_t * s)
   {
   int ret = 0;
-  gavl_dictionary_get_int(s, COMPRESSION_TAG_KEY, &ret);
-  return ret;
+  const gavl_dictionary_t * cmp;
+  if(!(cmp = gavl_dictionary_get_dictionary(s, COMPRESSION_INFO_KEY)) ||
+     !gavl_dictionary_get_int(cmp, COMPRESSION_INFO_KEY_TAG, &ret))
+    return 0;
+  else
+    return ret;
   }
 
 void gavl_stream_set_compression_tag(gavl_dictionary_t * s, int tag)
   {
-  gavl_dictionary_set_int(s, COMPRESSION_TAG_KEY, tag);
+  gavl_dictionary_t * cmp;
+  cmp = gavl_dictionary_get_dictionary_create(s, COMPRESSION_INFO_KEY);
+  gavl_dictionary_set_int(cmp, COMPRESSION_INFO_KEY_TAG, tag);
   }
 
 void gavl_stream_set_sample_timescale(gavl_dictionary_t * s)

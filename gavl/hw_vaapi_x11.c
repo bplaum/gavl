@@ -27,6 +27,7 @@
 
 #include <gavl/gavl.h>
 #include <gavl/hw_vaapi_x11.h>
+#include <gavl/hw_vaapi.h>
 
 #include <hw_private.h>
 #include <vaapi.h>
@@ -53,15 +54,14 @@ static const gavl_hw_funcs_t funcs =
   {
     .destroy_native = destroy_native,
     .get_image_formats = gavl_vaapi_get_image_formats,
-    .get_overlay_formats = gavl_vaapi_get_overlay_formats,
-    .video_frame_create_hw = gavl_vaapi_video_frame_create_hw,
-    .video_frame_create_ram = gavl_vaapi_video_frame_create_ram,
-    .video_frame_create_ovl = gavl_vaapi_video_frame_create_ovl,
+    .video_frame_create = gavl_vaapi_video_frame_create,
     .video_frame_destroy = gavl_vaapi_video_frame_destroy,
-    .video_frame_to_ram = gavl_vaapi_video_frame_to_ram,
-    .video_frame_to_hw  = gavl_vaapi_video_frame_to_hw,
+    .video_frame_map = gavl_vaapi_map_frame,
+    .video_frame_unmap = gavl_vaapi_unmap_frame,
     .video_format_adjust  = gavl_vaapi_video_format_adjust,
-    
+    .can_export = gavl_vaapi_exports_type,
+    .export_video_frame = gavl_vaapi_export_video_frame,
+
   };
 
 gavl_hw_context_t * gavl_hw_ctx_create_vaapi_x11(Display * dpy)
@@ -88,6 +88,8 @@ gavl_hw_context_t * gavl_hw_ctx_create_vaapi_x11(Display * dpy)
     }
   
   priv->va.dpy = vaGetDisplay(priv->display);
+
+  /* Deriving images doesn't work for weird formats like NV12 */
   priv->va.no_derive = 1;
   
   if(!priv->va.dpy)

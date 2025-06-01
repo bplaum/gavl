@@ -467,6 +467,16 @@ int gavl_dictionary_from_buffer(const uint8_t * buf, int len, gavl_dictionary_t 
 
 GAVL_PUBLIC
 uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt);
+
+GAVL_PUBLIC
+int gavl_io_read_video_frame_header(gavl_io_t * io,
+                                    gavl_video_frame_t * ret);
+
+GAVL_PUBLIC
+int gavl_io_write_video_frame_header(gavl_io_t * io,
+                                     const gavl_video_frame_t * ret);
+
+
   
 #ifdef __cplusplus
 }

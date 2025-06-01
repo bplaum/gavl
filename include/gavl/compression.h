@@ -424,7 +424,7 @@ typedef struct
  */
 
   
-typedef struct
+typedef struct gavl_packet_s
   {
   gavl_buffer_t buf; //!< Data
 

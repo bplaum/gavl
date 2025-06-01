@@ -1707,3 +1707,52 @@ uint8_t * gavl_dictionary_to_buffer(int * len, const gavl_dictionary_t * fmt)
   return ret;
   }
 
+/* Read/write A/V frames */
+
+int gavl_io_read_video_frame_header(gavl_io_t * io,
+                                    gavl_video_frame_t * ret)
+  {
+  char c;
+  if(gavl_io_get_data(io, (uint8_t*)&c, 1) <= 0)
+    return 0;
+  if(c != 'V')
+    return -1;
+  
+  gavl_io_read_data(io, (uint8_t*)&c, 1);
+
+  if(!gavl_io_read_int64v(io, &ret->timestamp) ||
+     !gavl_io_read_int64v(io, &ret->duration) ||
+     !gavl_io_read_uint64v(io, &ret->timecode) ||
+     !gavl_io_read_int32v(io, &ret->src_rect.x) ||
+     !gavl_io_read_int32v(io, &ret->src_rect.y) ||
+     !gavl_io_read_int32v(io, &ret->src_rect.w) ||
+     !gavl_io_read_int32v(io, &ret->src_rect.h) ||
+     !gavl_io_read_int32v(io, &ret->dst_x) ||
+     !gavl_io_read_int32v(io, &ret->dst_y) ||
+     !gavl_io_read_int32v(io, &ret->interlace_mode) ||
+     !gavl_io_read_int32v(io, &ret->buf_idx))
+    return 0;
+  return 1;
+  }
+
+int gavl_io_write_video_frame_header(gavl_io_t * io,
+                                     const gavl_video_frame_t * ret)
+  {
+  char c = 'V';
+  if(gavl_io_write_data(io, (uint8_t*)&c, 1) <= 0)
+    return 0;
+  if(!gavl_io_write_int64v(io, ret->timestamp) ||
+     !gavl_io_write_int64v(io, ret->duration) ||
+     !gavl_io_write_uint64v(io, ret->timecode) ||
+     !gavl_io_write_int32v(io, ret->src_rect.x) ||
+     !gavl_io_write_int32v(io, ret->src_rect.y) ||
+     !gavl_io_write_int32v(io, ret->src_rect.w) ||
+     !gavl_io_write_int32v(io, ret->src_rect.h) ||
+     !gavl_io_write_int32v(io, ret->dst_x) ||
+     !gavl_io_write_int32v(io, ret->dst_y) ||
+     !gavl_io_write_int32v(io, ret->interlace_mode) ||
+     !gavl_io_write_int32v(io, ret->buf_idx))
+    return 0;
+
+  return 1;
+  }

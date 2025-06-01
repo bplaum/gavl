@@ -73,9 +73,12 @@ int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * interna
     {
     if(pixelformats[i].fmt == fmt)
       {
-      *format = pixelformats[i].format;
-      *type   = pixelformats[i].type;
+      if(format)
+        *format = pixelformats[i].format;
 
+      if(type)
+        *type   = pixelformats[i].type;
+      
       if(internalformat)
         *internalformat = pixelformats[i].internalformat;
       
@@ -86,7 +89,7 @@ int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * interna
   return 0;
   }
 
-gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx)
+gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx, int * num)
   {
   int src_idx = 0;
   int dst_idx = 0;
@@ -112,46 +115,11 @@ gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx)
 
     }
   ret[dst_idx] = GAVL_PIXELFORMAT_NONE;
+  if(num)
+    *num = dst_idx;
   return ret;
   }
 
-gavl_pixelformat_t * gavl_gl_get_overlay_formats(gavl_hw_context_t * ctx)
-  {
-  int idx1 = 0;
-  int idx2 = 0;
-  
-  gavl_pixelformat_t * ret;
-  //  glx_t * priv = ctx->native;
-
-  ret = calloc(NUM_PIXELFORMATS, sizeof(*ret));
-
-  while(1)
-    {
-    if(pixelformats[idx1].fmt == GAVL_PIXELFORMAT_NONE)
-      break;
-    
-    if(!gavl_pixelformat_has_alpha(pixelformats[idx1].fmt))
-      {
-      idx1++;
-      continue;
-      }
-
-    if((ctx->type == GAVL_HW_EGL_GLES_X11) &&
-       (pixelformats[idx1].type != GL_UNSIGNED_BYTE))
-      {
-      idx1++;
-      continue;
-      }
-    
-    ret[idx2] = pixelformats[idx1].fmt;
-    idx1++;
-    idx2++;
-    }
-
-  ret[idx2] = GAVL_PIXELFORMAT_NONE;
-  
-  return ret;
-  }
 
 void gavl_gl_adjust_video_format(gavl_hw_context_t * ctx,
                                  gavl_video_format_t * fmt)
@@ -244,14 +212,15 @@ gavl_video_frame_t * gavl_gl_create_frame(const gavl_video_format_t * fmt)
   return ret;
   }
 
-void gavl_gl_destroy_frame(gavl_video_frame_t * f)
+void gavl_gl_destroy_frame(gavl_video_frame_t * f, int destroy_resource)
   {
   gavl_gl_frame_info_t * info;
 
   if(f->storage)
     {
     info = f->storage;
-    glDeleteTextures(info->num_textures, info->textures);
+    if(destroy_resource)
+      glDeleteTextures(info->num_textures, info->textures);
     free(info);
     }
   f->hwctx = NULL;
@@ -342,7 +311,7 @@ void gavl_gl_frame_to_hw(const gavl_video_format_t * fmt,
       }
     
     }
-  
+  gavl_video_frame_copy_metadata(dst, src);
   }
 
 

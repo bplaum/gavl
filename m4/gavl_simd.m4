@@ -24,7 +24,11 @@ case $1 in
     AC_MSG_RESULT(PowerPC)
     ARCH_PPC=true
     ;;
-  *)
+  aarch64)
+    AC_MSG_RESULT(ARM 64 bit)
+    ARCH_ARM=true
+    ;;
+   *)
     AC_MSG_RESULT(unknown)
     ;;
 esac
@@ -230,6 +234,34 @@ dnl
   fi
 fi
 
+if test x$ARCH_ARM = xtrue; then
+
+dnl
+dnl Check for Neon intrinsics
+dnl
+
+
+AC_MSG_CHECKING([if C compiler accepts Neon intrinsics])
+AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <arm_neon.h>
+                                 #include <stdlib.h>
+		  int main()
+		  {
+		  uint8_t * src = NULL;
+                  uint8x16x4_t rgba = vld4q_u8(src);
+		  return 0;
+		  }
+		 ]])],
+	      HAVE_NEON_INT=true)
+  if test "$HAVE_NEON_INT" = true; then
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_RESULT(no)
+  fi
+fi
+
+
+    
+
 CFLAGS=$OLD_CFLAGS
 
 ])
@@ -251,6 +283,7 @@ dnl
 AH_TEMPLATE([ARCH_X86],    [Intel Architecture (32/64)])
 AH_TEMPLATE([ARCH_X86_64], [Intel Architecture (64)])
 AH_TEMPLATE([ARCH_PPC],    [PowerPC Architecture])
+AH_TEMPLATE([ARCH_ARM],    [ARM Architecture])
 
 AH_TEMPLATE([HAVE_MMX],    [MMX Supported])
 AH_TEMPLATE([HAVE_3DNOW],  [3Dnow Supported])
@@ -258,6 +291,7 @@ AH_TEMPLATE([HAVE_SSE],    [SSE Supported])
 AH_TEMPLATE([HAVE_SSE2],   [SSE2 Supported])
 AH_TEMPLATE([HAVE_SSE3],   [SSE3 Supported])
 AH_TEMPLATE([HAVE_SSSE3],   [SSSE3 Supported])
+AH_TEMPLATE([HAVE_NEON],   [Neon Supported])
 
 GAVL_CHECK_SIMD_INTERNAL($1, $2)
 
@@ -301,6 +335,10 @@ fi
 
 if test x"$ARCH_PPC" = "xtrue"; then
 AC_DEFINE(ARCH_PPC)
+fi
+
+if test x"$ARCH_ARM" = "xtrue"; then
+AC_DEFINE(ARCH_ARM)
 fi
 
 

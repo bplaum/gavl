@@ -59,7 +59,7 @@ static gavl_video_frame_t * create_frame(gavl_video_frame_pool_t *p)
   gavl_video_frame_t * ret;
   
   if(p->hwctx)
-    ret = gavl_hw_video_frame_create_ram(p->hwctx, &p->format);
+    ret = gavl_hw_video_frame_create(p->hwctx);
   else
     {
     ret = gavl_video_frame_create(&p->format);

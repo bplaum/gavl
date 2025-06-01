@@ -955,3 +955,145 @@ char * gavl_search_config_dir(const char * package, const char * directory)
     }
   return config_dir;
   }
+
+/* 2D coordinate transforms */
+
+void gavl_set_orient_matrix_inv(gavl_image_orientation_t orient, double mat[2][3])
+  {
+  mat[0][2] = 0.0;
+  mat[1][2] = 0.0;
+  
+  switch(orient)
+    {
+    case GAVL_IMAGE_ORIENT_NORMAL:  // EXIF: 1
+      mat[0][0] = 1.0; mat[0][1] = 0.0;
+      mat[1][0] = 0.0; mat[1][1] = 1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT90_CW:  // EXIF: 8
+      mat[0][0] =  0.0; mat[0][1] = -1.0;
+      mat[1][0] =  1.0; mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT180_CW: // EXIF: 3
+      mat[0][0] = -1.0; mat[0][1] =  0.0;
+      mat[1][0] =  0.0; mat[1][1] = -1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_ROT270_CW: // EXIF: 6
+      mat[0][0] =  0.0; mat[0][1] =  1.0;
+      mat[1][0] = -1.0; mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH:       // EXIF: 2
+      mat[0][0] = -1.0; mat[0][1] = 0.0;
+      mat[1][0] = 0.0;  mat[1][1] = 1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT90_CW:  // EXIF: 7
+      mat[0][0] =  0.0;  mat[0][1] =  1.0;
+      mat[1][0] =  1.0;  mat[1][1] =  0.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT180_CW: // EXIF: 4
+      mat[0][0] =  1.0;  mat[0][1] =  0.0;
+      mat[1][0] =  0.0;  mat[1][1] = -1.0;
+      break;
+    case GAVL_IMAGE_ORIENT_FH_ROT270_CW: // EXIF: 5
+      mat[0][0] =  0.0;  mat[0][1] =  -1.0;
+      mat[1][0] =  -1.0; mat[1][1] =  0.0;
+      break;
+    default: // Keeps gcc quiet
+      mat[0][0] = 1.0;   mat[0][1] = 0.0;
+      mat[1][0] = 0.0;   mat[1][1] = 1.0;
+      break;
+    }
+  }
+
+void gavl_set_orient_matrix(gavl_image_orientation_t orient, double mat[2][3])
+  {
+  double tmp[2][3];
+  gavl_set_orient_matrix_inv(orient, tmp);
+  gavl_2d_transform_invert(tmp, mat);
+  
+  }
+
+void 
+gavl_2d_transform_invert(const double matrix[2][3], double inverse[2][3])
+  {
+  // Extrahiere die 2x2 Transformationsmatrix
+  double a = matrix[0][0];
+  double b = matrix[0][1];
+  double c = matrix[1][0];
+  double d = matrix[1][1];
+    
+  // Extrahiere die Translationskomponenten
+  double tx = matrix[0][2];
+  double ty = matrix[1][2];
+    
+  // Berechne die Determinante der 2x2 Matrix
+  double det = a * d - b * c;
+
+  double inv_det;
+  double inv_a;
+  double inv_b;
+  double inv_c;
+  double inv_d;
+  
+  double inv_tx;
+  double inv_ty;
+
+  
+  // Test for singularity
+  if(det == 0.0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Matrix is singular");
+    return;
+    }
+  
+  // Berechne die Inverse der 2x2 Matrix
+  inv_det = 1.0 / det;
+  inv_a = d * inv_det;
+  inv_b = -b * inv_det;
+  inv_c = -c * inv_det;
+  inv_d = a * inv_det;
+    
+  // Berechne die inverse Translation
+  inv_tx = -(inv_a * tx + inv_b * ty);
+  inv_ty = -(inv_c * tx + inv_d * ty);
+  
+  // Setze die inverse Matrix zusammen
+  inverse[0][0] = inv_a;
+  inverse[0][1] = inv_b;
+  inverse[0][2] = inv_tx;
+    
+  inverse[1][0] = inv_c;
+  inverse[1][1] = inv_d;
+  inverse[1][2] = inv_ty;
+  }
+
+
+void gavl_2d_transform_mult(const double mat1[2][3], const double mat2[2][3], double ret[2][3])
+  {
+  ret[0][0] = mat1[0][0] * mat2[0][0] + mat1[0][1] * mat2[1][0];
+  ret[0][1] = mat1[0][0] * mat2[0][1] + mat1[0][1] * mat2[1][1];
+  ret[1][0] = mat1[1][0] * mat2[0][0] + mat1[1][1] * mat2[1][0];
+  ret[1][1] = mat1[1][0] * mat2[0][1] + mat1[1][1] * mat2[1][1];
+
+  ret[0][2] = mat1[0][0] * mat2[0][2] + mat1[0][1] * mat2[1][2] + mat1[0][2]; 
+  ret[1][2] = mat1[1][0] * mat2[0][2] + mat1[1][1] * mat2[1][2] + mat1[1][2];
+  }
+
+void gavl_2d_transform_prepend(double dst[2][3], const double src[2][3])
+  {
+  double tmp[2][3];
+  gavl_2d_transform_mult(src, dst, tmp);
+  memcpy(&dst, tmp, sizeof(dst));
+  }
+
+void gavl_2d_transform_transform(const double mat[2][3], const float * src, float * dst)
+  {
+  dst[0] = src[0] * mat[0][0] + src[1] * mat[0][1] + mat[0][2];
+  dst[1] = src[0] * mat[1][0] + src[1] * mat[1][1] + mat[1][2];
+  }
+
+void gavl_2d_transform_transform_inplace(const double mat[2][3], float * vec)
+  {
+  float tmp[2];
+  gavl_2d_transform_transform(mat, vec, tmp);
+  memcpy(vec, tmp, 2*sizeof(vec[0]));
+  }

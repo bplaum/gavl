@@ -467,7 +467,6 @@ typedef struct
    *  \param bits Number of bits to shift
    */
   void (*shift_down_copy_16)(void * dst, const void * src, int num, int bits);
-
   
   /** \brief Shuffle bytes in 4 byte words
    *  \param ptr Pointer
@@ -475,8 +474,17 @@ typedef struct
    *  \param mask 4 bytes with sources indices. 0x80 means clear.
    */
 
-  void (*shuffle_8_4)(void * ptr, int num, uint8_t * mask);
-  
+  void (*shuffle_8_4)(void * dst, const void * src, int num, int * indices);
+
+  /** \brief Shuffle 16 bit words in groups of 4 
+   *  \param ptr Pointer
+   *  \param len Number of 64 bit elements
+   *  \param mask 4 bytes with sources indices. 0x80 means clear.
+   */
+
+  void (*shuffle_16_4)(void * dst, const void * src, int num, int * indices);
+
+
   
   } gavl_dsp_funcs_t;
 
@@ -638,24 +646,17 @@ gavl_dsp_video_frame_shift_bits_copy(gavl_dsp_context_t * ctx,
                                      const gavl_video_frame_t * src,
                                      const gavl_video_format_t * format, int bits);
 
+void
+gavl_dsp_video_frame_shuffle_4(gavl_dsp_context_t * ctx, gavl_video_frame_t * frame,
+                               const gavl_video_format_t * format, int * src_indices);
 
-/*!
-  \brief Shuffle bytes in a video frame.
-  \param ctx An initialized dsp context
-  \param frame A video frame
-  \param format The format of the frame
-  \param src_masks 4 Masks for the single componts in the source format
-  \param dst_masks 4 Masks for the single componts in the destination format  
+void
+gavl_dsp_video_frame_shuffle_4_copy(gavl_dsp_context_t * ctx,
+                                    gavl_video_frame_t * dst,
+                                    const gavl_video_frame_t * src,
+                                    const gavl_video_format_t * format,
+                                    int * src_indices);
 
-  Since 1.5.0
-*/
-
-GAVL_PUBLIC void
-gavl_dsp_video_frame_shuffle_bytes(gavl_dsp_context_t * ctx,
-                                   gavl_video_frame_t * frame,
-                                   const gavl_video_format_t * format,
-                                   const uint32_t * src_masks,
-                                   const uint32_t * dst_masks);
 
 /**
  * @}

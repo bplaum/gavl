@@ -770,40 +770,52 @@ static void shift_down_copy_16_c(void * _dst, const void * _src, int num, int bi
     }
   }
 
-static void shuffle_8_4_c(void * ptr, int num, uint8_t * mask)
+static void shuffle_8_4_c(void * dst1, const void * src1, int num, int * indices)
   {
-  union
-    {
-    uint8_t u8[4];
-    uint32_t u32;
-    } buf;
+  const uint8_t * src = src1;
+  uint8_t * dst = dst1;
 
-  union
-    {
-    uint8_t * u8;
-    uint32_t * u32;
-    } buf_ptr;
-  
   num++;
-
-  mask[0] &= (0x80 | 0x03);
-  mask[1] &= (0x80 | 0x03);
-  mask[2] &= (0x80 | 0x03);
-  mask[3] &= (0x80 | 0x03);
-  
-  buf_ptr.u8 = ptr;
   
   while(--num)
     {
-    buf.u8[0] = mask[0] & 0x80 ? 0 : buf_ptr.u8[mask[0]];
-    buf.u8[1] = mask[1] & 0x80 ? 0 : buf_ptr.u8[mask[1]];
-    buf.u8[2] = mask[2] & 0x80 ? 0 : buf_ptr.u8[mask[2]];
-    buf.u8[3] = mask[3] & 0x80 ? 0 : buf_ptr.u8[mask[3]];
-    
-    *(buf_ptr.u32) = buf.u32;
-    buf_ptr.u32++;
+#if 1
+    dst[0] = src[indices[0]];
+    dst[1] = src[indices[1]];
+    dst[2] = src[indices[2]];
+    dst[3] = src[indices[3]];
+#else
+    dst[0] = 0x80; /* V */
+    dst[1] = 0x80; /* U */
+    dst[2] = 0xff; /* Y */
+    dst[3] = 0xff; /* A */
+#endif
+    src += 4;
+    dst += 4;
     }
   }
+
+static void shuffle_16_4_c(void * dst1, const void * src1, int num, int * indices)
+  {
+  const uint16_t * src = src1;
+  uint16_t * dst = dst1;
+  num++;
+
+  while(--num)
+    {
+    dst[0] = src[indices[0]];
+    dst[1] = src[indices[1]];
+    dst[2] = src[indices[2]];
+    dst[3] = src[indices[3]];
+    
+    src += 4;
+    dst += 4;
+
+    }
+  
+  
+  }
+
 
 void gavl_dsp_init_c(gavl_dsp_funcs_t * funcs, 
                      int quality)
@@ -856,6 +868,7 @@ void gavl_dsp_init_c(gavl_dsp_funcs_t * funcs,
   funcs->shift_up_copy_16   = shift_up_copy_16_c;
   funcs->shift_down_copy_16 = shift_down_copy_16_c;
   
-  funcs->shuffle_8_4       = shuffle_8_4_c;
+  funcs->shuffle_8_4        = shuffle_8_4_c;
+  funcs->shuffle_16_4       = shuffle_16_4_c;
   
   }

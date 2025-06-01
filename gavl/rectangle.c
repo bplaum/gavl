@@ -103,58 +103,67 @@ void gavl_rectangle_crop_to_format_noscale(gavl_rectangle_i_t * src_rect,
 #undef GAVL_MIN
 
 static void
-crop_dimension_scale(double * src_off, double * src_len, uint32_t src_size,
-                     int32_t * dst_off, int32_t * dst_len, uint32_t dst_size)
+crop_dimension_scale_f(double * src_off, double * src_len, uint32_t src_size,
+                       double * dst_off_f, double * dst_len_f, uint32_t dst_size)
   {
   double scale_factor;
-  double dst_off_f, dst_len_f;
   double crop;
   
-  dst_off_f = (double)(*dst_off);
-  dst_len_f = (double)(*dst_len);
+  scale_factor = *dst_len_f / *src_len;
   
-  scale_factor = (double)(*dst_len) / *src_len;
-
   /* Lower limit (source) */
   if(*src_off < 0.0)
     {
     crop = - (*src_off);
-    dst_off_f += (crop*scale_factor);
-    dst_len_f -= (crop*scale_factor);
+    *dst_off_f += (crop*scale_factor);
+    *dst_len_f -= (crop*scale_factor);
     *src_len  -= (crop);
     *src_off = 0.0;
     }
 
   /* Upper limit (source) */
-  if(*src_off + *src_len > (double)(src_size))
+  if(*src_off + *src_len > (double)src_size)
     {
-    crop = *src_off + *src_len - (double)(src_size); 
-    dst_len_f -= (crop*scale_factor);
+    crop = *src_off + *src_len - (double)src_size; 
+    *dst_len_f -= (crop*scale_factor);
     *src_len  -= crop;
     }
 
   /* Lower limit (destination) */
-  if(dst_off_f < 0.0)
+  if(*dst_off_f < 0.0)
     {
-    crop = - (*dst_off);
+    crop = - *dst_off_f;
     *src_off += (crop/scale_factor);
     *src_len -= (crop/scale_factor);
-    dst_len_f  -= (crop);
-    dst_off_f = 0.0;
+    *dst_len_f  -= (crop);
+    *dst_off_f = 0.0;
     }
   
   /* Upper limit (destination) */
-  if(dst_off_f + dst_len_f > (double)(dst_size))
+  if(*dst_off_f + *dst_len_f > (double)dst_size)
     {
-    crop = dst_off_f + dst_len_f - (double)(dst_size); 
-    dst_len_f -= (crop);
+    crop = *dst_off_f + *dst_len_f - (double)dst_size; 
+    *dst_len_f -= (crop);
     *src_len  -= crop/scale_factor;
     }
-  *dst_len = (int)(dst_len_f+0.5);
-  *dst_off = (int)(dst_off_f+0.5);
   
   }
 
+static void
+crop_dimension_scale(double * src_off, double * src_len, uint32_t src_size,
+                     int32_t * dst_off, int32_t * dst_len, uint32_t dst_size)
+  {
+  double dst_off_f = *dst_off;
+  double dst_len_f = *dst_len;
+  
+  crop_dimension_scale_f(src_off, src_len, src_size,
+                         &dst_off_f, &dst_len_f, dst_size);
+
+  *dst_len = (int)(dst_len_f+0.5);
+  *dst_off = (int)(dst_off_f+0.5);
+
+    
+  }
 
 void gavl_rectangle_crop_to_format_scale(gavl_rectangle_f_t * src_rect,
                                          gavl_rectangle_i_t * dst_rect,
@@ -165,6 +174,17 @@ void gavl_rectangle_crop_to_format_scale(gavl_rectangle_f_t * src_rect,
                        &dst_rect->x, &dst_rect->w, dst_format->image_width);
   crop_dimension_scale(&src_rect->y, &src_rect->h, src_format->image_height,
                        &dst_rect->y, &dst_rect->h, dst_format->image_height);
+  }
+
+void gavl_rectangle_crop_to_format_scale_f(gavl_rectangle_f_t * src_rect,
+                                           gavl_rectangle_f_t * dst_rect,
+                                           const gavl_video_format_t * src_format,
+                                           const gavl_video_format_t * dst_format)
+  {
+  crop_dimension_scale_f(&src_rect->x, &src_rect->w, src_format->image_width,
+                         &dst_rect->x, &dst_rect->w, dst_format->image_width);
+  crop_dimension_scale_f(&src_rect->y, &src_rect->h, src_format->image_height,
+                         &dst_rect->y, &dst_rect->h, dst_format->image_height);
   }
 
 
@@ -232,22 +252,25 @@ void gavl_rectangle_f_crop_bottom(gavl_rectangle_f_t * r, double num_pixels)
   r->h -= num_pixels;
   }
 
-#define PADD(num, multiple) num -= num % multiple
+#define PAD(num, multiple) num -= num % multiple
 
 void gavl_rectangle_i_align(gavl_rectangle_i_t * r, int h_align, int v_align)
   {
-  PADD(r->x, h_align);
-  PADD(r->w, h_align);
+  PAD(r->x, h_align);
+  PAD(r->w, h_align);
 
-  PADD(r->y, v_align);
-  PADD(r->h, v_align);
+  PAD(r->y, v_align);
+  PAD(r->h, v_align);
   }
 
 void gavl_rectangle_i_align_to_format(gavl_rectangle_i_t * r,
                                       const gavl_video_format_t * format)
   {
-  int sub_h, sub_v;
-  gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
+  int sub_h = 1, sub_v = 1;
+
+  if(format->pixelformat != GAVL_PIXELFORMAT_NONE)
+    gavl_pixelformat_chroma_sub(format->pixelformat, &sub_h, &sub_v);
+    
   gavl_rectangle_i_align(r, sub_h, sub_v);
   }
 
@@ -276,11 +299,11 @@ int gavl_rectangle_f_is_empty(const gavl_rectangle_f_t * r)
 /* Assuming we take src_rect from a frame in format src_format,
    calculate the optimal dst_rect in dst_format. */
 
-void gavl_rectangle_fit_aspect(gavl_rectangle_i_t * r,
-                               const gavl_video_format_t * src_format,
-                               const gavl_rectangle_f_t * src_rect,
-                               const gavl_video_format_t * dst_format,
-                               float zoom, float squeeze)
+void gavl_rectangle_fit_aspect_f(gavl_rectangle_f_t * r,
+                                 const gavl_video_format_t * src_format,
+                                 const gavl_rectangle_f_t * src_rect,
+                                 const gavl_video_format_t * dst_format,
+                                 float zoom, float squeeze, int do_orient)
   {
   float dst_display_aspect;
   float dst_pixel_aspect;
@@ -288,26 +311,34 @@ void gavl_rectangle_fit_aspect(gavl_rectangle_i_t * r,
 
   float squeeze_factor;
 
+  int transposed = 0;
+  
+  if(do_orient && gavl_image_orientation_is_transposed(src_format->orientation))
+    transposed = 1;
+  
   squeeze_factor = pow(2.0, squeeze);
   
   src_display_aspect = squeeze_factor * 
-    src_rect->w * (float)(src_format->pixel_width) /
-    (src_rect->h * (float)(src_format->pixel_height));
+    src_rect->w * (float)src_format->pixel_width /
+    (src_rect->h * (float)src_format->pixel_height);
 
+  if(transposed)
+    src_display_aspect = 1.0 / src_display_aspect;
+    
   dst_pixel_aspect =
-    (float)(dst_format->pixel_width) /
-    (float)(dst_format->pixel_height);
+    (float)dst_format->pixel_width /
+    (float)dst_format->pixel_height;
   
   dst_display_aspect =
     dst_pixel_aspect * 
-    (float)(dst_format->image_width) /
-    (float)(dst_format->image_height);
-
+    (float)dst_format->image_width /
+    (float)dst_format->image_height;
+  
   if(dst_display_aspect > src_display_aspect) /* Bars left and right */
     {
     //    fprintf(stderr, "Bars left and right\n");
-    r->w = (int)((float)dst_format->image_height * src_display_aspect * zoom / dst_pixel_aspect + 0.5);
-    r->h = (int)((float)dst_format->image_height * zoom + 0.5); 
+    r->w = (float)dst_format->image_height * src_display_aspect * zoom / dst_pixel_aspect;
+    r->h = (float)dst_format->image_height * zoom; 
     //    fprintf(stderr, "Bars left and right %dx%d -> %dx%d (%f, %f)\n", src_rect->w, src_rect->h, r->w, r->h,
     //            (float)(src_rect->w * src_format->pixel_width) /
     //            (float)(src_rect->h * src_format->pixel_height), dst_pixel_aspect);
@@ -315,20 +346,33 @@ void gavl_rectangle_fit_aspect(gavl_rectangle_i_t * r,
   else  /* Bars top and bottom */
     {
     //    fprintf(stderr, "Bars top and bottom\n");
-    r->w = (int)((float)(dst_format->image_width) * zoom + 0.5);
-    r->h = (int)((float)dst_format->image_width   * zoom * dst_pixel_aspect / src_display_aspect + 0.5);
+    r->w = (float)dst_format->image_width * zoom;
+    r->h = (float)dst_format->image_width * zoom * dst_pixel_aspect / src_display_aspect;
     }
-  r->x = ((int)dst_format->image_width - r->w)/2;
-  r->y = ((int)dst_format->image_height - r->h)/2;
+  r->x = (dst_format->image_width - r->w)/2;
+  r->y = (dst_format->image_height - r->h)/2;
+  }
+
+void gavl_rectangle_fit_aspect(gavl_rectangle_i_t * r,
+                               const gavl_video_format_t * src_format,
+                               const gavl_rectangle_f_t * src_rect,
+                               const gavl_video_format_t * dst_format,
+                               float zoom, float squeeze)
+  {
+  gavl_rectangle_f_t rf;
+  gavl_rectangle_i_to_f(&rf, r);
+  gavl_rectangle_fit_aspect_f(&rf, src_format, src_rect,
+                              dst_format, zoom, squeeze, 0);
+  gavl_rectangle_f_to_i(r, &rf);
   gavl_rectangle_i_align_to_format(r, dst_format);
   }
 
 void gavl_rectangle_i_to_f(gavl_rectangle_f_t * dst, const gavl_rectangle_i_t * src)
   {
-  dst->x = (double)(src->x);
-  dst->y = (double)(src->y);
-  dst->w = (double)(src->w);
-  dst->h = (double)(src->h);
+  dst->x = (double)src->x;
+  dst->y = (double)src->y;
+  dst->w = (double)src->w;
+  dst->h = (double)src->h;
   }
   
 void gavl_rectangle_f_to_i(gavl_rectangle_i_t * dst, const gavl_rectangle_f_t * src)

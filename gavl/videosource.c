@@ -95,11 +95,9 @@ static gavl_video_frame_t * create_in_frame(gavl_video_source_t * src)
   gavl_video_frame_t * ret;
   
   if(src->flags & FLAG_HW_TO_RAM)
-    ret = gavl_hw_video_frame_create_ram(src->src_format.hwctx,
-                                          &src->src_format);
+    ret = gavl_video_frame_create(&src->src_format);
   else if(src->src_format.hwctx)
-    ret = gavl_hw_video_frame_create_hw(src->src_format.hwctx,
-                                         &src->src_format);
+    ret = gavl_hw_video_frame_create(src->src_format.hwctx, 1);
   else
     ret = gavl_video_frame_create(&src->src_format);
 
@@ -186,6 +184,12 @@ const gavl_video_format_t *
 gavl_video_source_get_src_format(gavl_video_source_t * s)
   {
   return (s->flags & FLAG_SUPPORT_HW) ? &s->src_format : &s->src_format_nohw;
+  }
+
+int
+gavl_video_source_get_src_flags(gavl_video_source_t * s)
+  {
+  return s->src_flags;
   }
 
 const gavl_video_format_t *
@@ -317,8 +321,7 @@ static gavl_source_status_t read_frame_transfer(gavl_video_source_t * s,
 
   if(ret == GAVL_SOURCE_OK)
     {
-    if(!gavl_video_frame_hw_to_ram(&s->src_format,
-                                   *frame,
+    if(!gavl_video_frame_hw_to_ram(*frame,
                                    tmp_frame))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Frame transfer failed");

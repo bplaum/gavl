@@ -428,6 +428,38 @@ char * gavl_convert_string_to_buffer(gavl_charset_converter_t * cnv,
 GAVL_PUBLIC
 void gavl_charset_converter_destroy(gavl_charset_converter_t * cnv);
 
+/* Simple 2D coordinate transform */
+
+/* We keep matrices as double because we make more operations on them.
+   The actual transformations are then done on floats, which should be accurate enough
+   for todays image resolutions */
+
+GAVL_PUBLIC
+void gavl_set_orient_matrix_inv(gavl_image_orientation_t orient, double mat[2][3]);
+
+GAVL_PUBLIC
+void gavl_set_orient_matrix(gavl_image_orientation_t orient, double mat[2][3]);
+
+GAVL_PUBLIC
+void gavl_2d_transform_invert(const double matrix[2][3], double inverse[2][3]);
+
+GAVL_PUBLIC
+void gavl_2d_transform_mult(const double src1[2][3],
+                            const double src2[2][3],
+                            double dst[2][3]);
+
+GAVL_PUBLIC
+void gavl_2d_transform_transform(const double matrix[2][3],
+                                 const float * src,
+                                 float * dst);
+
+GAVL_PUBLIC
+void gavl_2d_transform_transform_inplace(const double matrix[2][3], float * dst);
+
+GAVL_PUBLIC
+void gavl_2d_transform_prepend(double dst[2][3], const double src[2][3]);
+
+
 #endif // GAVL_UTILS_H_INCLUDED
 
 

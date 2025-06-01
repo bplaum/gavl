@@ -481,59 +481,59 @@ gavl_dsp_video_frame_shift_bits_copy(gavl_dsp_context_t * ctx,
   
   }
 
-static int get_byte_index(uint32_t b)
+void
+gavl_dsp_video_frame_shuffle_4(gavl_dsp_context_t * ctx, gavl_video_frame_t * frame,
+                               const gavl_video_format_t * format, int * src_indices)
   {
-  int ret = 0;
-
-  while(b >>= 1)
-    ret++;
-
-  ret /= 8;
-  
-#ifdef WORDS_BIGENDIAN
-  return 3 - ret;
-#else
-  return ret;
-#endif
+  //  gavl_dsp_video_frame_shuffle_4_copy(ctx, frame, frame, format, src_indices);
+  fprintf(stderr, "gavl_dsp_video_frame_shuffle_4 Not implemeted\n");
   }
 
 void
-gavl_dsp_video_frame_shuffle_bytes(gavl_dsp_context_t * ctx,
-                                   gavl_video_frame_t * frame,
-                                   const gavl_video_format_t * format,
-                                   const uint32_t * src_masks, const uint32_t * dst_masks)
+gavl_dsp_video_frame_shuffle_4_copy(gavl_dsp_context_t * ctx, gavl_video_frame_t * dst,
+                                    const gavl_video_frame_t * src,
+                                    const gavl_video_format_t * format, int * src_indices)
   {
-  uint8_t * ptr;
+  const uint8_t * src_ptr;
+  uint8_t * dst_ptr;
   int i;
-  int src_byte, dst_byte;
-  int do_convert = 0;
-  uint8_t mask[4] = { 0, 0, 0, 0 };
+  int bytes_per_pixel;
+  int istart, iend;
 
-#if 0
-  fprintf(stderr, "gavl_dsp_video_frame_shuffle_bytes\n");
-  fprintf(stderr, "  src: %08x %08x %08x %08x\n", src_masks[0], src_masks[1], src_masks[2], src_masks[3]);
-  fprintf(stderr, "  dst: %08x %08x %08x %08x\n", dst_masks[0], dst_masks[1], dst_masks[2], dst_masks[3]);
-#endif
+  istart = 0;
+  iend = format->image_height;
 
-  for(i = 0; i < 4; i++)
+  if(src->src_rect.h > 0)
     {
-    src_byte = get_byte_index(src_masks[i]);
-    dst_byte = get_byte_index(dst_masks[i]);
-    if(src_byte != dst_byte)
-      do_convert = 1;
-
-    mask[dst_byte] = src_byte;
+    istart = src->src_rect.y;
+    iend = src->src_rect.y + src->src_rect.h;
     }
-
-  if(!do_convert) // Nothing to do
+  
+  if(!gavl_pixelformat_is_rgb(format->pixelformat) &&
+     !gavl_pixelformat_is_yuv(format->pixelformat))
     return;
+
+  dst_ptr = dst->planes[0] + dst->strides[0] * istart;
+  src_ptr = src->planes[0] + src->strides[0] * istart;
   
-  ptr = frame->planes[0];
-  
-  for(i = 0; i < format->image_height; i++)
+  bytes_per_pixel = gavl_pixelformat_bytes_per_pixel(format->pixelformat);
+  switch(bytes_per_pixel)
     {
-    ctx->funcs.shuffle_8_4(ptr, format->image_width, mask);
-    ptr += frame->strides[0];
+    case 4:
+      for(i = istart; i < iend; i++)
+        {
+        ctx->funcs.shuffle_8_4(dst_ptr, src_ptr, format->image_width, src_indices);
+        dst_ptr += dst->strides[0];
+        src_ptr += src->strides[0];
+        }
+      break;
+    case 8:
+      for(i = istart; i < iend; i++)
+        {
+        ctx->funcs.shuffle_16_4(dst_ptr, src_ptr, format->image_width, src_indices);
+        dst_ptr += dst->strides[0];
+        src_ptr += src->strides[0];
+        }
+      break;
     }
-  
   }

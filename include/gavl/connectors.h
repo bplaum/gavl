@@ -268,6 +268,14 @@ GAVL_PUBLIC
 const gavl_video_format_t *
 gavl_video_source_get_src_format(gavl_video_source_t * s);
 
+/** \brief Get the source flags
+ *  \param s A video source
+ *  \returns The source flags
+ */
+
+GAVL_PUBLIC
+int gavl_video_source_get_src_flags(gavl_video_source_t * s);
+
 /** \brief Get the output format
  *  \param s A video source
  *  \returns The video format in which frames are read

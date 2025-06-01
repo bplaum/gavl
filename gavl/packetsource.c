@@ -228,7 +228,7 @@ gavl_packet_source_read_packet(void*sp, gavl_packet_t ** p)
   
   if(s->out_packet)
     {
-    if(*p)
+    if(*p && (*p != s->out_packet))
       gavl_packet_copy(*p, s->out_packet);
     else
       *p = s->out_packet;

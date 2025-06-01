@@ -45,18 +45,13 @@
 #include <gavl/utils.h>
 
 #include <gavl/hw_v4l2.h>
-#include <gavl/hw_dmabuf.h>
+
 
 #include <hw_private.h>
 
-#ifdef HAVE_DRM_DRM_FOURCC_H 
-#define HAVE_DRM
-#else // !HAVE_DRM_DRM_FOURCC_H 
-
-#ifdef HAVE_LIBDRM_DRM_FOURCC_H 
-#define HAVE_DRM
+#ifdef HAVE_DRM
+#include <gavl/hw_dmabuf.h>
 #endif
-#endif // !HAVE_DRM_DRM_FOURCC_H 
 
 // #define DUMP_CONTROLS
 // #define DUMP_QUEUE
@@ -1065,6 +1060,7 @@ static void release_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
   memset(port->bufs, 0, count * sizeof(port->bufs[0]));
   }
 
+#ifdef HAVE_DRM
 static int request_buffers_dmabuf(gavl_v4l2_device_t * dev, int type, int count, gavl_v4l2_buffer_t * bufs)
   {
   int i;
@@ -1104,6 +1100,7 @@ static void release_buffers_dmabuf(gavl_v4l2_device_t * dev, int type, int count
     } 
   memset(bufs, 0, count * sizeof(*bufs));
   }
+#endif
 
 gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev)
   {
@@ -2489,7 +2486,9 @@ static gavl_sink_status_t sink_put_func_mmap(void * priv, gavl_video_frame_t * f
 static int init_video_output(gavl_v4l2_device_t * dev,
                              gavl_video_format_t * fmt, int num_bufs)
   {
-  int pixfmt_conversion = 0;
+#ifdef HAVE_DRM
+  int pixfmt_conversion;
+#endif
   gavl_video_sink_get_func get_func = NULL;
   gavl_video_sink_put_func put_func = NULL;
   gavl_pixelformat_t pfmt;
@@ -2499,8 +2498,10 @@ static int init_video_output(gavl_v4l2_device_t * dev,
   
   pfmt = gavl_pixelformat_get_best(fmt->pixelformat, dev->sink_pixelformats, NULL);
 
+#ifdef HAVE_DRM
   if(fmt->pixelformat != pfmt)
     pixfmt_conversion = 1;
+#endif
   
   fmt->pixelformat = pfmt;
   fmt->timescale = GAVL_TIME_SCALE;
@@ -2529,20 +2530,25 @@ static int init_video_output(gavl_v4l2_device_t * dev,
   
 #ifdef HAVE_DRM
   /* Initialize output (src) */
-  if(!pixfmt_conversion && fmt->hwctx && gavl_hw_ctx_exports_type(fmt->hwctx, GAVL_HW_DMABUFFER))
+  if(!pixfmt_conversion && fmt->hwctx)
     {
     /* Try to allocate dmabuf buffer */
+    dev->hwctx_dmabuf = gavl_hw_ctx_create_dma();
 
-    if(request_buffers_dmabuf(dev, dev->output.buf_type, num_bufs, dev->output.bufs))
+    if(gavl_hw_ctx_can_export(fmt->hwctx, dev->hwctx_dmabuf) &&
+       request_buffers_dmabuf(dev, dev->output.buf_type, num_bufs, dev->output.bufs))
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing DMA buffer");
-      dev->hwctx_dmabuf = gavl_hw_ctx_create_dma();
 
       if(IS_PLANAR(dev->output.buf_type))
         put_func = sink_put_func_dmabuf_planar;
       else
         put_func = sink_put_func_dmabuf;
-      
+      }
+    else
+      {
+      gavl_hw_ctx_destroy(dev->hwctx_dmabuf);
+      dev->hwctx_dmabuf = NULL;
       }
     }
 #endif
@@ -3278,10 +3284,8 @@ static void destroy_native_v4l2(void * native)
   }
 
 
-static int export_video_frame_v4l2(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
-                                   gavl_video_frame_t * src, gavl_video_frame_t * dst)
+static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_frame_t * src, gavl_video_frame_t * dst)
   {
-  gavl_v4l2_device_t * dev = ctx->native;
   gavl_hw_type_t dst_hw_type = gavl_hw_ctx_get_type(dst->hwctx);
 
   switch(dst_hw_type)
@@ -3292,14 +3296,24 @@ static int export_video_frame_v4l2(gavl_hw_context_t * ctx, const gavl_video_for
       int i;
       gavl_dmabuf_video_frame_t * dma_frame = dst->storage;
       gavl_v4l2_buffer_t * v4l2_storage = src->storage;
-
-      if(IS_PLANAR(v4l2_storage->buf.type))
-        dma_frame->num_buffers = v4l2_storage->buf.length;
-      else
-        dma_frame->num_buffers = 1;
+      gavl_v4l2_device_t * dev = src->hwctx->native;
       
-      dma_frame->num_planes = gavl_pixelformat_num_planes(fmt->pixelformat);
-      dma_frame->fourcc = gavl_drm_fourcc_from_gavl(fmt->pixelformat);
+      if(IS_PLANAR(v4l2_storage->buf.type))
+        {
+        dma_frame->num_buffers = v4l2_storage->buf.length;
+        for(i = 0; i < dma_frame->num_buffers; i++)
+          {
+          dma_frame->buffers[i].map_len = v4l2_storage->buf.m.planes[i].length;
+          }
+        }
+      else
+        {
+        dma_frame->num_buffers = 1;
+        dma_frame->buffers[0].map_len = v4l2_storage->buf.length;
+        }
+      
+      dma_frame->num_planes = gavl_pixelformat_num_planes(vfmt->pixelformat);
+      dma_frame->fourcc = gavl_drm_fourcc_from_gavl(src->hwctx, vfmt->pixelformat);
       
       /* Export buffers */
       for(i = 0; i < dma_frame->num_buffers; i++)
@@ -3323,7 +3337,8 @@ static int export_video_frame_v4l2(gavl_hw_context_t * ctx, const gavl_video_for
       for(i = 0; i < dma_frame->num_planes; i++)
         {
         dst->strides[i] = src->strides[i];
-
+        dma_frame->planes[i].stride = src->strides[i];
+        
         if(!i)
           {
           dma_frame->planes[i].buf_idx = 0;
@@ -3351,9 +3366,9 @@ static int export_video_frame_v4l2(gavl_hw_context_t * ctx, const gavl_video_for
   return 0;
   }
 
-static int exports_type_v4l2(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to)
   {
-  switch(hw)
+  switch(to->type)
     {
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
@@ -3391,12 +3406,12 @@ static int exports_type_v4l2(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
       port->vframe = gavl_video_frame_create(NULL);
       
       dma_ctx = gavl_hw_ctx_create_dma();
-      dma_frame = gavl_hw_video_frame_create_hw(dma_ctx, &port->format);
+      gavl_hw_ctx_set_video(dma_ctx, &port->format, GAVL_HW_FRAME_MODE_IMPORT);
+      dma_frame = gavl_hw_video_frame_create(dma_ctx, 0);
       
       buffer_to_video_frame_mmap(dev, port);
       
-      if(export_video_frame_v4l2(ctx, &port->format,
-                                 port->vframe, dma_frame))
+      if(export_video_frame_v4l2(&port->format, port->vframe, dma_frame))
         {
         ret = 1;
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export supported");
@@ -3443,7 +3458,7 @@ static const gavl_hw_funcs_t funcs =
    //    .video_frame_to_hw      = video_frame_to_hw_egl,
    //    .video_format_adjust    = gavl_gl_adjust_video_format,
    //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
-    .can_export             = exports_type_v4l2,
+    .can_export             = can_export_v4l2,
     .export_video_frame = export_video_frame_v4l2,
   };
 

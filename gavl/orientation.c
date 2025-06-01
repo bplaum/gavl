@@ -75,6 +75,17 @@ gavl_image_orientation_to_string(gavl_image_orientation_t orient)
   return NULL;
   }
 
+int 
+gavl_image_orientation_is_transposed(gavl_image_orientation_t orient)
+  {
+  int i;
+  for(i = 0; i < 8; i++)
+    {
+    if(orientations[i].orient == orient)
+      return orientations[i].transpose;
+    }
+  return 0;
+  }
 
 static void scanline_func_8(const uint8_t * in, uint8_t * out, int in_advance, int num)
   {

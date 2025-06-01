@@ -854,7 +854,7 @@ void gavl_packet_buffer_destroy(gavl_packet_buffer_t * b)
   buf_free(&b->pool);
   
   gavl_compression_info_free(&b->ci);
-  
+  free(b);
   }
 
 gavl_packet_sink_t * gavl_packet_buffer_get_sink(gavl_packet_buffer_t * b)

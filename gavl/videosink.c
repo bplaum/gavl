@@ -39,6 +39,8 @@ struct gavl_video_sink_s
   gavl_connector_lock_func_t unlock_func;
   void * lock_priv;
   gavl_connector_free_func_t free_func;
+
+  gavl_video_frame_t * get_frame;
   
   };
 
@@ -78,9 +80,13 @@ gavl_video_frame_t *
 gavl_video_sink_get_frame(gavl_video_sink_t * s)
   {
   gavl_video_frame_t * ret;
+
+  /* Repeated calls to get return the same frame */
+  if(s->flags & FLAG_GET_CALLED)
+    return s->get_frame;
+  
   s->flags |= FLAG_GET_CALLED;
 
-  
   if(s->get_func)
     {
     if(s->lock_func)
@@ -92,6 +98,9 @@ gavl_video_sink_get_frame(gavl_video_sink_t * s)
     }
   else
     ret = NULL;
+
+  s->get_frame = ret;
+  
   return ret;
   }
 
@@ -126,6 +135,10 @@ gavl_video_sink_put_frame(gavl_video_sink_t * s,
 
   if(s->unlock_func)
     s->unlock_func(s->lock_priv);
+
+  s->get_frame = NULL;
+  s->flags &= ~FLAG_GET_CALLED;
+  
   return st;
   }
 

@@ -633,6 +633,9 @@ gavl_dictionary_t * gavl_track_get_part_nc(gavl_dictionary_t * dict, int i);
 GAVL_PUBLIC
 gavl_time_t gavl_track_get_start_time(const gavl_dictionary_t * dict);
 
+GAVL_PUBLIC
+void gavl_track_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src);
+
 /* Compression tags (like AVI four character codes etc.) */
 
 GAVL_PUBLIC

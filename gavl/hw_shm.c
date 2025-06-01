@@ -31,7 +31,9 @@
 
 typedef struct
   {
-  int wr;
+  int ctx;
+  int idx;
+  
   } shm_t;
 
 /* Functions */
@@ -41,7 +43,7 @@ static void destroy_native_shm(void * native)
   free(s);
   }
 
-static gavl_pixelformat_t * get_image_formats_shm(gavl_hw_context_t * ctx)
+static gavl_pixelformat_t * get_image_formats_shm(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
   int i;
   gavl_pixelformat_t * pixelformats;
@@ -55,141 +57,83 @@ static gavl_pixelformat_t * get_image_formats_shm(gavl_hw_context_t * ctx)
   return pixelformats;
   }
 
-static gavl_pixelformat_t * get_overlay_formats_shm(gavl_hw_context_t * ctx)
+static gavl_video_frame_t *
+video_frame_create_hw_shm(gavl_hw_context_t * ctx, int alloc_resource)
   {
-  int i;
-  gavl_pixelformat_t * pixelformats;
-  int idx = 0;
-  int num_image_formats = gavl_num_pixelformats();
-
-  pixelformats = calloc(num_image_formats+1, sizeof(*pixelformats));
-  
-  for(i = 0; i < num_image_formats; i++)
-    {
-    gavl_pixelformat_t p = gavl_get_pixelformat(i);
-    
-    if(gavl_pixelformat_has_alpha(p))
-      {
-      pixelformats[idx] = p;
-      idx++;
-      }
-    }
-  pixelformats[idx] = GAVL_PIXELFORMAT_NONE;
-  return pixelformats;
-  }
-
-
-#if 0
-static void video_format_adjust_shm(gavl_hw_context_t * ctx,
-                                    gavl_video_format_t * fmt)
-  {
-  
-  }
-
-static void overlay_format_adjust_shm(gavl_hw_context_t * ctx,
-                                      gavl_video_format_t * fmt)
-  {
-  
-  }
-#endif
-
-
-static gavl_video_frame_t * video_frame_create_hw_shm(gavl_hw_context_t * ctx,
-                                                      gavl_video_format_t * fmt)
-  {
-  gavl_shm_t * shm;
   shm_t * s = ctx->native;
-  gavl_video_frame_t * ret = gavl_video_frame_create(NULL);
 
-  if(s->wr)
-    {
-    shm = gavl_shm_alloc_write(gavl_video_format_get_image_size(fmt));
-    ret->storage = shm;
-    
-    /* Set pointers */
-    gavl_video_frame_set_planes(ret, fmt, shm->addr);
-    }
-  else
-    {
-    // Set storage when we read the packet 
-    }
+  gavl_shm_video_frame_t * priv = calloc(1, sizeof(*priv));
+  
+  gavl_video_frame_t * ret = gavl_video_frame_create(NULL);
+  ret->storage = priv;
+
+  priv->shm = gavl_shm_create(gavl_video_format_get_image_size(&ctx->vfmt),
+                              &s->ctx, &s->idx);
+  
+  /* Set pointers */
+  gavl_video_frame_set_planes(ret, &ctx->vfmt,
+                              gavl_shm_get_buffer(priv->shm, NULL));
   
   return ret;
   }
 
-static void video_frame_destroy_shm(gavl_video_frame_t * f)
+static void video_frame_destroy_shm(gavl_video_frame_t * f, int destroy_resource)
   {
   //  shm_t * p;
   if(f->storage)
     {
-    gavl_shm_t * shm;
-    shm = f->storage;
-    gavl_shm_free(shm);
-    f->storage = 0;
+    gavl_shm_video_frame_t * priv = f->storage;
+    if(priv->shm)
+      gavl_shm_destroy(priv->shm);
+    free(priv);
+    f->storage = NULL;
     }
   gavl_video_frame_null(f);
   gavl_video_frame_destroy(f);
   }
 
-typedef struct
-  {
-  int pid;
-  int id;
-  int buf_idx;
-  int offsets[GAVL_MAX_PLANES];
-  int strides[GAVL_MAX_PLANES];
-  } shm_payload_t;
 
-static int video_frame_to_packet_shm(gavl_hw_context_t * ctx,
-                                     const gavl_video_format_t * fmt,
-                                     const gavl_video_frame_t * frame,
-                                     gavl_packet_t * p)
+static int video_frame_map_shm(gavl_video_frame_t * f, int wr)
   {
-  const gavl_shm_t *shm = frame->storage;
+  //   gavl_shm_video_frame_t * priv = f->storage;
+
+  //  gavl_shm_map(const char * name, int size, int wr);
+
+  if(wr)
+    {
+    }
+  else
+    {
+    
+    }
   
-  gavl_packet_alloc(p, BG_SHM_NAME_MAX);
-  strncpy((char*)p->buf.buf, shm->name, BG_SHM_NAME_MAX);
-  
-  p->buf_idx = frame->buf_idx;
   return 1;
   }
 
-static int video_frame_from_packet_shm(gavl_hw_context_t * ctx,
-                                       const gavl_video_format_t * fmt,
-                                       gavl_video_frame_t * frame,
-                                       const gavl_packet_t * p)
-  {
-  gavl_shm_t *shm = gavl_shm_alloc_read((const char *)p->buf.buf,
-                                        gavl_video_format_get_image_size(fmt));
 
-  frame->storage = shm;
-  gavl_video_frame_set_planes(frame, fmt, shm->addr);
-  
-  frame->buf_idx = p->buf_idx;
-  
-  return 1;
+static int video_frame_unmap_shm(gavl_video_frame_t * frame)
+  {
+  return 0;
   }
 
 static const gavl_hw_funcs_t funcs =
   {
    .destroy_native         = destroy_native_shm,
    .get_image_formats      = get_image_formats_shm,
-   .get_overlay_formats    = get_overlay_formats_shm,
-   .video_frame_create_hw  = video_frame_create_hw_shm,
+   .video_frame_create     = video_frame_create_hw_shm,
    .video_frame_destroy    = video_frame_destroy_shm,
-   .video_frame_to_packet = video_frame_to_packet_shm,
-   .video_frame_from_packet   = video_frame_from_packet_shm,
+   .video_frame_map        = video_frame_map_shm,
+   .video_frame_unmap        = video_frame_unmap_shm,
    
    //   .video_format_adjust    = video_format_adjust_shm,
    //   .overlay_format_adjust  = overlay_format_adjust_shm,
   };
 
-
-gavl_hw_context_t * gavl_hw_ctx_create_shm(int wr)
+gavl_hw_context_t * gavl_hw_ctx_create_shm()
   {
   shm_t * native = calloc(1, sizeof(*native));
-  native->wr = wr;
-  return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_SHM, GAVL_HW_SUPPORTS_VIDEO);
+  return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_SHM,
+                                         GAVL_HW_SUPPORTS_VIDEO | GAVL_HW_SUPPORTS_VIDEO_MAP);
   }
 
 /*
