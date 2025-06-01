@@ -58,8 +58,6 @@ fi
 
 AM_CONDITIONAL(HAVE_DOXYGEN, test "x$have_doxygen" = "xtrue")
 
-
-
 dnl
 dnl Check for compiler flags
 dnl  
@@ -156,8 +154,20 @@ LIBS=$OLD_LIBS
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
 
-AC_CHECK_HEADERS([drm/drm_fourcc.h])
-AC_CHECK_HEADERS([libdrm/drm_fourcc.h])
+AH_TEMPLATE([HAVE_DRM], [Is DRM available?])
+
+have_drm="false"
+
+AC_CHECK_HEADERS([drm/drm_fourcc.h libdrm/drm_fourcc.h], have_drm="true")
+
+if test "x$have_drm" = "xtrue"; then
+AC_DEFINE([HAVE_DRM])
+fi
+
+AC_CHECK_HEADERS([linux/dma-heap.h])
+AC_CHECK_HEADERS([linux/dma-buf.h])
+
+
 
 dnl
 dnl clock_gettime
@@ -268,6 +278,7 @@ if test "x$have_libva" = "xtrue"; then
 LIBGAVL_CFLAGS="$LIBGAVL_CFLAGS $LIBVA_CFLAGS"
 LIBGAVL_LIBS="$LIBGAVL_LIBS $LIBVA_LIBS"
 fi
+
 
 dnl
 dnl OpenGL
