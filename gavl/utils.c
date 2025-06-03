@@ -1078,11 +1078,25 @@ void gavl_2d_transform_mult(const double mat1[2][3], const double mat2[2][3], do
   ret[1][2] = mat1[1][0] * mat2[0][2] + mat1[1][1] * mat2[1][2] + mat1[1][2];
   }
 
+static void transform_2d_copy(double dst[2][3], const double src[2][3])
+  {
+  int i, j;
+
+  for(i = 0; i < 2; i++)
+    {
+    for(j = 0; j < 3; j++)
+      {
+      dst[i][j] = src[i][j];
+      }
+    }
+    
+  }
+
 void gavl_2d_transform_prepend(double dst[2][3], const double src[2][3])
   {
   double tmp[2][3];
   gavl_2d_transform_mult(src, dst, tmp);
-  memcpy(&dst, tmp, sizeof(dst));
+  transform_2d_copy(dst, tmp);
   }
 
 void gavl_2d_transform_transform(const double mat[2][3], const float * src, float * dst)
