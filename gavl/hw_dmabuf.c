@@ -237,7 +237,9 @@ video_frame_unmap_dmabuf(gavl_video_frame_t * f)
     {
 #ifdef __aarch64__
     /* Flush cache synchronously */
-    __builtin___clear_cache(dmabuf->buffers[i].map_ptr, dmabuf->buffers[i].map_ptr + dmabuf->buffers[i].map_len);
+    if(dmabuf->buffers[i].map_ptr)
+      __builtin___clear_cache(dmabuf->buffers[i].map_ptr,
+                              dmabuf->buffers[i].map_ptr + dmabuf->buffers[i].map_len);
 #endif
 
 #ifdef HAVE_LINUX_DMA_BUF_H
