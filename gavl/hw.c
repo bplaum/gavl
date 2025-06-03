@@ -559,6 +559,9 @@ gavl_hw_video_frame_get(gavl_hw_context_t * ctx)
 
   /* Add a reference which, is passed to the caller */
   gavl_hw_video_frame_ref(f);
+
+  gavl_hw_video_frame_map(f, 1);
+  
   //  fprintf(stderr, "gavl_hw_video_frame_get: creating frame\n");
   return f;
   }

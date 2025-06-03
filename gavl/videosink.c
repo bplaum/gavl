@@ -100,7 +100,9 @@ gavl_video_sink_get_frame(gavl_video_sink_t * s)
     ret = NULL;
 
   s->get_frame = ret;
-  
+
+  if(s->get_frame)
+    gavl_hw_video_frame_map(s->get_frame, 1);
   return ret;
   }
 
@@ -114,16 +116,23 @@ gavl_video_sink_put_frame(gavl_video_sink_t * s,
   if(s->lock_func)
     s->lock_func(s->lock_priv);
 
+  
   //  fprintf(stderr, "gavl_video_sink_put_frame s: %p f: %p get_called %d get_func %p\n", 
   //          s, f, s->flags & FLAG_GET_CALLED, s->get_func);
-          
+
+  if(s->get_frame)
+    gavl_hw_video_frame_unmap(s->get_frame);
+  
   if(!(s->flags & FLAG_GET_CALLED) &&
      s->get_func &&
      (df = s->get_func(s->priv)))
     {
     if(f)
       {
+      gavl_hw_video_frame_map(df, 1);
       gavl_video_frame_copy(&s->format, df, f);
+      gavl_hw_video_frame_unmap(df);
+      
       gavl_video_frame_copy_metadata(df, f);
       st = s->put_func(s->priv, df);
       }
@@ -131,7 +140,9 @@ gavl_video_sink_put_frame(gavl_video_sink_t * s,
       st = s->put_func(s->priv, f);
     }
   else
+    {
     st = s->put_func(s->priv, f);
+    }
 
   if(s->unlock_func)
     s->unlock_func(s->lock_priv);
