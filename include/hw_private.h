@@ -25,13 +25,8 @@
 #include <gavl/gavl.h> // Includes hw.h
 #include <gavl/compression.h>
 
-#ifdef HAVE_DRM_DRM_FOURCC_H
-#include <drm/drm_fourcc.h>
-#else
-#ifdef HAVE_LIBDRM_RM_FOURCC_H
-#include <libdrm/drm_fourcc.h>
-#endif
-
+#ifdef HAVE_DRM
+#include <drm_fourcc.h>
 #endif
 
 
