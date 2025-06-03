@@ -364,7 +364,7 @@ static void dump_image_format(const VAImageFormat * f)
 #endif
 
 gavl_pixelformat_t *
-gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx)
+gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
   int num, i;
   gavl_pixelformat_t * ret;
@@ -514,7 +514,7 @@ VAImageID gavl_vaapi_get_image_id(const gavl_video_frame_t * f)
   }
   
 void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
-                                    gavl_video_format_t * fmt)
+                                    gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
   {
   gavl_video_format_set_frame_size(fmt, 16, 16);
   }
@@ -634,10 +634,10 @@ int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * dict)
   
   }
 
-int gavl_vaapi_export_video_frame(gavl_hw_context_t * ctx, const gavl_video_format_t * fmt,
+int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
                                   gavl_video_frame_t * src, gavl_video_frame_t * dst)
   {
-  gavl_hw_vaapi_t * dev = ctx->native;
+  gavl_hw_vaapi_t * dev = src->hwctx->native;
   gavl_hw_type_t dst_hw_type = gavl_hw_ctx_get_type(dst->hwctx);
 
   switch(dst_hw_type)
@@ -689,9 +689,9 @@ int gavl_vaapi_export_video_frame(gavl_hw_context_t * ctx, const gavl_video_form
   return 0;
   }
 
-int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, gavl_hw_type_t hw)
+int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_hw_context_t * other)
   {
-  switch(hw)
+  switch(other->type)
     {
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
