@@ -43,18 +43,37 @@
 #define LOG_DOMAIN "dmabuf"
 
 #ifdef HAVE_DRM
+#include <xf86drm.h>
+#include <xf86drmMode.h>
+
+#define DUMP_DEVICE_INFO
+
+
+
+
+#ifdef HAVE_LINUX_DMA_BUF_H
+#include <linux/dma-buf.h>
+#endif
 
 #ifdef HAVE_LINUX_DMA_HEAP_H
 #include <linux/dma-heap.h>
 #endif
 
 
+#ifdef DUMP_DEVICE_INFO
+static void print_drm_info(int fd);
+#endif
+
+
 typedef struct
   {
   char * heap_device;
-
+  char * drm_device;
+  
   uint32_t * supported_formats;
   gavl_dsp_context_t * dsp;
+
+  int drm_fd;
   
   } dma_native_t;
 
@@ -142,20 +161,36 @@ gavl_pixelformat_t gavl_drm_pixelformat_from_fourcc(uint32_t fourcc, int * flags
 static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
   {
   int i;
+#ifdef HAVE_LINUX_DMA_BUF_H
+  struct dma_buf_sync sync;
+#endif
+  dma_native_t * native = f->hwctx->native;
   gavl_dmabuf_video_frame_t *dmabuf = f->storage;
 
+  dmabuf->wr = wr;
+  
+  /* Map the buffers. We'll keep this even if unmap is called */
   if(!f->planes[0])
     {
     int prot = PROT_READ;
+    int fd;
+
     if(wr)
       prot |= PROT_WRITE;
   
     for(i = 0; i < dmabuf->num_buffers; i++)
       {
+      if(dmabuf->buffers[i].drm_handle >= 0)
+        fd = native->drm_fd;
+      else
+        fd = dmabuf->buffers[i].fd;
+      
       dmabuf->buffers[i].map_ptr =
         mmap(NULL, dmabuf->buffers[i].map_len, prot, MAP_SHARED,
-             dmabuf->buffers[i].fd, 0);
+             fd, dmabuf->buffers[i].map_offset);
 
+
+      
       if(dmabuf->buffers[i].map_ptr == MAP_FAILED)
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Memory mmapping failed: %s",
@@ -172,7 +207,15 @@ static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
         dmabuf->planes[i].offset;
       }
     }
+
+#ifdef HAVE_LINUX_DMA_BUF_H
+  sync.flags = DMA_BUF_SYNC_START|DMA_BUF_SYNC_READ;
+  if(wr)
+    sync.flags |= DMA_BUF_SYNC_WRITE;
+  for(i = 0; i < dmabuf->num_buffers; i++)
+    ioctl(dmabuf->buffers[i].fd, DMA_BUF_IOCTL_SYNC, &sync);
   
+#endif
   
   return 1;
   }
@@ -180,21 +223,176 @@ static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
 static int
 video_frame_unmap_dmabuf(gavl_video_frame_t * f)
   {
-#if 0 // TODO: Handle R/W sync
-  gavl_dmabuf_video_frame_t *dmabuf = f->storage;
   int i;
+  gavl_dmabuf_video_frame_t *dmabuf = f->storage;
+
+#ifdef HAVE_LINUX_DMA_BUF_H
+  struct dma_buf_sync sync;
+  sync.flags = DMA_BUF_SYNC_END|DMA_BUF_SYNC_READ;
+  if(dmabuf->wr)
+    sync.flags |= DMA_BUF_SYNC_WRITE;
+#endif
+  
   for(i = 0; i < dmabuf->num_buffers; i++)
     {
-    if(dmabuf->buffers[i].map_ptr)
-      {
-      munmap(dmabuf->buffers[i].map_ptr, dmabuf->buffers[i].map_len);
-      dmabuf->buffers[i].map_ptr = NULL;
-      }
-    }
-  gavl_video_frame_null(f);
+#ifdef __aarch64__
+    /* Flush cache synchronously */
+    __builtin___clear_cache(dmabuf->buffers[i].map_ptr, dmabuf->buffers[i].map_ptr + dmabuf->buffers[i].map_len);
 #endif
+
+#ifdef HAVE_LINUX_DMA_BUF_H
+  for(i = 0; i < dmabuf->num_buffers; i++)
+    ioctl(dmabuf->buffers[i].fd, DMA_BUF_IOCTL_SYNC, &sync);
+#endif
+    }
+
+  dmabuf->wr = 0;
+  
   return 1;
   }
+
+#ifdef HAVE_LINUX_DMA_HEAP_H
+
+static int alloc_cma(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
+  {
+  int i;
+  int heap_fd;
+  dma_native_t * native = ctx->native;
+  struct dma_heap_allocation_data heap_data;
+
+  int offsets[GAVL_MAX_PLANES];
+  int size;
+
+  gavl_dmabuf_video_frame_t *f = ret->storage;
+  
+  f->fourcc = gavl_drm_fourcc_from_gavl(ret->hwctx, ctx->vfmt.pixelformat);
+    
+  gavl_video_format_get_frame_layout(&ctx->vfmt,
+                                     offsets,
+                                     ret->strides,
+                                     &size,
+                                     0);
+  memset(&heap_data, 0, sizeof(heap_data));
+  heap_data.len = size;
+  heap_data.fd_flags = O_RDWR | O_CLOEXEC;
+    
+  if((heap_fd = open(native->heap_device, O_RDONLY | O_CLOEXEC)) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Opening %s failed: %s",
+             native->heap_device, strerror(errno));
+    goto fail;
+    }
+
+  if(ioctl(heap_fd, DMA_HEAP_IOCTL_ALLOC, &heap_data) < 0)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+             "Allocating %d bytes from %s failed: %s",
+             size, native->heap_device, strerror(errno));
+    goto fail;
+    }
+  
+  close(heap_fd);
+  f->buffers[0].fd = heap_data.fd;
+  f->buffers[0].map_len = size;
+  f->num_buffers = 1;
+    
+  f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
+
+  for(i = 0; i < f->num_planes; i++)
+    {
+    f->planes[i].buf_idx = 0;
+    f->planes[i].offset = offsets[i];
+    f->planes[i].stride = ret->strides[i];
+    }
+
+  return 1;
+  fail:
+  return 0;
+  
+  }
+
+#endif
+
+#ifdef DUMP_DEVICE_INFO
+static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
+  {
+  int i;
+  gavl_dmabuf_video_frame_t *f = ret->storage;
+  dma_native_t * native = ctx->native;
+
+  struct drm_mode_create_dumb create_struct;
+  struct drm_mode_map_dumb map_struct;
+  struct drm_prime_handle prime;
+
+#define INIT(s) memset(&s, 0, sizeof(s))
+
+  INIT(create_struct);
+  INIT(map_struct);
+  INIT(prime);
+  
+  create_struct.width  = ctx->vfmt.frame_width;
+  create_struct.height = ctx->vfmt.frame_height; 
+
+  f->fourcc = gavl_drm_fourcc_from_gavl(ret->hwctx, ctx->vfmt.pixelformat);
+  
+  f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
+  f->num_buffers = f->num_planes;
+
+  if(native->drm_fd < 0)
+    {
+    native->drm_fd = open(native->drm_device, O_RDWR);
+    }
+
+  if(f->num_planes > 1)
+    create_struct.bpp = gavl_pixelformat_bytes_per_component(ctx->vfmt.pixelformat) * 8;
+  else
+    create_struct.bpp = gavl_pixelformat_bytes_per_pixel(ctx->vfmt.pixelformat) * 8;
+  
+  for(i = 0; i < f->num_planes; i++)
+    {
+    if(i == 1)
+      {
+      int sub_h, sub_v;
+      gavl_pixelformat_chroma_sub(ctx->vfmt.pixelformat, &sub_h, &sub_v);
+      create_struct.width /= sub_h;
+      create_struct.height /= sub_v;
+      }
+
+    if(drmIoctl(native->drm_fd, DRM_IOCTL_MODE_CREATE_DUMB, &create_struct) < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "DRM_IOCTL_MODE_CREATE_DUMB failed: %s", strerror(errno));
+      }
+
+    map_struct.handle = create_struct.handle;
+    
+    if(drmIoctl(native->drm_fd, DRM_IOCTL_MODE_MAP_DUMB, &map_struct) < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "DRM_IOCTL_MODE_MAP_DUMB failed: %s", strerror(errno));
+      
+      }
+    
+    
+    f->buffers[i].drm_handle = create_struct.handle;
+    f->planes[i].stride = create_struct.pitch;
+    f->buffers[i].map_len    = create_struct.size;
+    f->buffers[i].map_offset = map_struct.offset;
+
+    prime.handle = create_struct.handle;
+    prime.flags = DRM_CLOEXEC | DRM_RDWR;
+    if(drmIoctl(native->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &prime) < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s", strerror(errno));
+      
+      
+      }
+    
+    f->planes[i].buf_idx = i;
+    f->buffers[i].fd = prime.fd;
+    }
+  
+  return 1;
+  }
+#endif
 
 
 static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx,
@@ -203,69 +401,36 @@ static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx
   gavl_video_frame_t * ret;
   gavl_dmabuf_video_frame_t *f = calloc(1, sizeof(*f));
   int i;
-  
+  dma_native_t * native = ctx->native;
+    
   for(i = 0; i < GAVL_MAX_PLANES; i++)
+    {
     f->buffers[i].fd = -1;
-  
+    f->buffers[i].drm_handle = -1;
+    }
   ret = gavl_video_frame_create(NULL);
   ret->storage = f;
   
   if(alloc_resources)
     {
-    int heap_fd;
-    dma_native_t * native = ctx->native;
-    struct dma_heap_allocation_data heap_data;
-
-    int offsets[GAVL_MAX_PLANES];
-    int size;
-
-    f->fourcc = gavl_drm_fourcc_from_gavl(ctx, ctx->vfmt.pixelformat);
-    
-    gavl_video_format_get_frame_layout(&ctx->vfmt,
-                                       offsets,
-                                       ret->strides,
-                                       &size,
-                                       0);
-    memset(&heap_data, 0, sizeof(heap_data));
-    heap_data.len = size;
-    heap_data.fd_flags = O_RDWR | O_CLOEXEC;
-    
-    if((heap_fd = open(native->heap_device, O_RDONLY | O_CLOEXEC)) < 0)
+    if(native->heap_device && !alloc_cma(ctx, ret))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Opening %s failed: %s",
-               native->heap_device, strerror(errno));
+      /* Error */
       goto fail;
       }
-
-    if(ioctl(heap_fd, DMA_HEAP_IOCTL_ALLOC, &heap_data) < 0)
+    else if(native->drm_device && !alloc_drm(ctx, ret))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
-               "Allocating %d bytes from %s failed: %s",
-               size, native->heap_device, strerror(errno));
+      /* Error */
       goto fail;
       }
-    
-    close(heap_fd);
-    f->buffers[0].fd = heap_data.fd;
-    f->buffers[0].map_len = size;
-    f->num_buffers = 1;
-    
-    f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
-
-    for(i = 0; i < f->num_planes; i++)
+    else if(!native->heap_device && !native->drm_device)
       {
-      f->planes[i].buf_idx = 0;
-      f->planes[i].offset = offsets[i];
-      f->planes[i].stride = ret->strides[i];
+      /* Error */
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Neither cma nor drm buffers can be allocated");
+      goto fail;
       }
-
-    /* Write to the memory once to make sure it's there */
-    video_frame_map_dmabuf(ret, 1);
-    gavl_video_frame_clear(ret, &ctx->vfmt);
-    video_frame_unmap_dmabuf(ret);
-    
     }
-
+  
   return ret;
 
   fail:
@@ -280,6 +445,8 @@ static void
 video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f,
                               int destroy_resources)
   {
+  dma_native_t * native = f->hwctx->native;
+  
   if(f->storage)
     {
     int i;
@@ -293,10 +460,22 @@ video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f,
       {
       if(info->buffers[i].map_ptr)
         munmap(info->buffers[i].map_ptr, info->buffers[i].map_len);
-      
+
       /* Even imported dma-bufs must be closed */
       if(info->buffers[i].fd >= 0)
         close(info->buffers[i].fd);
+
+      if(destroy_resources)
+        {
+        struct drm_mode_destroy_dumb destroy;
+        
+        if(info->buffers[i].drm_handle > 0)
+          {
+          destroy.handle = info->buffers[i].drm_handle;
+          drmIoctl(native->drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+          }
+        }
+      
       }
     free(info);
     }
@@ -311,6 +490,17 @@ static void destroy_native_dmabuf(void * n)
   dma_native_t * native = n;
   if(native->heap_device)
     free(native->heap_device);
+  if(native->drm_device)
+    free(native->drm_device);
+  if(native->supported_formats)
+    free(native->supported_formats);
+
+  if(native->drm_fd >= 0)
+    close(native->drm_fd);
+
+  if(native->dsp)
+    gavl_dsp_context_destroy(native->dsp);
+  
   free(native);
   }
 
@@ -396,12 +586,53 @@ gavl_hw_context_t * gavl_hw_ctx_create_dma()
   int support_flags = GAVL_HW_SUPPORTS_VIDEO;
 
   native = calloc(1, sizeof(*native));
-
+  
+  native->drm_fd = -1;
+  
+#undef HAVE_LINUX_DMA_HEAP_H
+  
 #ifdef HAVE_LINUX_DMA_HEAP_H  
-  if(test_heap_dev(native, "/dev/dma_heap/linux,cma") ||
-     test_heap_dev(native, "/dev/dma_heap/system"))
+  if(test_heap_dev(native, "/dev/dma_heap/linux,cma"))
     support_flags |= GAVL_HW_SUPPORTS_VIDEO_POOL | GAVL_HW_SUPPORTS_VIDEO_MAP;
+  else
 #endif
+    {
+    /* Get Graphics card */
+    int i;
+    int fd;
+    uint64_t cap;
+    for(i = 0; i < 8; i++)
+      {
+      native->drm_device = gavl_sprintf("/dev/dri/card%d", i);
+      
+      fd = open(native->drm_device, O_RDWR);
+      
+      if(fd >= 0)
+        {
+        drmVersionPtr version = NULL;
+        
+        // Check for working DRM-driver
+        if((version = drmGetVersion(fd)) &&
+           !drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &cap) && cap &&
+           !drmGetCap(fd, DRM_CAP_PRIME, &cap) && (cap & DRM_PRIME_CAP_EXPORT))
+          {
+#ifdef DUMP_DEVICE_INFO
+          print_drm_info(fd);
+#endif
+          close(fd);
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Using drm device: %s", native->drm_device);
+          support_flags |= GAVL_HW_SUPPORTS_VIDEO_POOL | GAVL_HW_SUPPORTS_VIDEO_MAP;
+          drmFreeVersion(version);
+          break;
+          }
+        if(version)
+          drmFreeVersion(version);
+        close(fd);
+        }
+      free(native->drm_device);
+      native->drm_device = NULL;
+      }
+    }
   
   return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_DMABUFFER, support_flags);
   }
@@ -454,6 +685,124 @@ void gavl_hw_ctx_dma_set_supported_formats(gavl_hw_context_t * ctx, uint32_t * f
   
   }
 
+/* Print DRM info */
+
+static void print_capabilities(int fd)
+  {
+  uint64_t cap;
+    
+  printf("\n=== DRM Capabilities ===\n");
+  
+  if(drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &cap) == 0)
+    {
+    printf("Dumb Buffer Support: %s\n", cap ? "Yes" : "No");
+    }
+  
+  if (drmGetCap(fd, DRM_CAP_VBLANK_HIGH_CRTC, &cap) == 0)
+    {
+    printf("High CRTC VBlank: %s\n", cap ? "Yes" : "No");
+    }
+  
+  if (drmGetCap(fd, DRM_CAP_PRIME, &cap) == 0)
+    {
+    printf("PRIME Support: ");
+    if (cap & DRM_PRIME_CAP_IMPORT) printf("Import ");
+    if (cap & DRM_PRIME_CAP_EXPORT) printf("Export ");
+    if (!cap) printf("None");
+    printf("\n");
+    }
+    
+  if (drmGetCap(fd, DRM_CAP_ASYNC_PAGE_FLIP, &cap) == 0)
+    {
+    printf("Async Page Flip: %s\n", cap ? "Yes" : "No");
+    }
+  
+  if (drmGetCap(fd, DRM_CAP_CURSOR_WIDTH, &cap) == 0)
+    {
+    printf("Max Cursor Width: %lu\n", cap);
+    }
+  
+  if (drmGetCap(fd, DRM_CAP_CURSOR_HEIGHT, &cap) == 0)
+    {
+    printf("Max Cursor Height: %lu\n", cap);
+    }
+  }
+
+static void print_version_info(int fd)
+  {
+  drmVersionPtr version = drmGetVersion(fd);
+  if (!version)
+    {
+    printf("Failed to get version info\n");
+    return;
+    }
+  
+  printf("\n=== Driver Information ===\n");
+  printf("Driver Name: %s\n", version->name);
+  printf("Driver Description: %s\n", version->desc);
+  printf("Driver Date: %s\n", version->date);
+  printf("Version: %d.%d.%d\n", version->version_major, 
+         version->version_minor, version->version_patchlevel);
+  
+  drmFreeVersion(version);
+  }
+
+static void print_resources_info(int fd)
+  {
+  int i;
+  drmModeResPtr res = drmModeGetResources(fd);
+  if(!res)
+    {
+    printf("Failed to get mode resources\n");
+    return;
+    }
+  
+  printf("\n=== Display Resources ===\n");
+  printf("CRTCs: %d\n", res->count_crtcs);
+  printf("Encoders: %d\n", res->count_encoders);
+  printf("Connectors: %d\n", res->count_connectors);
+  printf("Frame Buffers: %d\n", res->count_fbs);
+  printf("Min Resolution: %dx%d\n", res->min_width, res->min_height);
+  printf("Max Resolution: %dx%d\n", res->max_width, res->max_height);
+    
+  // Zeige verfügbare Connectors
+  printf("\n=== Connected Displays ===\n");
+  for(i = 0; i < res->count_connectors; i++)
+    {
+    drmModeConnectorPtr connector = drmModeGetConnector(fd, res->connectors[i]);
+    if (connector)
+      {
+      printf("Connector %d: %s, Status: %s\n", 
+             i + 1,
+             drmModeGetConnectorTypeName(connector->connector_type),
+             connector->connection == DRM_MODE_CONNECTED ? "Connected" :
+             connector->connection == DRM_MODE_DISCONNECTED ? "Disconnected" : "Unknown");
+      
+      if (connector->connection == DRM_MODE_CONNECTED && connector->count_modes > 0) {
+      printf("  Primary Mode: %dx%d@%dHz\n", 
+             connector->modes[0].hdisplay,
+             connector->modes[0].vdisplay,
+             connector->modes[0].vrefresh);
+      }
+      drmModeFreeConnector(connector);
+      }
+    }
+  
+  drmModeFreeResources(res);
+  }
+
+static void print_drm_info(int fd)
+  {
+  // Ausgabe der Informationen
+  print_version_info(fd);
+  print_capabilities(fd);
+  print_resources_info(fd);
+  
+  printf("\n=== Additional Info ===\n");
+  printf("DRM File Descriptor: %d\n", fd);
+  printf("Device supports KMS: %s\n", drmIsKMS(fd) ? "Yes" : "No");
+  }
+
 #else // No DRM
 gavl_hw_context_t * gavl_hw_ctx_create_dma()
   {
@@ -461,3 +810,4 @@ gavl_hw_context_t * gavl_hw_ctx_create_dma()
   }
 
 #endif
+

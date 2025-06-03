@@ -103,6 +103,7 @@ endif
 
 AM_CFLAGS = \
 @LIBGAVL_CFLAGS@ \
+@DRM_CFLAGS@ \
 $(hw_libva_cflags) \
 $(hw_libva_x11_cflags) \
 $(hw_gl_cflags) \
@@ -249,6 +250,7 @@ hq/libgavl_hq.la \
 libgdither/libgdither.la \
 libsamplerate/libsamplerate.la \
 @LIBGAVL_LIBS@ \
+@DRM_LIBS@ \
 $(hw_libva_x11_libs) \
 $(hw_libva_libs) \
 $(hw_gl_libs) \

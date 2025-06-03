@@ -28,10 +28,12 @@ typedef struct
   {
   struct
     {
-    int fd;
-
+    int fd;     // DMA-buf fd
+    int drm_handle;
+    
     uint8_t * map_ptr;
     size_t map_len;
+    size_t map_offset;
     
     } buffers[GAVL_MAX_PLANES];
   
@@ -46,6 +48,9 @@ typedef struct
   
   int num_buffers;
   int num_planes;
+  
+  int wr; // If mapped writable (will mostly be the case)
+
   } gavl_dmabuf_video_frame_t;
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_dma(void);
