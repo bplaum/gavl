@@ -589,7 +589,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_dma()
   
   native->drm_fd = -1;
   
-#undef HAVE_LINUX_DMA_HEAP_H
+  // #undef HAVE_LINUX_DMA_HEAP_H
   
 #ifdef HAVE_LINUX_DMA_HEAP_H  
   if(test_heap_dev(native, "/dev/dma_heap/linux,cma"))
