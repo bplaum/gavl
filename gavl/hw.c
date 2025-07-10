@@ -32,8 +32,11 @@
 
 #define LOG_DOMAIN "hw_context"
 
-static void get_formats(gavl_hw_context_t * ret)
+static void ensure_formats(gavl_hw_context_t * ret)
   {
+  if(ret->image_formats_map || ret->image_formats_transfer)
+    return;
+
   if(ret->funcs->get_image_formats)
     {
     ret->image_formats_map = ret->funcs->get_image_formats(ret, GAVL_HW_FRAME_MODE_MAP);
@@ -54,7 +57,6 @@ gavl_hw_context_t * gavl_hw_context_create_internal(void * native,
   ret->funcs = funcs;
   ret->support_flags = support_flags;
   
-  get_formats(ret);
   return ret;
   }
 
@@ -107,7 +109,7 @@ void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
     ctx->image_formats_transfer = NULL;
     }
   
-  get_formats(ctx);
+  //  get_formats(ctx);
   }
 
 void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx)
@@ -151,6 +153,8 @@ static gavl_pixelformat_t * copy_pfmt_arr(const gavl_pixelformat_t * pfmts)
 const gavl_pixelformat_t *
 gavl_hw_ctx_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
+  ensure_formats(ctx);
+  
   switch(mode)
     {
     case GAVL_HW_FRAME_MODE_MAP:
@@ -539,6 +543,7 @@ gavl_hw_video_frame_get(gavl_hw_context_t * ctx)
   int i;
   gavl_video_frame_t * f;
 
+  // fprintf(stderr, "gavl_hw_video_frame_get: %d\n", ctx->created.num_frames);
   
   for(i = 0; i < ctx->created.num_frames; i++)
     {
@@ -592,11 +597,16 @@ int gavl_hw_frame_pool_add(frame_pool_t * pool, void * frame, int idx)
                idx);
       return 0;
       }
-    pool->frames_alloc = idx + 16;
-    pool->frames = realloc(pool->frames, pool->frames_alloc * sizeof(*pool->frames));
-    memset(pool->frames + pool->num_frames, 0,
-           (pool->frames_alloc - pool->num_frames)*sizeof(*pool->frames));
-    pool->num_frames = pool->frames_alloc;
+
+    if(idx >= pool->frames_alloc)
+      {
+      pool->frames_alloc = idx + 16;
+      pool->frames = realloc(pool->frames, pool->frames_alloc * sizeof(*pool->frames));
+      memset(pool->frames + pool->num_frames, 0,
+             (pool->frames_alloc - pool->num_frames)*sizeof(*pool->frames));
+      pool->num_frames = pool->frames_alloc;
+      }
+    
     pool->frames[idx] = frame;
     }
   return 1;
