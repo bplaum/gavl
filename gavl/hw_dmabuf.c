@@ -551,19 +551,103 @@ static int frame_to_hw_dmabuf(gavl_video_frame_t * dst,
   return 1;
   }
 
+static int check_flags(int flags, gavl_hw_frame_mode_t mode)
+  {
+  if(mode == GAVL_HW_FRAME_MODE_MAP)
+    return !(flags & GAVL_DMABUF_FLAG_SHUFFLE);
+  else if(mode == GAVL_HW_FRAME_MODE_TRANSFER)
+    return !!(flags & GAVL_DMABUF_FLAG_SHUFFLE);
+  else
+    return 0;
+  }
+
+static gavl_pixelformat_t *
+get_image_formats_dmabuf(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
+  {
+  gavl_pixelformat_t * ret = NULL;
+
+  dma_native_t * native = ctx->native;
+  
+  int num = 0;
+  int i, j;
+  
+  if(native->supported_formats)
+    {
+    i = 0;
+    /* Count formats */
+    while(native->supported_formats[i])
+      {
+      int flags;
+      if((gavl_drm_pixelformat_from_fourcc(native->supported_formats[i], &flags, NULL) != GAVL_PIXELFORMAT_NONE) &&
+         check_flags(flags, mode))
+        {
+        num++;
+        }
+      i++;
+      }
+
+    ret = calloc(num + 1, sizeof(*ret));
+
+    j = 0;
+
+    i = 0;
+    while(native->supported_formats[i])
+      {
+      int flags;
+      if(((ret[j] = gavl_drm_pixelformat_from_fourcc(native->supported_formats[i], &flags, NULL)) != GAVL_PIXELFORMAT_NONE) &&
+         check_flags(flags, mode))
+        {
+        j++;
+        }
+      i++;
+      }
+    ret[j] = GAVL_PIXELFORMAT_NONE;
+    }
+  else
+    {
+    /* Assume that everything is supported */
+
+    /* Count formats */
+
+    i = 0;
+    while(drm_formats[i].drm_fourcc)
+      {
+      if(check_flags(drm_formats[i].flags, mode))
+        num++;
+      i++;
+      }
+      
+    ret = calloc(num + 1, sizeof(*ret));
+    
+    i = 0;
+    j = 0;
+    while(drm_formats[i].drm_fourcc)
+      {
+      if(check_flags(drm_formats[i].flags, mode))
+        {
+        ret[j] = drm_formats[i].pfmt;
+        j++;
+        }
+      i++;
+      }
+    }
+    
+  return ret;
+  }
+
 static const gavl_hw_funcs_t funcs =
   {
-    .destroy_native         = destroy_native_dmabuf,
-   //    .get_image_formats      = gavl_gl_get_image_formats,
-   //    .get_overlay_formats    = gavl_gl_get_overlay_formats,
-   .video_frame_create     = video_frame_create_hw_dmabuf,
-   .video_frame_destroy    = video_frame_destroy_hw_dmabuf,
 
-   .video_frame_map        = video_frame_map_dmabuf,
-   .video_frame_unmap        = video_frame_unmap_dmabuf,
+    .destroy_native         = destroy_native_dmabuf,
+    .get_image_formats      = get_image_formats_dmabuf,
+    .video_frame_create     = video_frame_create_hw_dmabuf,
+    .video_frame_destroy    = video_frame_destroy_hw_dmabuf,
+
+    .video_frame_map        = video_frame_map_dmabuf,
+    .video_frame_unmap        = video_frame_unmap_dmabuf,
    
-   .video_frame_to_ram     = frame_to_ram_dmabuf,
-   .video_frame_to_hw      = frame_to_hw_dmabuf,
+    .video_frame_to_ram     = frame_to_ram_dmabuf,
+    .video_frame_to_hw      = frame_to_hw_dmabuf,
 
    //    .video_format_adjust    = gavl_gl_adjust_video_format,
    //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
@@ -684,6 +768,10 @@ void gavl_hw_ctx_dma_set_supported_formats(gavl_hw_context_t * ctx, uint32_t * f
       }
     i++;
     }
+
+  /* Set pixelformats for mapping */
+  //  if(ctx->
+
   
   }
 
