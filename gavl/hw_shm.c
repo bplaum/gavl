@@ -46,14 +46,23 @@ static void destroy_native_shm(void * native)
 static gavl_pixelformat_t * get_image_formats_shm(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
   int i;
-  gavl_pixelformat_t * pixelformats;
-  int num_image_formats = gavl_num_pixelformats();
-  pixelformats = calloc(num_image_formats+1, sizeof(*pixelformats));
+  gavl_pixelformat_t * pixelformats = NULL;
+  int num_image_formats;
 
-  for(i = 0; i < num_image_formats; i++)
-    pixelformats[i] = gavl_get_pixelformat(i);
+  if(mode == GAVL_HW_FRAME_MODE_MAP)
+    {
+    num_image_formats = gavl_num_pixelformats();
+
+    pixelformats = calloc(num_image_formats+1, sizeof(*pixelformats));
+
+    for(i = 0; i < num_image_formats; i++)
+      pixelformats[i] = gavl_get_pixelformat(i);
   
-  pixelformats[num_image_formats] = GAVL_PIXELFORMAT_NONE;
+    pixelformats[num_image_formats] = GAVL_PIXELFORMAT_NONE;
+    
+    }
+  
+  
   return pixelformats;
   }
 
