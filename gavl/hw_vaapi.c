@@ -24,20 +24,45 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <unistd.h>
+#include <fcntl.h>
 
-#include <vaapi.h>
+// #include <vaapi.h>
+
+#include <va/va_drm.h>
 
 #include <config.h>
+
+#include <gavl/gavl.h>
 #include <gavl/hw_vaapi.h>
 #include <gavl/metatags.h>
 #include <gavl/trackinfo.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "hw_vaapi"
 
+#include <hw_private.h>
+
+
 #ifdef HAVE_DRM
 #include <va/va_drmcommon.h>
 #include <gavl/hw_dmabuf.h>
 #endif
+
+typedef struct
+  {
+  VADisplay dpy; // Must be first
+
+  int num_image_formats;
+  VAImageFormat * image_formats;
+  
+  int no_derive;
+
+  int num_imported_frames;
+
+  int drm_fd;
+  
+  } gavl_hw_vaapi_t;
+
 
 static struct
   {
@@ -140,7 +165,7 @@ static gavl_video_frame_t * create_common(gavl_hw_context_t * ctx)
   return ret;
   }
 
-gavl_video_frame_t * gavl_vaapi_video_frame_create(gavl_hw_context_t * ctx, int alloc_resource)
+static gavl_video_frame_t * gavl_vaapi_video_frame_create(gavl_hw_context_t * ctx, int alloc_resource)
   {
   VAStatus result;
   gavl_video_frame_t * ret = NULL;
@@ -324,7 +349,7 @@ int gavl_vaapi_unmap_frame(gavl_video_frame_t * f)
   return 1;
   }
 
-void gavl_vaapi_video_frame_destroy(gavl_video_frame_t * f, int destroy_resource)
+static void gavl_vaapi_video_frame_destroy(gavl_video_frame_t * f, int destroy_resource)
   {
   gavl_hw_vaapi_t * priv = f->hwctx->native;
   
@@ -363,7 +388,7 @@ static void dump_image_format(const VAImageFormat * f)
   }
 #endif
 
-gavl_pixelformat_t *
+static gavl_pixelformat_t *
 gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
   int num, i;
@@ -413,69 +438,18 @@ gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   return ret;
   }
 
-#if 0
-gavl_pixelformat_t *
-gavl_vaapi_get_overlay_formats(gavl_hw_context_t * ctx)
-  {
-  int num, i;
-  gavl_pixelformat_t * ret;
-  gavl_hw_vaapi_t * p = ctx->native;
-  int num_ret = 0;
-  gavl_pixelformat_t fmt;
-  int j;
-  int take_it;
-  
-  num = vaMaxNumSubpictureFormats(p->dpy);
-  p->subpicture_formats = malloc(num * sizeof(*p->subpicture_formats));
 
-  vaQuerySubpictureFormats(p->dpy, p->subpicture_formats,
-                           p->subpicture_flags,
-                           (unsigned int*)&p->num_subpicture_formats);
-
-  ret = calloc(p->num_subpicture_formats + 1, sizeof(*ret));
-  
-  for(i = 0; i < p->num_subpicture_formats; i++)
-    {
-#ifdef DUMP_FORMATS
-    fprintf(stderr, "Overlay format %d\n", i);
-    dump_image_format(&p->subpicture_formats[i]);
-#endif
-    if((fmt = fourcc_to_pixelformat(p->subpicture_formats[i].fourcc)) == GAVL_PIXELFORMAT_NONE)
-      continue;
-
-    j = 0;
-    take_it = 1;
-    
-    while(j < num_ret)
-      {
-      if(ret[j] == fmt)
-        {
-        take_it = 0;
-        break;
-        }
-      j++;
-      }
-
-    if(take_it)
-      {
-      ret[num_ret] = fmt;
-      num_ret++;
-      }
-    }
-  ret[num_ret] = GAVL_PIXELFORMAT_NONE;
-  return ret;
-  }
-#endif
-
-void gavl_vaapi_cleanup(void * priv)
+static void gavl_vaapi_cleanup(void * priv)
   {
   gavl_hw_vaapi_t * p = priv;
   if(p->image_formats)
     free(p->image_formats);
   if(p->dpy)
     vaTerminate(p->dpy);
-  if(p->dsp)
-    gavl_dsp_context_destroy(p->dsp);
+
+  if(p->drm_fd >= 0)
+    close(p->drm_fd);
+  free(p);
   }
 
 VASurfaceID gavl_vaapi_get_surface_id(const gavl_video_frame_t * f)
@@ -513,7 +487,7 @@ VAImageID gavl_vaapi_get_image_id(const gavl_video_frame_t * f)
   return frame->image.image_id;
   }
   
-void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
+static void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
                                     gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
   {
   gavl_video_format_set_frame_size(fmt, 16, 16);
@@ -634,7 +608,7 @@ int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * dict)
   
   }
 
-int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
+static int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
                                   gavl_video_frame_t * src, gavl_video_frame_t * dst)
   {
   gavl_hw_vaapi_t * dev = src->hwctx->native;
@@ -689,7 +663,7 @@ int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
   return 0;
   }
 
-int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_hw_context_t * other)
+static int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_hw_context_t * other)
   {
   switch(other->type)
     {
@@ -706,3 +680,79 @@ int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_hw_context_t * o
   return 0;
   }
 
+static const gavl_hw_funcs_t funcs =
+  {
+    .destroy_native = gavl_vaapi_cleanup,
+    .get_image_formats = gavl_vaapi_get_image_formats,
+    .video_frame_create = gavl_vaapi_video_frame_create,
+    .video_frame_destroy = gavl_vaapi_video_frame_destroy,
+    .video_frame_map = gavl_vaapi_map_frame,
+    .video_frame_unmap = gavl_vaapi_unmap_frame,
+    .video_format_adjust  = gavl_vaapi_video_format_adjust,
+    .can_export = gavl_vaapi_exports_type,
+    .export_video_frame = gavl_vaapi_export_video_frame,
+
+  };
+
+
+
+static const char * drm_devices[] =
+  {
+    "/dev/dri/renderD128",
+    "/dev/dri/renderD129",
+    "/dev/dri/card0",
+    "/dev/dri/card1",
+    NULL,
+  };
+
+gavl_hw_context_t * gavl_hw_ctx_create_vaapi()
+  {
+  int major, minor;
+  gavl_hw_vaapi_t * priv;
+  VAStatus result;
+  int support_flags = GAVL_HW_SUPPORTS_VIDEO;
+  int i = 0;
+  
+  priv = calloc(1, sizeof(*priv));
+  priv->drm_fd = -1;
+  
+  /* TODO */
+  while(drm_devices[i])
+    {
+    if((priv->drm_fd = open(drm_devices[i], O_RDWR)) >= 0)
+      break;
+    i++;
+    }
+  if(!drm_devices[i])
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "No DRM device available");
+    return NULL;
+    }
+  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Opened %s for VAAPI", drm_devices[i]);
+
+  priv->dpy = vaGetDisplayDRM(priv->drm_fd);
+  
+  /* Deriving images doesn't work for weird formats like NV12 */
+  priv->no_derive = 1;
+  
+  if(!priv->dpy)
+    return NULL;
+  
+  if((result = vaInitialize(priv->dpy,
+                            &major,
+                            &minor)) != VA_STATUS_SUCCESS)
+    {
+    return NULL;
+    }
+
+  return gavl_hw_context_create_internal(priv, &funcs,
+                                         GAVL_HW_VAAPI, support_flags);
+  }
+
+
+VADisplay gavl_hw_ctx_vaapi_get_va_display(gavl_hw_context_t * ctx)
+  {
+  gavl_hw_vaapi_t * p = ctx->native;
+  return p->dpy;
+  }

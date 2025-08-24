@@ -45,9 +45,5 @@ void gavl_dsp_init_sse(gavl_dsp_funcs_t * funcs,
                        int quality);
 #endif
 
-#ifdef HAVE_SSSE3
-void gavl_dsp_init_ssse3(gavl_dsp_funcs_t * funcs, 
-                         int quality);
-#endif
 
 #endif // DSP_H_INCLUDED

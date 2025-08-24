@@ -45,10 +45,6 @@ static void init_table(gavl_dsp_context_t* ctx)
     gavl_dsp_init_sse(&ctx->funcs, ctx->quality);
 #endif       
 
-#ifdef HAVE_SSSE3
-  if(ctx->accel_flags & GAVL_ACCEL_SSSE3)
-    gavl_dsp_init_ssse3(&ctx->funcs, ctx->quality);
-#endif       
 
   }
 

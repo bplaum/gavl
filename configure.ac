@@ -169,6 +169,8 @@ fi
 AC_CHECK_HEADERS([linux/dma-heap.h])
 AC_CHECK_HEADERS([linux/dma-buf.h])
 
+AC_CHECK_HEADERS([linux/memfd.h])
+AC_CHECK_HEADERS([linux/udmabuf.h])
 
 
 dnl
@@ -260,21 +262,11 @@ dnl
 GAVL_CHECK_SIMD($host_cpu, "$OPT_CFLAGS")
 
 dnl
-dnl X11
-dnl
-
-GMERLIN_CHECK_X11
-
-dnl
 dnl Check for libva
 dnl
 
-GMERLIN_CHECK_LIBVA
 
-if test "x$have_libva_x11" = "xtrue"; then
-LIBGAVL_CFLAGS="$LIBGAVL_CFLAGS $X_CFLAGS"
-LIBGAVL_LIBS="$LIBGAVL_LIBS $X_LIBS"
-fi
+GMERLIN_CHECK_LIBVA
 
 if test "x$have_libva" = "xtrue"; then
 LIBGAVL_CFLAGS="$LIBGAVL_CFLAGS $LIBVA_CFLAGS"
@@ -372,11 +364,9 @@ gavl/c/Makefile \
 gavl/hq/Makefile \
 gavl/mmx/Makefile \
 gavl/mmxext/Makefile \
-gavl/3dnow/Makefile \
 gavl/sse/Makefile \
 gavl/sse2/Makefile \
-gavl/sse3/Makefile \
-gavl/ssse3/Makefile])
+gavl/sse3/Makefile])
 
 AC_OUTPUT
 

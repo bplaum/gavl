@@ -31,23 +31,6 @@ sse3_libs =
 sse3_subdirs =
 endif
 
-if HAVE_SSSE3
-ssse3_libs = ssse3/libgavl_ssse3.la
-ssse3_subdirs = ssse3
-else
-ssse3_libs = 
-ssse3_subdirs =
-endif
-
-
-if HAVE_3DNOW
-threednow_libs = 3dnow/libgavl_3dnow.la
-threednow_subdirs = 3dnow
-else
-threednow_libs = 
-threednow_subdirs =
-endif
-
 
 if HAVE_LIBVA
 hw_libva_sources = hw_vaapi.c
@@ -59,18 +42,6 @@ hw_libva_cflags =
 hw_libva_libs   =
 endif
 
-
-
-
-if HAVE_LIBVA_X11
-hw_libva_x11_sources = hw_vaapi_x11.c
-hw_libva_x11_cflags = @LIBVA_X11_CFLAGS@
-hw_libva_x11_libs   = @LIBVA_X11_LIBS@
-else
-hw_libva_x11_sources = 
-hw_libva_x11_cflags =
-hw_libva_x11_libs   =
-endif
 
 if HAVE_GL
 hw_gl_sources = hw_gl.c
@@ -85,8 +56,8 @@ endif
 
 if HAVE_EGL
 hw_egl_sources = hw_egl.c
-hw_egl_cflags = @EGL_CFLAGS@  @X_CFLAGS@
-hw_egl_libs =   @EGL_LIBS@ @X_LIBS@
+hw_egl_cflags = @EGL_CFLAGS@
+hw_egl_libs =   @EGL_LIBS@
 else
 hw_egl_sources = 
 hw_egl_cflags = 
@@ -105,7 +76,6 @@ AM_CFLAGS = \
 @LIBGAVL_CFLAGS@ \
 @DRM_CFLAGS@ \
 $(hw_libva_cflags) \
-$(hw_libva_x11_cflags) \
 $(hw_gl_cflags) \
 $(hw_egl_cflags) \
 -I/usr/include
@@ -119,7 +89,6 @@ $(mmx_subdirs) \
 $(sse_subdirs) \
 $(sse2_subdirs) \
 $(sse3_subdirs) \
-$(ssse3_subdirs) \
 $(threednow_subdirs)
 
 lib_LTLIBRARIES= libgavl.la
@@ -127,7 +96,6 @@ lib_LTLIBRARIES= libgavl.la
 
 libgavl_la_SOURCES = \
 $(hw_libva_sources) \
-$(hw_libva_x11_sources) \
 $(hw_egl_sources) \
 $(hw_gl_sources) \
 $(hw_v4l2_sources) \
@@ -243,15 +211,12 @@ $(mmx_libs) \
 $(sse_libs) \
 $(sse2_libs) \
 $(sse3_libs) \
-$(ssse3_libs) \
-$(threednow_libs) \
 c/libgavl_c.la \
 hq/libgavl_hq.la \
 libgdither/libgdither.la \
 libsamplerate/libsamplerate.la \
 @LIBGAVL_LIBS@ \
 @DRM_LIBS@ \
-$(hw_libva_x11_libs) \
 $(hw_libva_libs) \
 $(hw_gl_libs) \
 $(hw_egl_libs) \

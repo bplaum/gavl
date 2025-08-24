@@ -71,7 +71,7 @@ typedef struct
   } frame_pool_t;
 
 int gavl_hw_frame_pool_add(frame_pool_t *, void * frame, int idx);
-void gavl_hw_frame_pool_reset(frame_pool_t *);
+void gavl_hw_frame_pool_reset(gavl_hw_context_t * ctx, frame_pool_t *, int free_resources);
 
 struct gavl_hw_context_s
   {

@@ -57,18 +57,15 @@ typedef enum
 typedef enum
   {
     GAVL_HW_NONE = 0,  // Frames in RAM
-    GAVL_HW_EGL_GL_X11 =   (1<<0), // OpenGL Texture in an EGL/X11 context
-    GAVL_HW_EGL_GLES_X11 = (1<<1), // OpenGL ES Texture in an EGL/X11 context
+    GAVL_HW_EGL_GL   =     (1<<0), // OpenGL Texture in an EGL context
+    GAVL_HW_EGL_GLES =     (1<<1), // OpenGL ES Texture in an EGL context
     
-    GAVL_HW_VAAPI_X11 =    (1<<2),
+    GAVL_HW_VAAPI =        (1<<2),
     GAVL_HW_V4L2_BUFFER =  (1<<3), // V4L2 buffers (mmapped)
     GAVL_HW_DMABUFFER =    (1<<4), // DMA handles, can be exported by V4L and im- and exported by OpenGL
     GAVL_HW_SHM =          (1<<5), // Shared memory, which can be sent to other processes
   } gavl_hw_type_t;
 
-/* Add wayland types here too */
-#define GAVL_HW_GL_MASK (GAVL_HW_EGL_GL_X11)
-#define GAVL_HW_GLES_MASK (GAVL_HW_EGL_GLES_X11)
 
 /* Global handle for accessing a piece of hardware */
 typedef struct gavl_hw_context_s gavl_hw_context_t;
@@ -88,6 +85,10 @@ GAVL_PUBLIC void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx);
 
 /* Reset to the initial state (after creating) */
 GAVL_PUBLIC void gavl_hw_ctx_reset(gavl_hw_context_t * ctx);
+
+/* Do a post-seek resync. This will destroy all imported frames, because
+   an underlying hardware decoder might got restarted */
+GAVL_PUBLIC void gavl_hw_ctx_resync(gavl_hw_context_t * ctx);
 
 GAVL_PUBLIC int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx);
 
@@ -165,5 +166,10 @@ GAVL_PUBLIC void
 gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict);
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict);
+
+/* Currently, for the string we support "x11" and "wayland" */
+
+GAVL_PUBLIC const char * gavl_get_window_system();
+GAVL_PUBLIC void gavl_set_window_system(const char *);
 
 #endif // GAVL_HW_H_INCLUDED

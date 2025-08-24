@@ -98,6 +98,10 @@ GAVL_PUBLIC int gavl_v4l2_has_decoder(gavl_array_t * arr, gavl_codec_id_t id);
 
 GAVL_PUBLIC gavl_codec_id_t gavl_v4l2_pix_fmt_to_codec_id(uint32_t fmt);
 GAVL_PUBLIC gavl_pixelformat_t gavl_v4l2_pix_fmt_to_pixelformat(uint32_t fmt, int quantization);
+
+GAVL_PUBLIC uint32_t gavl_v4l2_pix_fmt_to_drm_fourcc(uint32_t fmt);
+
+
 GAVL_PUBLIC uint32_t gavl_v4l2_pixelformat_to_pix_fmt(gavl_pixelformat_t fmt, int * quantization);
 
 GAVL_PUBLIC uint32_t gavl_v4l2_codec_id_to_pix_fmt(gavl_codec_id_t id);

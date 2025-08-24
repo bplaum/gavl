@@ -170,9 +170,12 @@ typedef struct gavl_video_frame_s gavl_video_frame_t;
 #define GAVL_ACCEL_SSE      (1<<2) //!< Intel SSE
 #define GAVL_ACCEL_SSE2     (1<<3) //!< Intel SSE2
 #define GAVL_ACCEL_SSE3     (1<<4) //!< Intel SSE3
-#define GAVL_ACCEL_3DNOW    (1<<5) //!< AMD 3Dnow
-#define GAVL_ACCEL_3DNOWEXT (1<<6) //!< AMD 3Dnow ext
+#define GAVL_ACCEL_3DNOW    (1<<5) //!< AMD 3Dnow (unsupported)
+#define GAVL_ACCEL_3DNOWEXT (1<<6) //!< AMD 3Dnow ext (unsupported)
 #define GAVL_ACCEL_SSSE3    (1<<7) //!< Intel SSSE3
+#define GAVL_ACCEL_AVX      (1<<8) //!< Intel AVX
+#define GAVL_ACCEL_AVX2     (1<<9) //!< Intel AVX
+#define GAVL_ACCEL_NEON     (1<<10) //!< ARM Neon
 
 /** \brief Get the supported acceleration flags
  *  \returns A combination of GAVL_ACCEL_* flags.

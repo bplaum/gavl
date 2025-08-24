@@ -23,19 +23,14 @@
 #ifndef GAVL_HW_EGL_H_INCLUDED
 #define GAVL_HW_EGL_H_INCLUDED
 
-
 #include <EGL/egl.h>
-
-#ifdef HAVE_XLIB
-#include <X11/Xlib.h>
-#endif
+#include <EGL/eglext.h>
 
 // gavl_hw_context_t * gavl_hw_ctx_create_egl(EGLint const * attrs);
 
 GAVL_PUBLIC gavl_hw_context_t *
-gavl_hw_ctx_create_egl(EGLint const * attrs, gavl_hw_type_t type, void * native_display);
-
-GAVL_PUBLIC void * gavl_hw_ctx_egl_get_native_display(gavl_hw_context_t * ctx);
+gavl_hw_ctx_create_egl(EGLenum platform,
+                       EGLint const * attrs, gavl_hw_type_t type, void * native_display);
 
 GAVL_PUBLIC void gavl_hw_egl_swap_buffers(gavl_hw_context_t * ctx);
 

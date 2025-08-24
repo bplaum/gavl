@@ -52,32 +52,6 @@ dnl
   fi
 
 dnl
-dnl Check for 3Dnow assembly
-dnl
-
-  AC_MSG_CHECKING([if C compiler accepts 3Dnow assembly])
-  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[int main() { __asm__ __volatile__ ("pmulhrw" " %" "mm0" ", %" "mm1");return 0; }]])],
-                 HAVE_3DNOW=true)
-  if test "$HAVE_3DNOW" = true; then
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-  fi
-
-dnl
-dnl Check for 3Dnowext assembly
-dnl
-
-  AC_MSG_CHECKING([if C compiler accepts 3Dnowext assembly])
-  AC_COMPILE_IFELSE([AC_LANG_SOURCE([[int main() { __asm__ __volatile__ ("pswapd" " %" "mm0" ", %" "mm0");return 0; }]])],
-                    HAVE_3DNOWEXT=true)
-  if test "$HAVE_3DNOWEXT" = true; then
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-  fi
-
-dnl
 dnl Check for SSE assembly
 dnl
 
@@ -144,49 +118,6 @@ dnl
 	      HAVE_MMX_INT=true)
 
   if test "$HAVE_MMX_INT" = true; then
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-  fi
-
-
-dnl
-dnl Check for 3Dnow intrinsics
-dnl
-
-  AC_MSG_CHECKING([if C compiler accepts 3Dnow intrinsics])
-  AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <mm3dnow.h>
-		  int main()
-		  {
-		  _m_femms();
-		  return 0;
-	          }
-	         ]])],
-		 HAVE_3DNOW_INT=true)
-
-  if test "$HAVE_3DNOW_INT" = true; then
-    AC_MSG_RESULT(yes)
-  else
-    AC_MSG_RESULT(no)
-  fi
-
-dnl
-dnl Check for 3Dnowext intrinsics
-dnl
-
-  AC_MSG_CHECKING([if C compiler accepts 3Dnowext intrinsics])
-  AC_LINK_IFELSE([AC_LANG_SOURCE([[#include <mm3dnow.h>
-		  int main()
-		  {
-		  __m64 b1;
-		  b1 = _m_pswapd(b1);
-		  _m_femms();
-		  return 0;
-		  }
-		 ]])],
-		 HAVE_3DNOWEXT_INT=true)
-
-  if test "$HAVE_3DNOWEXT_INT" = true; then
     AC_MSG_RESULT(yes)
   else
     AC_MSG_RESULT(no)
@@ -286,12 +217,12 @@ AH_TEMPLATE([ARCH_PPC],    [PowerPC Architecture])
 AH_TEMPLATE([ARCH_ARM],    [ARM Architecture])
 
 AH_TEMPLATE([HAVE_MMX],    [MMX Supported])
-AH_TEMPLATE([HAVE_3DNOW],  [3Dnow Supported])
 AH_TEMPLATE([HAVE_SSE],    [SSE Supported])
 AH_TEMPLATE([HAVE_SSE2],   [SSE2 Supported])
 AH_TEMPLATE([HAVE_SSE3],   [SSE3 Supported])
 AH_TEMPLATE([HAVE_SSSE3],   [SSSE3 Supported])
 AH_TEMPLATE([HAVE_NEON],   [Neon Supported])
+AH_TEMPLATE([HAVE_AVX],    [AVX Supported])
 
 GAVL_CHECK_SIMD_INTERNAL($1, $2)
 
@@ -299,11 +230,6 @@ if test x"$HAVE_MMX" = "xtrue"; then
 AC_DEFINE(HAVE_MMX)
 fi
 AM_CONDITIONAL(HAVE_MMX, test "x$HAVE_MMX" = "xtrue")
-
-if test x"$HAVE_3DNOW" = "xtrue"; then
-AC_DEFINE(HAVE_3DNOW)
-fi
-AM_CONDITIONAL(HAVE_3DNOW, test "x$HAVE_3DNOW" = "xtrue")
 
 if test x"$HAVE_SSE" = "xtrue"; then
 AC_DEFINE(HAVE_SSE)

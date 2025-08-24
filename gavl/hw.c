@@ -65,38 +65,16 @@ int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx)
   return ctx->support_flags;
   }
 
+void gavl_hw_ctx_resync(gavl_hw_context_t * ctx)
+  {
+  gavl_hw_frame_pool_reset(ctx, &ctx->imported, 0);
+  }
+
 void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
   {
-  int i;
-  gavl_video_frame_t * vf;
   
-  for(i = 0; i < ctx->imported.num_frames; i++)
-    {
-    vf = ctx->imported.frames[i];
-    if(vf)
-      {
-      if(vf->client_data)
-        free(vf->client_data);
-      
-      gavl_hw_destroy_video_frame(ctx, vf, 0);
-      }
-    }
-  for(i = 0; i < ctx->created.num_frames; i++)
-    {
-    vf = ctx->created.frames[i];
-    if(vf)
-      {
-      if(vf->client_data)
-        {
-        free(vf->client_data);
-        vf->client_data = NULL;
-        }
-      gavl_hw_destroy_video_frame(ctx, vf, 1);
-      }
-    }
-  
-  gavl_hw_frame_pool_reset(&ctx->imported);
-  gavl_hw_frame_pool_reset(&ctx->created);
+  gavl_hw_frame_pool_reset(ctx, &ctx->imported, 0);
+  gavl_hw_frame_pool_reset(ctx, &ctx->created, 1);
 
   if(ctx->image_formats_map)
     {
@@ -278,15 +256,13 @@ static const struct
   }
 types[] = 
   {
-    { GAVL_HW_VAAPI_X11, "vaapi through X11", "va_x11" },
+    { GAVL_HW_VAAPI, "vaapi", "vaapi" },
 
     // EGL Texture (associated with X11 connection)
-    { GAVL_HW_EGL_GL_X11, "Opengl Texture (EGL+X11)", "egl_gl_x11" },
+    { GAVL_HW_EGL_GL, "Opengl Texture (EGL)", "gl" },
 
     // EGL Texture (associated with X11 connection)
-    { GAVL_HW_EGL_GLES_X11, "Opengl ES Texture (EGL+X11)", "egl_gles_x11" },
-
-    // GAVL_HW_EGL_WAYLAND,  // EGL Texture (wayland) Not implemented yet
+    { GAVL_HW_EGL_GLES, "Opengl ES Texture (EGL)", "gles" },
 
     // V4L2 buffers (mmap()ed, optionaly also with DMA handles)
     { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer", "v4l2" }, 
@@ -432,7 +408,10 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
     ret = import_frame(ctx1, ctx2, frame1, frame2, fmt);
 
     if(frame1 && *frame2)
+      {
       gavl_video_frame_copy_metadata(*frame2, frame1);
+      (*frame2)->buf_idx = frame1->buf_idx;
+      }
     return ret;
     }
 
@@ -442,7 +421,10 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
     {
     ret = export_frame(ctx1, ctx2, frame1, frame2, fmt);
     if(frame1 && *frame2)
+      {
       gavl_video_frame_copy_metadata(*frame2, frame1);
+      (*frame2)->buf_idx = frame1->buf_idx;
+      }
     return ret;
     }
 
@@ -450,12 +432,14 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
   return 0;
   }
 
-void gavl_hw_ctx_set_video(gavl_hw_context_t * ctx, gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
+void gavl_hw_ctx_set_video(gavl_hw_context_t * ctx,
+                           gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
   {
   ctx->mode = mode;
   if(mode != GAVL_HW_FRAME_MODE_IMPORT)
     gavl_hw_video_format_adjust(ctx, fmt, mode);
   gavl_video_format_copy(&ctx->vfmt, fmt);
+  fmt->hwctx = ctx;
   }
 
 int gavl_hw_supported(gavl_hw_type_t type)
@@ -465,13 +449,13 @@ int gavl_hw_supported(gavl_hw_type_t type)
     case GAVL_HW_NONE:  // Frames in RAM
       return 1;
       break;
-    case GAVL_HW_EGL_GL_X11:     // EGL Texture (associated with X11 connection)
-    case GAVL_HW_EGL_GLES_X11:   // EGL Texture (associated with X11 connection)
+    case GAVL_HW_EGL_GL:     // EGL Texture
+    case GAVL_HW_EGL_GLES:   // EGL Texture
 #ifdef HAVE_EGL
       return 1;
 #endif
-    case GAVL_HW_VAAPI_X11:
-#ifdef HAVE_LIBVA_X11
+    case GAVL_HW_VAAPI:
+#ifdef HAVE_LIBVA
       return 1;
 #endif
       break;
@@ -612,8 +596,25 @@ int gavl_hw_frame_pool_add(frame_pool_t * pool, void * frame, int idx)
   return 1;
   }
 
-void gavl_hw_frame_pool_reset(frame_pool_t * pool)
+void gavl_hw_frame_pool_reset(gavl_hw_context_t * ctx, frame_pool_t * pool, int free_resources)
   {
+  int i;
+  gavl_video_frame_t * vf;
+  
+  for(i = 0; i < pool->num_frames; i++)
+    {
+    vf = pool->frames[i];
+    if(vf)
+      {
+      if(vf->client_data)
+        {
+        free(vf->client_data);
+        vf->client_data = NULL;
+        }
+      gavl_hw_destroy_video_frame(ctx, vf, free_resources);
+      }
+    }
+  
   if(pool->frames)
     free(pool->frames);
   memset(pool, 0, sizeof(*pool));
@@ -665,3 +666,29 @@ gavl_hw_video_frame_unmap(gavl_video_frame_t * frame)
   
   }
 
+static char * window_system = NULL;
+
+const char * gavl_get_window_system()
+  {
+  const char * var;
+
+  if(window_system)
+    return window_system;
+  
+  var = getenv("WAYLAND_DISPLAY");
+
+  if(var)
+    return "wayland";
+
+  var = getenv("DISPLAY");
+
+  if(var)
+    return "x11";
+  
+  return NULL;
+  }
+
+void gavl_set_window_system(const char *)
+  {
+  
+  }

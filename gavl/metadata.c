@@ -512,7 +512,11 @@ gavl_dictionary_get_image_max_proto(const gavl_dictionary_t * m,
       continue;
       }
 
-    uri = gavl_dictionary_get_string(dict, GAVL_META_URI);
+    if(!(uri = gavl_dictionary_get_string(dict, GAVL_META_URI)))
+      {
+      i++;
+      continue;
+      }
     
     if(protocol && 
        (!gavl_string_starts_with(uri, protocol) ||

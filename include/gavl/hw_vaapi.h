@@ -23,6 +23,8 @@
 #ifndef GAVL_HW_VAAPI_H_INCLUDED
 #define GAVL_HW_VAAPI_H_INCLUDED
 
+#include <va/va.h>
+
 typedef struct
   {
   VASurfaceID surface;
@@ -53,5 +55,7 @@ GAVL_PUBLIC int gavl_vaapi_can_decode(VADisplay dpy, const gavl_dictionary_t * d
 // GAVL_PUBLIC gavl_video_frame_t *
 // gavl_vaapi_import_surface(gavl_hw_context_t * ctx, VASurfaceID surf);
 
+GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_vaapi();
+GAVL_PUBLIC VADisplay gavl_hw_ctx_vaapi_get_va_display(gavl_hw_context_t *);
 
 #endif // GAVL_HW_VAAPI_H_INCLUDED

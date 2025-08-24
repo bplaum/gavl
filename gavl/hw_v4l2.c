@@ -51,7 +51,19 @@
 
 #ifdef HAVE_DRM
 #include <gavl/hw_dmabuf.h>
+#else
+#define DRM_FORMAT_BGR888   0
+#define DRM_FORMAT_RGB888   0
+#define DRM_FORMAT_BGRX8888 0
+#define DRM_FORMAT_RGBX8888 0
+#define DRM_FORMAT_R8       0
+#define DRM_FORMAT_YUV410   0
+#define DRM_FORMAT_YUV420   0
+#define DRM_FORMAT_YUV422   0
+#define DRM_FORMAT_YUYV     0
+#define DRM_FORMAT_UYVY     0
 #endif
+
 
 // #define DUMP_CONTROLS
 // #define DUMP_QUEUE
@@ -3013,11 +3025,9 @@ void gavl_v4l2_devices_scan(gavl_array_t * ret)
 static const struct
   {
   uint32_t           v4l2;
-
   gavl_pixelformat_t pixelformat;
-
-  
   gavl_codec_id_t codec_id;
+  uint32_t           drm;
   }
 pixelformats[] =
   {
@@ -3029,31 +3039,93 @@ pixelformats[] =
     // #define V4L2_PIX_FMT_RGB555X v4l2_fourcc('R','G','B','Q') /* 16  RGB-5-5-5 BE  */
     // #define V4L2_PIX_FMT_RGB565X v4l2_fourcc('R','G','B','R') /* 16  RGB-5-6-5 BE  */
     // #define V4L2_PIX_FMT_BGR24   v4l2_fourcc('B','G','R','3') /* 24  BGR-8-8-8     */
-   { V4L2_PIX_FMT_BGR24, GAVL_BGR_24, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_BGR24, GAVL_BGR_24, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGR888 },
     // #define V4L2_PIX_FMT_RGB24   v4l2_fourcc('R','G','B','3') /* 24  RGB-8-8-8     */
-   { V4L2_PIX_FMT_RGB24, GAVL_RGB_24, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_RGB24, GAVL_RGB_24, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGB888 },
     // #define V4L2_PIX_FMT_BGR32   v4l2_fourcc('B','G','R','4') /* 32  BGR-8-8-8-8   */
-   { V4L2_PIX_FMT_BGR32, GAVL_BGR_32, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_BGR32, GAVL_BGR_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGRX8888 },
     // #define V4L2_PIX_FMT_RGB32   v4l2_fourcc('R','G','B','4') /* 32  RGB-8-8-8-8   */
-   { V4L2_PIX_FMT_RGB32, GAVL_RGB_32, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_RGB32, GAVL_RGB_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGBX8888 },
     // #define V4L2_PIX_FMT_GREY    v4l2_fourcc('G','R','E','Y') /*  8  Greyscale     */
-   { V4L2_PIX_FMT_GREY, GAVL_GRAY_8,  GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_GREY, GAVL_GRAY_8,  GAVL_CODEC_ID_NONE, DRM_FORMAT_R8 },
     // #define V4L2_PIX_FMT_PAL8    v4l2_fourcc('P','A','L','8') /*  8  8-bit palette */
     // #define V4L2_PIX_FMT_YVU410  v4l2_fourcc('Y','V','U','9') /*  9  YVU 4:1:0     */
-   { V4L2_PIX_FMT_YVU410, GAVL_YUV_410_P, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_YVU410, GAVL_YUV_410_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU410 },
     // #define V4L2_PIX_FMT_YVU420  v4l2_fourcc('Y','V','1','2') /* 12  YVU 4:2:0     */
-   { V4L2_PIX_FMT_YVU420, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_YVU420,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU420 },
+    { V4L2_PIX_FMT_YVU420M, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU420 },
     // #define V4L2_PIX_FMT_YUYV    v4l2_fourcc('Y','U','Y','V') /* 16  YUV 4:2:2     */
-   { V4L2_PIX_FMT_YUYV, GAVL_YUY2, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_YUYV, GAVL_YUY2, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUYV },
     // #define V4L2_PIX_FMT_UYVY    v4l2_fourcc('U','Y','V','Y') /* 16  YUV 4:2:2     */
-   { V4L2_PIX_FMT_UYVY, GAVL_UYVY, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_UYVY, GAVL_UYVY, GAVL_CODEC_ID_NONE, DRM_FORMAT_UYVY },
     // #define V4L2_PIX_FMT_YUV422P v4l2_fourcc('4','2','2','P') /* 16  YVU422 planar */
-   { V4L2_PIX_FMT_YUV422P, GAVL_YUV_422_P, GAVL_CODEC_ID_NONE },
-   { V4L2_PIX_FMT_YUV422P, GAVL_YUVJ_422_P, GAVL_CODEC_ID_NONE },
+    { V4L2_PIX_FMT_YUV422P, GAVL_YUV_422_P, GAVL_CODEC_ID_NONE,  DRM_FORMAT_YUV422 },
+    { V4L2_PIX_FMT_YUV422P, GAVL_YUVJ_422_P, GAVL_CODEC_ID_NONE,  DRM_FORMAT_YUV422},
     // #define V4L2_PIX_FMT_YUV411P v4l2_fourcc('4','1','1','P') /* 16  YVU411 planar */
-   { V4L2_PIX_FMT_YUV411P, GAVL_YUV_411_P, GAVL_CODEC_ID_NONE },
-    // #define V4L2_PIX_FMT_Y41P    v4l2_fourcc('Y','4','1','P') /* 12  YUV 4:1:1     */
-   { V4L2_PIX_FMT_Y41P, GAVL_YUV_411_P, GAVL_CODEC_ID_NONE},
+    { V4L2_PIX_FMT_YUV411P, GAVL_YUV_411_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV411 },
+    // #define V4L2_PIX_FMT_Y41P    v4l2_fourcc('Y','4','1','P') /* 12  YUV 4:1:1 (packed) */
     // #define V4L2_PIX_FMT_YUV444  v4l2_fourcc('Y','4','4','4') /* 16  xxxxyyyy uuuuvvvv */
     // #define V4L2_PIX_FMT_YUV555  v4l2_fourcc('Y','U','V','O') /* 16  YUV-5-5-5     */
     // #define V4L2_PIX_FMT_YUV565  v4l2_fourcc('Y','U','V','P') /* 16  YUV-5-6-5     */
@@ -3066,9 +3138,11 @@ pixelformats[] =
 /*  The following formats are not defined in the V4L2 specification */
     // #define V4L2_PIX_FMT_YUV410  v4l2_fourcc('Y','U','V','9') /*  9  YUV 4:1:0     */
     // #define V4L2_PIX_FMT_YUV420  v4l2_fourcc('Y','U','1','2') /* 12  YUV 4:2:0     */
-   { V4L2_PIX_FMT_YUV420, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE },
-   { V4L2_PIX_FMT_YUV420, GAVL_YUVJ_420_P, GAVL_CODEC_ID_NONE },
-    
+   { V4L2_PIX_FMT_YUV420, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV420  },
+   { V4L2_PIX_FMT_YUV420, GAVL_YUVJ_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV420 },
+   { V4L2_PIX_FMT_YUV420M, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV420  },
+   { V4L2_PIX_FMT_YUV420M, GAVL_YUVJ_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV420 },
+   
     // #define V4L2_PIX_FMT_YYUV    v4l2_fourcc('Y','Y','U','V') /* 16  YUV 4:2:2     */
     // #define V4L2_PIX_FMT_HI240   v4l2_fourcc('H','I','2','4') /*  8  8-bit color   */
     // #define V4L2_PIX_FMT_HM12    v4l2_fourcc('H','M','1','2') /*  8  YUV 4:2:0 16x16 macroblocks */
@@ -3149,26 +3223,39 @@ uint32_t gavl_v4l2_codec_id_to_pix_fmt(gavl_codec_id_t id)
     idx++;
     }
   return 0;
-  
   }
 
+uint32_t gavl_v4l2_pix_fmt_to_drm_fourcc(uint32_t fmt)
+  {
+  int idx = 0;
+  
+  while(pixelformats[idx].v4l2)
+    {
+    if(pixelformats[idx].v4l2 == fmt)
+      return pixelformats[idx].drm;
+    idx++;
+    }
+  return 0;
+  }
 
 gavl_pixelformat_t gavl_v4l2_pix_fmt_to_pixelformat(uint32_t fmt, int quantization)
   {
   int idx = 0;
-
-  if(quantization == V4L2_QUANTIZATION_FULL_RANGE)
-    {
-    if(pixelformats[idx].v4l2 == V4L2_PIX_FMT_YVU420)
-      return GAVL_YUVJ_420_P;
-    if(pixelformats[idx].v4l2 == V4L2_PIX_FMT_YUV422P)
-      return GAVL_YUVJ_422_P;
-    }
   
   while(pixelformats[idx].v4l2)
     {
     if(pixelformats[idx].v4l2 == fmt)
       {
+      if(quantization == V4L2_QUANTIZATION_FULL_RANGE)
+        {
+        if(pixelformats[idx].v4l2 == V4L2_PIX_FMT_YVU420)
+          return GAVL_YUVJ_420_P;
+        if(pixelformats[idx].v4l2 == V4L2_PIX_FMT_YUV422P)
+          return GAVL_YUVJ_422_P;
+        if(pixelformats[idx].v4l2 == V4L2_PIX_FMT_YUV444M)
+          return GAVL_YUVJ_444_P;
+        }
+      
       return pixelformats[idx].pixelformat;
       }
     idx++;
@@ -3294,9 +3381,16 @@ static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_
     case GAVL_HW_DMABUFFER:
       {
       int i;
+      port_t * port;
+      uint32_t fmt = 0;
       gavl_dmabuf_video_frame_t * dma_frame = dst->storage;
       gavl_v4l2_buffer_t * v4l2_storage = src->storage;
       gavl_v4l2_device_t * dev = src->hwctx->native;
+
+      if(IS_CAPTURE(v4l2_storage->buf.type))
+        port = &dev->capture;
+      else
+        port = &dev->output;
       
       if(IS_PLANAR(v4l2_storage->buf.type))
         {
@@ -3305,15 +3399,26 @@ static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_
           {
           dma_frame->buffers[i].map_len = v4l2_storage->buf.m.planes[i].length;
           }
+#if 0
+        if(IS_PLANAR(dev->capture.buf_type))
+          pixelformat = dev->capture.fmt.fmt.pix_mp.pixelformat;
+        else
+          pixelformat = dev->capture.fmt.fmt.pix.pixelformat;
+#endif
+        
+        fmt = port->fmt.fmt.pix_mp.pixelformat;
         }
       else
         {
         dma_frame->num_buffers = 1;
         dma_frame->buffers[0].map_len = v4l2_storage->buf.length;
+        fmt = port->fmt.fmt.pix.pixelformat;
         }
       
+      
       dma_frame->num_planes = gavl_pixelformat_num_planes(vfmt->pixelformat);
-      dma_frame->fourcc = gavl_drm_fourcc_from_gavl(src->hwctx, vfmt->pixelformat);
+      
+      dma_frame->fourcc = gavl_v4l2_pix_fmt_to_drm_fourcc(fmt);
       
       /* Export buffers */
       for(i = 0; i < dma_frame->num_buffers; i++)
@@ -3355,8 +3460,6 @@ static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_
           dma_frame->planes[i].offset = 0;
           }
         }
-      
-      dst->buf_idx = src->buf_idx;
       }
     return 1;
 #endif

@@ -36,7 +36,6 @@ typedef struct
   int num_image_formats;
   VAImageFormat * image_formats;
   
-  gavl_dsp_context_t * dsp;
   int no_derive;
 
   int num_imported_frames;

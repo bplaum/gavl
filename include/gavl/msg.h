@@ -18,8 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
-
 #ifndef GAVL_MSG_H_INCLUDED
 #define GAVL_MSG_H_INCLUDED
 
@@ -387,10 +385,10 @@
 
 #define GAVL_CMD_GAVF_SELECT_STREAM   (0x100+1)
 
-/* Sink */
+/* Sink GAVL_MSG_NS_SINK */
 
-/* Underrun (no args) */
-#define GAVL_MSG_SINK_UNDERRUN        1
+/* Timestamps might be discontinous after this call */
+ #define GAVL_MSG_SINK_RESYNC          1
 
 /* Header fields */
 #define GAVL_MSG_ID         "ID"

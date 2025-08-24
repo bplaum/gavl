@@ -102,7 +102,7 @@ gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx, int * nu
   while(pixelformats[src_idx].fmt)
     {
     /* Seems that GL ES supports no 16 bit colors */
-    if((ctx->type == GAVL_HW_EGL_GLES_X11) &&
+    if((ctx->type == GAVL_HW_EGL_GLES) &&
        (pixelformats[src_idx].type != GL_UNSIGNED_BYTE))
       {
       src_idx++;
@@ -219,7 +219,9 @@ void gavl_gl_destroy_frame(gavl_video_frame_t * f, int destroy_resource)
   if(f->storage)
     {
     info = f->storage;
-    if(destroy_resource)
+    /* Imported textures are always deleted because their primary resource
+       is owned by someone else */
+    if(destroy_resource || (info->texture_target != GL_TEXTURE_2D))
       glDeleteTextures(info->num_textures, info->textures);
     free(info);
     }
