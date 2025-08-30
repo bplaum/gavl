@@ -351,7 +351,7 @@ static int alloc_cma(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
 
   int offsets[GAVL_MAX_PLANES];
   int size;
-  int flags;
+  int flags = 0;
   gavl_dmabuf_video_frame_t *f = ret->storage;
   
   f->fourcc = fourcc_from_gavl(ctx, ctx->vfmt.pixelformat, &flags);
@@ -426,7 +426,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   struct drm_mode_map_dumb map_struct;
   struct drm_prime_handle prime;
 
-  int flags;
+  int flags = 0;
 
   
 #define INIT(s) memset(&s, 0, sizeof(s))
