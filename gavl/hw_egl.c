@@ -470,7 +470,9 @@ gles_attributes[] =
 
 gavl_hw_context_t *
 gavl_hw_ctx_create_egl(EGLenum platform,
-                       EGLint const * attrs, gavl_hw_type_t type, void * native_display)
+                       EGLint const * attrs,
+                       gavl_hw_type_t type,
+                       void * native_display)
   {
   int support_flags;
   egl_t * priv;
