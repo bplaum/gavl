@@ -167,6 +167,12 @@ gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict);
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict);
 
+/* Create a HW context with just a type. This function suceeds only for types,
+   which don't require other stuff (e.g. device nodes) for creation */
+
+GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create(gavl_hw_type_t type);
+
+
 /* Currently, for the string we support "x11" and "wayland" */
 
 GAVL_PUBLIC const char * gavl_get_window_system();

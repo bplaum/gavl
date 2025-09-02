@@ -32,6 +32,10 @@
 
 #define LOG_DOMAIN "hw_context"
 
+#include <hw_dmabuf.h>
+#include <hw_shm.h>
+
+
 static void ensure_formats(gavl_hw_context_t * ret)
   {
   if(ret->image_formats_map || ret->image_formats_transfer)
@@ -72,7 +76,6 @@ void gavl_hw_ctx_resync(gavl_hw_context_t * ctx)
 
 void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
   {
-  
   gavl_hw_frame_pool_reset(ctx, &ctx->imported, 0);
   gavl_hw_frame_pool_reset(ctx, &ctx->created, 1);
 
@@ -388,6 +391,8 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
   gavl_hw_context_t * ctx1 = frame1->hwctx;
   //  gavl_hw_type_t t = gavl_hw_ctx_get_type(ctx1);
 
+  //  fprintf(stderr, "Transfer video frame: %p %p %p\n", frame1, frame1->hwctx, *frame2);
+  
   if((frame1->buf_idx < 0) && !(*frame2))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot transfer video frame (need buf_idx)");
@@ -691,4 +696,24 @@ const char * gavl_get_window_system()
 void gavl_set_window_system(const char *)
   {
   
+  }
+
+gavl_hw_context_t * gavl_hw_ctx_create(gavl_hw_type_t type)
+  {
+  gavl_hw_context_t * ret = NULL;
+  switch(type)
+    {
+    case GAVL_HW_DMABUFFER:
+      ret = gavl_hw_ctx_create_dma();
+      break;
+    case GAVL_HW_SHM:
+      ret = gavl_hw_ctx_create_shm();
+      break;
+    default:
+      break;
+    }
+  if(!ret)
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_hw_ctx_create is not supported for %s",
+             gavl_hw_type_to_string(type));
+  return ret;
   }
