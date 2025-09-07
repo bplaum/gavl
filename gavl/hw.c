@@ -671,32 +671,6 @@ gavl_hw_video_frame_unmap(gavl_video_frame_t * frame)
   
   }
 
-static char * window_system = NULL;
-
-const char * gavl_get_window_system()
-  {
-  const char * var;
-
-  if(window_system)
-    return window_system;
-  
-  var = getenv("WAYLAND_DISPLAY");
-
-  if(var)
-    return "wayland";
-
-  var = getenv("DISPLAY");
-
-  if(var)
-    return "x11";
-  
-  return NULL;
-  }
-
-void gavl_set_window_system(const char *)
-  {
-  
-  }
 
 gavl_hw_context_t * gavl_hw_ctx_create(gavl_hw_type_t type)
   {

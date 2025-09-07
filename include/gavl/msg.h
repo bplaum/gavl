@@ -388,7 +388,9 @@
 /* Sink GAVL_MSG_NS_SINK */
 
 /* Timestamps might be discontinous after this call */
- #define GAVL_MSG_SINK_RESYNC          1
+#define GAVL_MSG_SINK_RESYNC          1
+
+
 
 /* Header fields */
 #define GAVL_MSG_ID         "ID"

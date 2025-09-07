@@ -172,10 +172,4 @@ GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict)
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create(gavl_hw_type_t type);
 
-
-/* Currently, for the string we support "x11" and "wayland" */
-
-GAVL_PUBLIC const char * gavl_get_window_system();
-GAVL_PUBLIC void gavl_set_window_system(const char *);
-
 #endif // GAVL_HW_H_INCLUDED
