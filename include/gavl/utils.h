@@ -256,7 +256,7 @@ char * gavl_find_char(char * start, char delim);
 
 
 GAVL_PUBLIC
-const char * gavl_tempdir();
+const char * gavl_tempdir(void);
 
 GAVL_PUBLIC
 int gavl_url_split(const char * url,
@@ -299,7 +299,7 @@ GAVL_PUBLIC
 void gavl_simplify_rational(int * num, int * den);
 
 GAVL_PUBLIC
-int gavl_num_cpus();
+int gavl_num_cpus(void);
 
 /* URL variables */
 

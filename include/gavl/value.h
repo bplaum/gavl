@@ -305,7 +305,7 @@ gavl_video_format_t * gavl_dictionary_get_video_format_nc(gavl_dictionary_t * d,
 /* For compatibility with old heap API */
 
 GAVL_PUBLIC
-gavl_dictionary_t *  gavl_dictionary_create();
+gavl_dictionary_t *  gavl_dictionary_create(void);
 
 GAVL_PUBLIC
 gavl_dictionary_t * gavl_dictionary_clone(const gavl_dictionary_t * src);
@@ -456,7 +456,7 @@ int gavl_dictionary_has_string_array(const gavl_dictionary_t * d,
 /* For compatibility with old heap API */
 
 GAVL_PUBLIC
-gavl_array_t *  gavl_array_create();
+gavl_array_t *  gavl_array_create(void);
 
 GAVL_PUBLIC
 void gavl_array_destroy(gavl_array_t *);

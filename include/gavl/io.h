@@ -178,7 +178,7 @@ GAVL_PUBLIC
 gavl_io_t * gavl_io_create_mem_read(const uint8_t * ptr, int len);
 
 GAVL_PUBLIC
-gavl_io_t * gavl_io_create_mem_write();
+gavl_io_t * gavl_io_create_mem_write(void);
 
 /* Buffer I/O */
 

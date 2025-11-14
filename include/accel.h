@@ -58,7 +58,7 @@ int gavl_video_options_get_accel_flags(gavl_video_options_t * opt);
 
 /* Optimized memcpy versions */
 
-void gavl_init_memcpy();
+void gavl_init_memcpy(void);
 
 extern void * (*gavl_memcpy)(void *to, const void *from, size_t len);
 

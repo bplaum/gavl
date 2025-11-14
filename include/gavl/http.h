@@ -149,7 +149,7 @@ void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 /* http client */
 
 GAVL_PUBLIC
-gavl_io_t * gavl_http_client_create();
+gavl_io_t * gavl_http_client_create(void);
 
 GAVL_PUBLIC int
 gavl_http_client_read_body(gavl_io_t *,

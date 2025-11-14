@@ -38,7 +38,7 @@
 typedef struct gavl_socket_address_s gavl_socket_address_t;
 
 GAVL_PUBLIC
-gavl_socket_address_t * gavl_socket_address_create();
+gavl_socket_address_t * gavl_socket_address_create(void);
 
 GAVL_PUBLIC
 void gavl_socket_address_destroy(gavl_socket_address_t *);

@@ -181,7 +181,7 @@ typedef struct gavl_video_frame_s gavl_video_frame_t;
  *  \returns A combination of GAVL_ACCEL_* flags.
  */
   
-GAVL_PUBLIC int gavl_accel_supported();
+GAVL_PUBLIC int gavl_accel_supported(void);
 
 /**
  *  @}
@@ -335,7 +335,7 @@ gavl_sample_format_t gavl_short_string_to_sample_format(const char * format);
  */
 
 GAVL_PUBLIC 
-int gavl_num_sample_formats();
+int gavl_num_sample_formats(void);
 
 /*! \ingroup audio_format
  * \brief Get the sample format from index
@@ -1129,7 +1129,7 @@ gavl_audio_options_get_mix_matrix(const gavl_audio_options_t * opt);
  */
   
 GAVL_PUBLIC
-gavl_audio_options_t * gavl_audio_options_create();
+gavl_audio_options_t * gavl_audio_options_create(void);
 
 /*! \ingroup audio_options
  *  \brief Copy audio options
@@ -1194,7 +1194,7 @@ typedef struct gavl_audio_converter_s gavl_audio_converter_t;
  */
 
 GAVL_PUBLIC
-gavl_audio_converter_t * gavl_audio_converter_create();
+gavl_audio_converter_t * gavl_audio_converter_create(void);
 
 /*! \ingroup audio_converter
  *  \brief Destroys an audio converter and frees all associated memory
@@ -1358,7 +1358,7 @@ typedef struct gavl_volume_control_s gavl_volume_control_t;
  */
   
 GAVL_PUBLIC
-gavl_volume_control_t * gavl_volume_control_create();
+gavl_volume_control_t * gavl_volume_control_create(void);
 
 /*! \ingroup volume_control
  *  \brief Destroys a volume control and frees all associated memory
@@ -2224,7 +2224,7 @@ const uint32_t * gavl_pixelformat_get_masks(gavl_pixelformat_t pixelformat);
  */
 
 GAVL_PUBLIC
-int gavl_num_pixelformats();
+int gavl_num_pixelformats(void);
 
 /*! \ingroup video_format
  * \brief Get the pixelformat from index
@@ -3249,7 +3249,7 @@ void gavl_video_options_set_defaults(gavl_video_options_t * opt);
  */
   
 GAVL_PUBLIC
-gavl_video_options_t * gavl_video_options_create();
+gavl_video_options_t * gavl_video_options_create(void);
 
 /*! \ingroup video_options
  *  \brief Copy video options
@@ -3567,7 +3567,7 @@ typedef struct gavl_video_converter_s gavl_video_converter_t;
  */
 
 GAVL_PUBLIC
-gavl_video_converter_t * gavl_video_converter_create();
+gavl_video_converter_t * gavl_video_converter_create(void);
 
 /*! \ingroup video_converter
  *  \brief Destroys a video converter and frees all associated memory
@@ -3684,7 +3684,7 @@ typedef struct gavl_video_scaler_s gavl_video_scaler_t;
  */
 
 GAVL_PUBLIC
-gavl_video_scaler_t * gavl_video_scaler_create();
+gavl_video_scaler_t * gavl_video_scaler_create(void);
 
 /*! \ingroup video_scaler
  *  \brief Destroy a video scaler
@@ -3784,7 +3784,7 @@ typedef struct gavl_video_deinterlacer_s gavl_video_deinterlacer_t;
  */
 
 GAVL_PUBLIC
-gavl_video_deinterlacer_t * gavl_video_deinterlacer_create();
+gavl_video_deinterlacer_t * gavl_video_deinterlacer_create(void);
 
 /*! \ingroup video_deinterlacer
  *  \brief Destroy a video deinterlacer
@@ -3883,7 +3883,7 @@ typedef struct gavl_overlay_blend_context_s gavl_overlay_blend_context_t;
  */
   
 GAVL_PUBLIC
-gavl_overlay_blend_context_t * gavl_overlay_blend_context_create();
+gavl_overlay_blend_context_t * gavl_overlay_blend_context_create(void);
 
 /*! \ingroup video_blend
  *  \brief Destroy a blend context and free all associated memory
@@ -4004,7 +4004,7 @@ typedef void (*gavl_image_transform_func)(void * priv,
  */
   
 GAVL_PUBLIC
-gavl_image_transform_t * gavl_image_transform_create();
+gavl_image_transform_t * gavl_image_transform_create(void);
 
 /** \brief Destroy a transformation engine
  *  \param t A transformation engine
@@ -4115,7 +4115,7 @@ typedef struct
  *
  * Since 1.1.2.
  */
-GAVL_PUBLIC gavl_frame_table_t * gavl_frame_table_create();
+GAVL_PUBLIC gavl_frame_table_t * gavl_frame_table_create(void);
 
 /** \brief Create a frame table for an audio stream
  *  \param samplerate Samplerate for this stream

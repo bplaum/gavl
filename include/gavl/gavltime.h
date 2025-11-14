@@ -245,7 +245,7 @@ typedef struct gavl_timer_s gavl_timer_t;
  */
 
 GAVL_PUBLIC
-gavl_timer_t * gavl_timer_create();
+gavl_timer_t * gavl_timer_create(void);
 
 /*! \ingroup timer
  * \brief Destroy a timer

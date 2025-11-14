@@ -60,7 +60,7 @@ struct gavl_volume_control_s
   };
 
 
-gavl_volume_funcs_t * gavl_volume_funcs_create();
+gavl_volume_funcs_t * gavl_volume_funcs_create(void);
 void gavl_volume_funcs_destroy(gavl_volume_funcs_t *);
 
 /* Get specific functions */

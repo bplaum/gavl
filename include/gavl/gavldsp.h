@@ -496,7 +496,7 @@ typedef struct
  */
 
 GAVL_PUBLIC
-gavl_dsp_context_t * gavl_dsp_context_create();
+gavl_dsp_context_t * gavl_dsp_context_create(void);
 
 /** \brief Set the quality for a DSP context
  *  \param ctx A DSP context

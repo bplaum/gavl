@@ -439,7 +439,7 @@ int gavl_msg_send(gavl_msg_t * msg, gavl_handle_msg_func func, void * priv);
  */
 
 GAVL_PUBLIC
-gavl_msg_t * gavl_msg_create();
+gavl_msg_t * gavl_msg_create(void);
 
 /** \brief Initialize a message struct
  *  \param m A message

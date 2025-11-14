@@ -88,7 +88,7 @@ typedef void (*gavl_update_peaks_callback)(void * priv,
  */
   
 GAVL_PUBLIC
-gavl_peak_detector_t * gavl_peak_detector_create();
+gavl_peak_detector_t * gavl_peak_detector_create(void);
 
 /*! \brief Set callbacks
  *  \param pd A peak detector

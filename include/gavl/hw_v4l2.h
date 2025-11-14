@@ -140,7 +140,7 @@ GAVL_PUBLIC int gavl_v4l2_device_init_converter(gavl_v4l2_device_t * dev,
 GAVL_PUBLIC void gavl_v4l2_device_resync_decoder(gavl_v4l2_device_t * dev);
 
 GAVL_PUBLIC void gavl_v4l2_device_info(const char * dev);
-GAVL_PUBLIC void gavl_v4l2_device_infos();
+GAVL_PUBLIC void gavl_v4l2_device_infos(void);
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_v4l2(const gavl_dictionary_t * dev_info);
 

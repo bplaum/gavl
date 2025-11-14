@@ -315,7 +315,7 @@ gavl_compression_from_short_name(const char * name);
  */
   
 GAVL_PUBLIC
-int gavl_num_compressions();
+int gavl_num_compressions(void);
 
 /** \brief Get a compression format for a specified index
  *  \param index Index (starting with 0)
@@ -467,7 +467,7 @@ GAVL_PUBLIC
 void gavl_packet_init(gavl_packet_t * p);
 
 GAVL_PUBLIC
-gavl_packet_t * gavl_packet_create();
+gavl_packet_t * gavl_packet_create(void);
 
 
   

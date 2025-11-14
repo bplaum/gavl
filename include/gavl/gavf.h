@@ -216,7 +216,7 @@ GAVL_PUBLIC
 int gavf_options_get_flags(gavf_options_t *);
 
 GAVL_PUBLIC
-gavf_options_t * gavf_options_create();
+gavf_options_t * gavf_options_create(void);
 
 GAVL_PUBLIC
 void gavf_options_destroy(gavf_options_t *);
@@ -230,7 +230,7 @@ void gavf_options_destroy(gavf_options_t *);
 /* General functions */
 
 GAVL_PUBLIC
-gavf_t * gavf_create();
+gavf_t * gavf_create(void);
 
 GAVL_PUBLIC
 void gavf_close(gavf_t *, int discard);
