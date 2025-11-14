@@ -101,6 +101,18 @@
 
 #define GAVL_CMD_SET_RESOURCE      104
 
+/**
+ *  \brief Query resources
+ */
+
+#define GAVL_FUNC_QUERY_RESOUCRES   105
+
+/**
+ *  \brief Response: Same format as GAVL_MSG_RESOURCE_ADDED
+ */
+
+#define GAVL_RESP_QUERY_RESOUCRES   106
+
 /*
  *  GAVL_MSG_NS_SRC
  */
@@ -328,8 +340,6 @@
 #define GAVL_MSG_GUI_SWIPE_DOWN      2
 #define GAVL_MSG_GUI_SWIPE_LEFT      3
 #define GAVL_MSG_GUI_SWIPE_RIGHT     4
-
-/* Commands */
 
 
 

@@ -52,6 +52,7 @@ typedef struct gavl_value_s gavl_value_t;
 typedef struct gavl_dict_entry_s gavl_dict_entry_t;
 typedef struct gavl_array_s gavl_array_t;
 
+
 /* Dictionary */
 
 typedef struct
@@ -214,6 +215,13 @@ void gavl_dictionary_merge2(gavl_dictionary_t * dst,
 GAVL_PUBLIC
 void gavl_dictionary_update_fields(gavl_dictionary_t * dst,
                                    const gavl_dictionary_t * src);
+
+
+/* Update fields in dst from src, but only the ones, which already exist */
+GAVL_PUBLIC
+void gavl_dictionary_update_fields_nocreate(gavl_dictionary_t * dst,
+                                            const gavl_dictionary_t * src);
+
 
 GAVL_PUBLIC int
 gavl_dictionary_compare(const gavl_dictionary_t * m1,
@@ -628,6 +636,8 @@ const gavl_array_t * gavl_value_get_array(const gavl_value_t * v);
 GAVL_PUBLIC
 gavl_array_t * gavl_value_get_array_nc(gavl_value_t * v);
 
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_array_append_dictionary(gavl_array_t * arr);
 
 GAVL_PUBLIC
 const double * gavl_value_get_position(const gavl_value_t * v);

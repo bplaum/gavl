@@ -145,8 +145,7 @@ dict_set(gavl_dictionary_t * d, const char * name, const gavl_value_t * val,
       return 0; // Noop
     
     /* Replace */
-    gavl_value_free(&e->v);
-    gavl_value_init(&e->v);
+    gavl_value_reset(&e->v);
     }
   else
     e = dict_append(d, name);
@@ -630,6 +629,15 @@ static void merge_func_nr(void * priv, const char * name, const gavl_value_t * v
   if(!gavl_dictionary_get(dst, name))
     gavl_dictionary_set(dst, name, val);
   }
+
+static void update_func_nocreate(void * priv, const char * name, const gavl_value_t * val)
+  {
+  gavl_dictionary_t * dst = priv;
+  gavl_value_t * val_dst;
+  
+  if((val_dst = gavl_dictionary_get_nc(dst, name)))
+    gavl_value_copy(val_dst, val);
+  }
   
 void gavl_dictionary_merge(gavl_dictionary_t * dst,
                            const gavl_dictionary_t * src1,
@@ -649,6 +657,12 @@ void gavl_dictionary_merge2(gavl_dictionary_t * dst,
 
 void gavl_dictionary_update_fields(gavl_dictionary_t * dst,
                                    const gavl_dictionary_t * src)
+  {
+  gavl_dictionary_foreach(src, update_func_nocreate, dst);
+  }
+
+void gavl_dictionary_update_fields_nocreate(gavl_dictionary_t * dst,
+                                            const gavl_dictionary_t * src)
   {
   gavl_dictionary_foreach(src, merge_func_r, dst);
   }

@@ -483,3 +483,13 @@ char * gavl_string_array_join(const gavl_array_t * arr, const char * glue)
 
   
   }
+
+gavl_dictionary_t * gavl_array_append_dictionary(gavl_array_t * arr)
+  {
+  gavl_value_t val;
+  gavl_value_init(&val);
+  gavl_value_set_dictionary(&val);
+  gavl_array_splice_val_nocopy(arr, -1, 0, &val);
+  return gavl_value_get_dictionary_nc(&arr->entries[arr->num_entries-1]);
+  }
+

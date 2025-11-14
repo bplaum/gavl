@@ -158,6 +158,7 @@ packetindex.c \
 packetsink.c \
 packetsource.c \
 palette.c \
+parameter.c \
 peakdetector.c \
 psnr.c \
 ptscache.c \

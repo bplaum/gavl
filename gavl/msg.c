@@ -789,7 +789,7 @@ void gavl_msg_copy_header_field(gavl_msg_t * dst, const gavl_msg_t * src, const 
   if(!strcmp(key, GAVL_MSG_CLIENT_ID))
     gavl_msg_set_client_id(dst, gavl_msg_get_client_id(src));
   else
-    gavl_dictionary_set(&dst->header, key, gavl_dictionary_get(&src->header, key));
+    gavl_dictionary_copy_value(&dst->header, &src->header, key);
   }
 
 void gavl_msg_set_resp_for_req(gavl_msg_t * dst, const gavl_msg_t * src)
