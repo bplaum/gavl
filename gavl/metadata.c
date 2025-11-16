@@ -324,8 +324,8 @@ void gavl_metadata_add_image_embedded(gavl_dictionary_t * m,
                                       const char * key,
                                       int w, int h,
                                       const char * mimetype,
-                                      int64_t offset,
-                                      int64_t size)
+                                      const uint8_t * image_data,
+                                      int len)
   {
   gavl_value_t child;
   gavl_value_t val;
@@ -338,12 +338,6 @@ void gavl_metadata_add_image_embedded(gavl_dictionary_t * m,
 
   gavl_value_init(&val);
   
-  gavl_value_set_long(&val, offset);
-  gavl_dictionary_set_nocopy(dict, GAVL_META_COVER_OFFSET, &val);
-
-  gavl_value_set_long(&val, size);
-  gavl_dictionary_set_nocopy(dict, GAVL_META_COVER_SIZE, &val);
-
   if(mimetype)
     {
     gavl_value_set_string(&val, mimetype);
@@ -359,6 +353,13 @@ void gavl_metadata_add_image_embedded(gavl_dictionary_t * m,
     gavl_value_set_int(&val, h);
     gavl_dictionary_set_nocopy(dict, GAVL_META_HEIGHT, &val);
     }
+  if(image_data)
+    {
+    gavl_buffer_t * buf = gavl_value_set_binary(&val);
+    gavl_buffer_append_data(buf, image_data, len);
+    gavl_dictionary_set_nocopy(dict, GAVL_META_IMAGE_BUFFER, &val);
+    }
+  
   gavl_dictionary_append_nocopy(m, key, &child);
   }
                          
