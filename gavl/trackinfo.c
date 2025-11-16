@@ -1533,6 +1533,8 @@ void gavl_track_finalize(gavl_dictionary_t * track)
     }
   
   gavl_track_compute_duration(track);
+  duration = GAVL_TIME_UNDEFINED;
+  gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration);
   
   if(media_class)
     {
@@ -1541,9 +1543,9 @@ void gavl_track_finalize(gavl_dictionary_t * track)
       finalize_audio(track);
       
       /* Check for audio broadcast */
-      if(gavl_dictionary_get(m, GAVL_META_STATION))
+      if(gavl_dictionary_get(m, GAVL_META_STATION) && (duration == GAVL_TIME_UNDEFINED))
         media_class = GAVL_META_CLASS_AUDIO_BROADCAST;
-
+      
       /* Check for song */
       else if(gavl_dictionary_get(m, GAVL_META_ARTIST) &&
               gavl_dictionary_get(m, GAVL_META_TITLE) &&
@@ -1564,7 +1566,7 @@ void gavl_track_finalize(gavl_dictionary_t * track)
       
       if((num_video_streams == 1))
         {
-        if(gavl_dictionary_get_long(m, GAVL_META_APPROX_DURATION, &duration) && (duration > 0))
+        if(duration > 0)
           {
           /* Check for episode */
 
