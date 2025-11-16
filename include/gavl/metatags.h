@@ -386,8 +386,8 @@
 
 /* For embedded covers: Location is NULL and offset and size are given */
 #define GAVL_META_COVER_EMBEDDED "CoverEmbedded"
-#define GAVL_META_COVER_OFFSET   "CoverOffset"
-#define GAVL_META_COVER_SIZE     "CoverSize"
+/* Buffer of an embedded image */
+#define GAVL_META_IMAGE_BUFFER "ImageBuffer"
 
 #define GAVL_META_WALLPAPER_URL  "WallpaperURL"
 #define GAVL_META_POSTER_URL     "PosterURL"

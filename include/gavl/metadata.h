@@ -391,8 +391,8 @@ gavl_metadata_add_image_embedded(gavl_dictionary_t * m,
                                  const char * key,
                                  int w, int h,
                                  const char * mimetype,
-                                 int64_t offset,
-                                 int64_t size);
+                                 const uint8_t * image_data,
+                                 int len);
 
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_dictionary_get_image_max(const gavl_dictionary_t * m,
