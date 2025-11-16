@@ -920,7 +920,7 @@ void gavl_value_dump(const gavl_value_t * v, int indent)
       break;
     case GAVL_TYPE_BINARY:
       gavl_diprintf(indent, "%d bytes\n", v->v.buffer->len);
-      if(v->v.buffer->len)
+      if(v->v.buffer->len && (v->v.buffer->len <= 256))
         gavl_hexdumpi(v->v.buffer->buf, v->v.buffer->len, 16, indent+2);
       break;
       
