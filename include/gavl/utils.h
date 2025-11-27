@@ -268,6 +268,18 @@ int gavl_url_split(const char * url,
                    char ** path);
 
 GAVL_PUBLIC
+char * gavl_filename_get_dir(const char * filename);
+
+GAVL_PUBLIC
+char * gavl_filename_get_base(const char * filename);
+
+GAVL_PUBLIC
+char * gavl_filename_ensure_extension(const char * filename,
+                                      const char * ext);
+
+
+
+GAVL_PUBLIC
 char * 
 gavl_base64_encode_data(const void * data, int length);
 

@@ -1111,3 +1111,38 @@ void gavl_2d_transform_transform_inplace(const double mat[2][3], float * vec)
   gavl_2d_transform_transform(mat, vec, tmp);
   memcpy(vec, tmp, 2*sizeof(vec[0]));
   }
+
+char * gavl_filename_get_dir(const char * filename)
+  {
+  const char * pos = strrchr(filename, '/');
+  return gavl_strndup(filename, pos);
+  }
+
+char * gavl_filename_get_base(const char * filename)
+  {
+  const char * start;
+  const char * end;
+
+  if((start = strrchr(filename, '/')))
+    start++;
+  else
+    start = filename;
+
+  if(!(end = strrchr(start, '.')))
+    end = start + strlen(start);
+  
+  return gavl_strndup(start, end);
+  }
+
+
+char * gavl_filename_ensure_extension(const char * filename,
+                                    const char * ext)
+  {
+  const char * pos;
+
+  if((pos = strrchr(filename, '.')) &&
+     (!strcasecmp(pos+1, ext)))
+    return gavl_strdup(filename);
+  else
+    return gavl_sprintf("%s.%s", filename, ext);
+  }
