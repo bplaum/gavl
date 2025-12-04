@@ -1291,7 +1291,7 @@ void gavl_audio_convert(gavl_audio_converter_t * cnv,
 
 
 /*! \ingroup audio_converter
- *  \brief Set samplerate converstion ratio 
+ *  \brief Set samplerate conversion ratio 
  *  \param cnv An resample only audio converter created with gavl_audio_converter_init_resample
  *  \param ratio  desired src_ratio  
  *
@@ -1730,7 +1730,7 @@ int gavl_rectangle_f_is_empty(const gavl_rectangle_f_t * r);
  * parameter.
  *
  * Zoom is a zoom factor (1.0 = 100 %). Squeeze is a value between -1.0 and 1.0,
- * which changes the apsect ratio in both directions. 0.0 means unchanged.
+ * which changes the aspect ratio in both directions. 0.0 means unchanged.
  *
  * Note that dst_rect might be outside the image dimensions of dst_format. If you
  * don't like this, call \ref gavl_rectangle_crop_to_format_scale afterwards.
@@ -2191,7 +2191,7 @@ const char * gavl_pixelformat_to_short_string(gavl_pixelformat_t pixelformat);
   
 /*! \ingroup video_format
  * \brief Translate a pixelformat name into a pixelformat
- * \param name A string describing the pixelformat (returnd by \ref gavl_pixelformat_to_string)
+ * \param name A string describing the pixelformat (returned by \ref gavl_pixelformat_to_string)
  * \returns The pixelformat or GAVL_PIXELFORMAT_NONE if no match.
  */
 
@@ -2200,7 +2200,7 @@ gavl_pixelformat_t gavl_string_to_pixelformat(const char * name);
 
 /*! \ingroup video_format
  * \brief Translate a short pixelformat name into a pixelformat
- * \param name A string describing the pixelformat (returnd by \ref gavl_pixelformat_to_short_string)
+ * \param name A string describing the pixelformat (returned by \ref gavl_pixelformat_to_short_string)
  * \returns The pixelformat or GAVL_PIXELFORMAT_NONE if no match.
  */
 
@@ -2609,7 +2609,7 @@ gavl_image_orientation_is_transposed(gavl_image_orientation_t orient);
  *
  * This is the standardized method of storing one frame with video data. For planar
  * formats, the first scanline starts at planes[0], subsequent scanlines start in
- * intervalls of strides[0] bytes. For planar formats, planes[0] will contain the
+ * intervals of strides[0] bytes. For planar formats, planes[0] will contain the
  * luminance channel, planes[1] contains Cb (aka U), planes[2] contains Cr (aka V).
  *
  * Video frames are created with \ref gavl_video_frame_create and destroyed with
@@ -2718,7 +2718,7 @@ void gavl_video_frame_clear(gavl_video_frame_t * frame,
 
 /*!
   \ingroup video_frame
-  \brief Fill the frame with a user spefified color
+  \brief Fill the frame with a user specified color
   \param frame A video frame
   \param format Format of the data in the frame
   \param color Color components in RGBA format scaled 0.0 .. 1.0
@@ -2732,7 +2732,7 @@ void gavl_video_frame_fill(gavl_video_frame_t * frame,
 
 /*!
   \ingroup video_frame
-  \brief Fill the frame with the absolute differene of 2 source frames
+  \brief Fill the frame with the absolute difference of 2 source frames
   \param format Format of the data in the frame
   \param dst A video frame
   \param src1 First source frame
@@ -2907,7 +2907,7 @@ void gavl_video_frame_copy_metadata(gavl_video_frame_t * dst,
   \param src_rect Rectangular area in the source, which will be in the destination frame
 
   This fills the pointers of dst from src such that the dst will represent the
-  speficied rectangular area. Note that no data are copied here. This means that
+  specified rectangular area. Note that no data are copied here. This means that
   dst must be created with NULL as the format argument and \ref gavl_video_frame_null
   must be called before destroying dst.
 
@@ -2930,7 +2930,7 @@ void gavl_video_frame_get_subframe(gavl_pixelformat_t pixelformat,
   \param field Field index (0 = top field, 1 = bottom field)
 
   This fills the pointers and strides of the destination frame such that it
-  will represent the speficied field of the source frame.
+  will represent the specified field of the source frame.
   Note that no data are copied here. This means that
   dst must be created with NULL as the format argument and \ref gavl_video_frame_null
   must be called before destroying dst.
@@ -3011,7 +3011,7 @@ void gavl_video_frame_set_planes(gavl_video_frame_t * frame,
   \brief Check if a video frame uses a continuous memory block
   \param format Format of the video data in the frame
   \param frame Video frame
-  \returns 1 if the planes are consequtive in memory and no padding is used, 0 else
+  \returns 1 if the planes are consecutive in memory and no padding is used, 0 else
 
   Use this to check if a frame can be directly serialized or not.
   
@@ -3047,7 +3047,7 @@ int gavl_video_frame_extract_channel(const gavl_video_format_t * format,
   \brief Insert one channel from a grayscale image into a video frame
   \param format Format of the source frame
   \param ch Channel to merge
-  \param src Source frame (grayscale image containing one chanel)
+  \param src Source frame (grayscale image containing one channel)
   \param dst Destination
 
   This inserts one color channel from a grayscale image into a video
@@ -3114,7 +3114,7 @@ void gavl_video_frame_set_from_packet(gavl_video_frame_t * frame,
  * \brief Force deinterlacing
  *
  * This option turns on deinterlacing by the converter in any case (i.e. also if the input format
- * pretends to be progressive or if the ouput format is interlaced).
+ * pretends to be progressive or if the output format is interlaced).
  */
 
 #define GAVL_FORCE_DEINTERLACE (1<<0)
@@ -3737,7 +3737,7 @@ int gavl_video_scaler_init(gavl_video_scaler_t * scaler,
  * which are taken in both left and right from the center pixel, i.e.
  * a value of 1 will result in a 3-tap filter. The coefficients
  * must be given for ALL taps (the convolver does not assume the
- * coeffitients to be symmetric)
+ * coefficients to be symmetric)
  *
  * This function can be called multiple times with one instance. 
  */
@@ -3986,7 +3986,7 @@ typedef struct gavl_image_transform_s gavl_image_transform_t;
  *
  *  All coordinates are in fractional pixels. 0,0 is the
  *  upper left corner. Return negative values or values
- *  larger than the dimesion to signal that a pixel is outside
+ *  larger than the dimension to signal that a pixel is outside
  *  the source image.
  */
  
@@ -4019,7 +4019,7 @@ void gavl_image_transform_destroy(gavl_image_transform_t * t);
  *  \param format Format (can be changed)
  *  \param func Coordinate transform function
  *  \param priv The priv argument for func
- *  \returns 1 if the transform was sucessfully initialized, 0 else.
+ *  \returns 1 if the transform was successfully initialized, 0 else.
  
  * If you enabled multithreading support, func will be called
  * from multiple threads at the same time. Make sure, that it

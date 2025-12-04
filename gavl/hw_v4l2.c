@@ -232,7 +232,7 @@ capabilities[] =
    { V4L2_CAP_VIDEO_OVERLAY, "Overlay" },                   // Can do video overlay
    { V4L2_CAP_VBI_CAPTURE,   "VBI Capture" },               // Is a raw VBI capture device
    { V4L2_CAP_VBI_OUTPUT,    "VBO Output" },                // Is a raw VBI output device
-   { V4L2_CAP_SLICED_VBI_CAPTURE, "Sliced VBI Capture" },   // Is a sliced VBI capture devic
+   { V4L2_CAP_SLICED_VBI_CAPTURE, "Sliced VBI Capture" },   // Is a sliced VBI capture device
    { V4L2_CAP_SLICED_VBI_OUTPUT,  "Sliced VBI Output" },    // Is a sliced VBI output device
    { V4L2_CAP_RDS_CAPTURE, "RDS Capture"  },                // RDS data capture
    { V4L2_CAP_VIDEO_OUTPUT_OVERLAY, "Output Overlay" },     // Can do video output overlay
@@ -1941,7 +1941,7 @@ static int check_str(const gavl_v4l2_device_t * dev,
   
   if(!str_to_int(map, str, &id))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unkown %s: %s", var,
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Unknown %s: %s", var,
              str);
     return 0;
     }
@@ -3501,7 +3501,7 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
       
       if(port->current_buf->buf.memory != V4L2_MEMORY_MMAP)
         {
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export not supported (no mmaped buffers)");
+        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export not supported (no mmapped buffers)");
         return 0;
         }
 

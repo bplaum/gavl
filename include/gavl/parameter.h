@@ -59,7 +59,7 @@ gavl_type_t gavl_parameter_type_to_gavl(gavl_parameter_type_t type);
 
 /* Parameter info (for static initialization) */
 
-/** \brief Parmeter description
+/** \brief Parameter description
  *
  *  Usually, parameter infos are passed around as NULL-terminated arrays.
  */

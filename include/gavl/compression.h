@@ -308,7 +308,7 @@ GAVL_PUBLIC gavl_codec_id_t
 gavl_compression_from_short_name(const char * name);
 
 /** \brief Get the number of compression formats
- *  \returns The number of supported compresion formats
+ *  \returns The number of supported compression formats
  *
  *  Use this with \ref gavl_get_compression to enumerate all
  *  compression formats
@@ -336,7 +336,7 @@ gavl_codec_id_t gavl_get_compression(int index);
 #define GAVL_PACKET_KEYFRAME (1<<2) //!< Packet is a keyframe
 #define GAVL_PACKET_LAST     (1<<3) //!< Packet is the last in the stream (only Xiph codecs need this flag)
 #define GAVL_PACKET_EXT      (1<<4) //!< Packet has extensions (used only in gavf files)
-#define GAVL_PACKET_REF      (1<<5) //!< B-frame used as reference (can't savely be skipped)
+#define GAVL_PACKET_REF      (1<<5) //!< B-frame used as reference (can't safely be skipped)
 #define GAVL_PACKET_NOOUTPUT (1<<6) //!< Packet will produce no decoder output (e.g. VP8 alternate reference)
 
 #define GAVL_PACKET_HAS_FDS  (1<<7) //!< Packet contains file descriptors (can only be sent via UNIX-Sockets)
@@ -415,7 +415,7 @@ typedef struct
  *  This specifies one packet of compressed data.
  *  For video streams, each packet must correspond to a video frame.
  *  For audio streams, each packet must be the smallest unit, which
- *  can be decoded indepentently and for which a duration is known.
+ *  can be decoded independently and for which a duration is known.
  *
  *  The typical usage of a packet is to memset() it to zero in the
  *  beginning. Then for each packet call \ref gavl_packet_alloc

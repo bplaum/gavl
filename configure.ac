@@ -64,7 +64,7 @@ dnl
 
 AC_C_ATTRIBUTE_ALIGNED
 
-AC_C_BIGENDIAN(,,AC_MSG_ERROR("Cannot detect endianess"))
+AC_C_BIGENDIAN(,,AC_MSG_ERROR("Cannot detect endianness"))
 
 LIBGAVL_CFLAGS=""
 case "$host_os" in 

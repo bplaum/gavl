@@ -200,7 +200,7 @@ static void blend_graya_16(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[1])
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 
@@ -259,7 +259,7 @@ static void blend_graya_32(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[1])
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 
@@ -320,7 +320,7 @@ static void blend_graya_float(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[1] != 0.0)
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 
@@ -751,7 +751,7 @@ static void blend_rgba_32(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[3])
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 
@@ -872,7 +872,7 @@ static void blend_rgba_64(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[3])
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 
@@ -1147,7 +1147,7 @@ static void blend_yuva_32(gavl_overlay_blend_context_t * ctx,
       else if(ovl_ptr[3])
         {
         /* rgba -> rgba blending */
-        /* Due to the complicated arithmetics, this is
+        /* Due to the complicated arithmetic, this is
            done in floating point. High speed integer versions
            are welcome */
 

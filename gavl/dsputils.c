@@ -486,7 +486,7 @@ gavl_dsp_video_frame_shuffle_4(gavl_dsp_context_t * ctx, gavl_video_frame_t * fr
                                const gavl_video_format_t * format, int * src_indices)
   {
   //  gavl_dsp_video_frame_shuffle_4_copy(ctx, frame, frame, format, src_indices);
-  fprintf(stderr, "gavl_dsp_video_frame_shuffle_4 Not implemeted\n");
+  fprintf(stderr, "gavl_dsp_video_frame_shuffle_4 Not implemented\n");
   }
 
 void

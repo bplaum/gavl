@@ -178,10 +178,10 @@ void gavl_video_source_drain(gavl_video_source_t * s);
  *  \param func Function to get the frames from
  *  \param priv Client data to pass to func
  *  \param src_flags Flags describing the source
- *  \param src preceeding source in the pipeline
+ *  \param src preceding source in the pipeline
  *  \returns A newly created video source
  *
- *  This will take the destination format of the preceeding source
+ *  This will take the destination format of the preceding source
  *  as the input format
  */
 
@@ -208,7 +208,7 @@ gavl_video_source_set_lock_funcs(gavl_video_source_t * src,
  *  \param src A video source
  *  \param free_func Function called with the private data when the source is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the source
+ *  Use this if you don't want to keep a reference to the private data along with the source
  */
   
 GAVL_PUBLIC void
@@ -217,7 +217,7 @@ gavl_video_source_set_free_func(gavl_video_source_t * src,
 
 
   
-/** \brief Get coversion options of a video source
+/** \brief Get conversion options of a video source
  *  \param s A video source
  *  \returns Conversion options
  */
@@ -347,10 +347,10 @@ void gavl_audio_source_set_pts_offset(gavl_audio_source_t * src, int64_t offset)
  *  \param func Function to get the frames from
  *  \param priv Client data to pass to func
  *  \param src_flags Flags describing the source
- *  \param src preceeding source in the pipeline
+ *  \param src preceding source in the pipeline
  *  \returns A newly created audio source
  *
- *  This will take the destination format of the preceeding source
+ *  This will take the destination format of the preceding source
  *  as the input format
  */
 
@@ -378,7 +378,7 @@ gavl_audio_source_set_lock_funcs(gavl_audio_source_t * src,
  *  \param src A audio source
  *  \param free_func Function called with the private data when the source is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the source
+ *  Use this if you don't want to keep a reference to the private data along with the source
  */
   
 GAVL_PUBLIC void
@@ -444,7 +444,7 @@ gavl_audio_source_set_dst(gavl_audio_source_t * s, int dst_flags,
  *  copied to the frame you pass.
  *
  *  If the return value is \ref GAVL_SOURCE_AGAIN, you might
- *  have an imcomplete frame. In this case you must call
+ *  have an incomplete frame. In this case you must call
  *  this function again with exactly the same frame argument.
  */
   
@@ -484,7 +484,7 @@ GAVL_PUBLIC
 int gavl_audio_source_read_samples(void*s, gavl_audio_frame_t * frame,
                                    int num_samples);
 
-/** \brief Get coversion options of an audio source
+/** \brief Get conversion options of an audio source
  *  \param s An audio source
  *  \returns Conversion options
  */
@@ -578,7 +578,7 @@ gavl_packet_source_set_lock_funcs(gavl_packet_source_t * src,
  *  \param src A packet source
  *  \param free_func Function called with the private data when the source is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the source
+ *  Use this if you don't want to keep a reference to the private data along with the source
  */
   
 GAVL_PUBLIC void
@@ -672,7 +672,7 @@ typedef enum
  *  \returns An audio frame where to copy the data
  *
  *  Sinks can use this to pass specially allocated buffers
- *  (e.g. shared or mmaped memory) to the client
+ *  (e.g. shared or mmapped memory) to the client
  */
 
 typedef gavl_audio_frame_t *
@@ -718,7 +718,7 @@ gavl_audio_sink_set_lock_funcs(gavl_audio_sink_t * sink,
  *  \param src A audio sink
  *  \param free_func Function called with the private data when the sink is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the sink
+ *  Use this if you don't want to keep a reference to the private data along with the sink
  */
   
 GAVL_PUBLIC void
@@ -752,7 +752,7 @@ gavl_audio_sink_get_frame(gavl_audio_sink_t * s);
  *  \param f Frame
  *  \returns \ref GAVL_SINK_ERROR if an error happened, \ref GAVL_SINK_OK else.
  *
- *  The frame must be the same as returned by the preceeding call to
+ *  The frame must be the same as returned by the preceding call to
  *  \ref gavl_audio_sink_get_frame if it was not NULL.
  */
 
@@ -773,7 +773,7 @@ gavl_audio_sink_destroy(gavl_audio_sink_t * s);
  *  \returns A video frame where to copy the data
  *
  *  Sinks can use this to pass specially allocated buffers
- *  (e.g. shared or mmaped memory) to the client
+ *  (e.g. shared or mmapped memory) to the client
  */
 
 typedef gavl_video_frame_t *
@@ -819,7 +819,7 @@ gavl_video_sink_set_lock_funcs(gavl_video_sink_t * sink,
  *  \param src A video sink
  *  \param free_func Function called with the private data when the sink is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the sink
+ *  Use this if you don't want to keep a reference to the private data along with the sink
  */
   
 GAVL_PUBLIC void
@@ -852,7 +852,7 @@ gavl_video_sink_get_frame(gavl_video_sink_t * s);
  *  \param f Frame
  *  \returns \ref GAVL_SINK_ERROR if an error happened, \ref GAVL_SINK_OK else.
  *
- *  The frame must be the same as returned by the preceeding call to
+ *  The frame must be the same as returned by the preceding call to
  *  \ref gavl_video_sink_get_frame if it was not NULL.
  */
 
@@ -873,7 +873,7 @@ gavl_video_sink_destroy(gavl_video_sink_t * s);
  *  \returns A packet where to copy the data
  *
  *  Sinks can use this to pass specially allocated buffers
- *  (e.g. shared or mmaped memory) to the client
+ *  (e.g. shared or mmapped memory) to the client
  */
 
 typedef gavl_packet_t *
@@ -917,7 +917,7 @@ gavl_packet_sink_set_lock_funcs(gavl_packet_sink_t * sink,
  *  \param src A packet sink
  *  \param free_func Function called with the private data when the sink is destroyed
  *
- *  Use this if you don't want to keep a reference to the private data along wit the sink
+ *  Use this if you don't want to keep a reference to the private data along with the sink
  */
   
 GAVL_PUBLIC void
@@ -946,7 +946,7 @@ gavl_packet_sink_reset(gavl_packet_sink_t * s);
  *  \param p Packet
  *  \returns \ref GAVL_SINK_ERROR if an error happened, \ref GAVL_SINK_OK else.
  *
- *  The frame must be the same as returned by the preceeding call to
+ *  The frame must be the same as returned by the preceding call to
  *  \ref gavl_packet_sink_get_packet if it was not NULL.
  */
 

@@ -34,7 +34,7 @@
 /*
  *  http utility routines
  *
- *  The main reaon this code is here is because it's shared between gmerlin
+ *  The main reason this code is here is because it's shared between gmerlin
  *  and gmerlin_avdecoder
  */
  

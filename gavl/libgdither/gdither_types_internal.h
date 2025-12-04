@@ -51,7 +51,7 @@ extern "C" {
 #define GDITHER_SH_BUF_SIZE 8
 #define GDITHER_SH_BUF_MASK 7
 
-/* this must agree with whats in gdither_types.h */
+/* this must agree with what's in gdither_types.h */
 typedef enum {
     GDitherNone = 0,
     GDitherRect,

@@ -117,7 +117,7 @@
 
 #define GAVL_META_MTIME       "mtime" // time_t (from stat()) as long
 
-/* Size of the oject in bytes */
+/* Size of the object in bytes */
 #define GAVL_META_TOTAL_BYTES    "totalbytes"
 
 /** \brief Generic year
@@ -451,7 +451,7 @@
 #define GAVL_META_IDX                "idx"         // Index in parent container
 #define GAVL_META_TOTAL              "total"       // Total number (maximum idx + 1)
 #define GAVL_META_SHOW               "Show"        // TV Show, this item belongs to
-#define GAVL_META_SEASON             "Season"      // Season, this episode belongs to (integer but can be non-continuos
+#define GAVL_META_SEASON             "Season"      // Season, this episode belongs to (integer but can be non-continuous
 #define GAVL_META_PODCAST            "Podcast"     // Name of the pocast this item belongs to
 
 #define GAVL_META_EPISODENUMBER      "EPNum"       // Number of the Episode (starting with 1)

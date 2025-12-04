@@ -597,7 +597,7 @@ void gavl_track_get_page_children_end(const gavl_dictionary_t * parent_orig,
                                       gavl_array_t * ret);
 
 /* If the track has more than 1 URIs, set GAVL_META_MULTIVARIANT
-   and sort URIs for descreasing quality (best first) */
+   and sort URIs for decreasing quality (best first) */
    
 // GAVL_PUBLIC
 // void gavl_track_set_multivariant(gavl_dictionary_t * dict);

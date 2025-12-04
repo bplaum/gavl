@@ -77,12 +77,12 @@ static void convolve_preblur(float * src_1, int src_len_1,
  * src: |   x   |   x   |
  * dst: | x | x | x | x |
  *
- * The table is created in the follwing steps:
+ * The table is created in the following steps:
  *
- * - Calculate the floating point filter coefficiens for each destination pixel
+ * - Calculate the floating point filter coefficients for each destination pixel
  *   
  * - Shift the indixes of the source pixels such that no source pixels are outside
- *   the image. The nonexistant pixels beyond the borders (whose values are needed
+ *   the image. The nonexistent pixels beyond the borders (whose values are needed
  *   for scaling) are assumed to have the same color as the nearest pixel at the
  *   image border
  *
@@ -373,7 +373,7 @@ static void normalize_table(gavl_video_scale_table_t * tab)
       sum += tab->pixels[i].factor_f[j];
 
     /* This is to prevent accidental setting of clipping functions due to
-       rounding errors. For usual applications, it should not be noticable
+       rounding errors. For usual applications, it should not be noticeable
     */
     sum += FLT_EPSILON;
     

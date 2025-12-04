@@ -397,7 +397,7 @@
 
 /* Sink GAVL_MSG_NS_SINK */
 
-/* Timestamps might be discontinous after this call */
+/* Timestamps might be discontinuous after this call */
 #define GAVL_MSG_SINK_RESYNC          1
 
 
@@ -712,7 +712,7 @@ void gavl_msg_get_arg_video_format(gavl_msg_t * msg, int arg,
                                  gavl_video_format_t * format);
 
 
-/** \brief Set a matadata argument
+/** \brief Set a metadata argument
  *  \param msg A message
  *  \param arg Argument index (starting with 0)
  *  \param m Metadata
@@ -727,12 +727,12 @@ void gavl_msg_set_arg_dictionary_nocopy(gavl_msg_t * msg, int arg,
                                         gavl_dictionary_t * m);
 
 
-/** \brief Get a matadata argument
+/** \brief Get a metadata argument
  *  \param msg A message
  *  \param arg Argument index (starting with 0)
  *  \param m Returns dictionary
  *
- *  Don't pass uninitalized memory as dictionary
+ *  Don't pass uninitialized memory as dictionary
  */
 
 GAVL_PUBLIC

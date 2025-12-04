@@ -383,7 +383,7 @@ int gavl_video_scaler_init(gavl_video_scaler_t * scaler,
 
   
   
-  /* Align the destination rectangle to the output formtat */
+  /* Align the destination rectangle to the output format */
 
   gavl_pixelformat_chroma_sub(scaler->dst_format.pixelformat, &sub_h_out, &sub_v_out);
   gavl_rectangle_i_align(&opt.dst_rect, sub_h_out, sub_v_out);

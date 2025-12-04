@@ -57,7 +57,7 @@
 
 // #define FLAG_LOOKUP_ACTIVE (1<<0)
 
-/* Asychronous host lookup */
+/* Asynchronous host lookup */
 
 struct lookup_async_s
   {
@@ -640,7 +640,7 @@ int gavl_interface_index_from_address(const gavl_socket_address_t * a)
   return ret;
   }
 
-/* Asychronous host lookup */
+/* Asynchronous host lookup */
 
 
 static lookup_async_t * async_create(const char * hostname,

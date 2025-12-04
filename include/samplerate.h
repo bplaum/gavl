@@ -97,7 +97,7 @@ typedef long (*src_callback_t) (void *cb_data, float **data) ;
 SRC_STATE* gavl_src_new (int converter_type, int channels, int *error, int d) ;
 
 /*
-**	Initilisation for callback based API : return an anonymous pointer to the
+**	Initialisation for callback based API : return an anonymous pointer to the
 **	internal state of the converter. Choose a converter from the enums below.
 **	The cb_data pointer can point to any data or be set to NULL. Whatever the
 **	value, when processing, user supplied function "func" gets called with

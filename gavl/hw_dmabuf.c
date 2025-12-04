@@ -837,7 +837,7 @@ static int bpp_supported(int drm_fd, int bpp)
   struct drm_mode_destroy_dumb destroy_req = {0};
   int ret;
   
-  // Prepare rquest
+  // Prepare request
   create_req.width  = 64;
   create_req.height = 64;
   create_req.bpp = bpp;

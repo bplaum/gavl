@@ -4436,12 +4436,12 @@ int gavl_pixelformat_conversion_penalty(gavl_pixelformat_t src,
 
   ret = 0;
   
-  /* Loosing the color is the worst */
+  /* Losing the color is the worst */
   if(!gavl_pixelformat_is_gray(src) &&
      gavl_pixelformat_is_gray(dst))
     ret += 1;
   
-  /* Loosing the alpha channel is second worst */
+  /* Losing the alpha channel is second worst */
   ret <<= 1;
   if(gavl_pixelformat_has_alpha(src) &&
      !gavl_pixelformat_has_alpha(dst))
@@ -4481,7 +4481,7 @@ int gavl_pixelformat_conversion_penalty(gavl_pixelformat_t src,
   /* Increasing precision is bad... */
   if(src_bits < dst_bits)
     ret += (dst_bits - src_bits);
-  /* ... but descreasing precision is worse */
+  /* ... but decreasing precision is worse */
   else if(src_bits > dst_bits)
     ret += (src_bits - dst_bits) * 2;
 
