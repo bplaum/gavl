@@ -24,7 +24,7 @@
 #ifndef NOISE_H
 #define NOISE_H
 
-/* Can be overrriden with any code that produces whitenoise between 0.0f and
+/* Can be overridden with any code that produces whitenoise between 0.0f and
  * 1.0f, eg (random() / (float)RAND_MAX) should be a good source of noise, but
  * its expensive */
 #ifndef GDITHER_NOISE

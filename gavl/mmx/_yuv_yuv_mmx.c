@@ -29,7 +29,7 @@
 
 /*
  *   Convert a single scanline from YUY2 to separate planes
- *   preserving the horizonal subsampling.
+ *   preserving the horizontal subsampling.
  *   This macro does practically the same as the LOAD_YUY2
  *   macro in _yuv_rgb_mmx.c
  */

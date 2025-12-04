@@ -108,7 +108,7 @@
    2. As a format, which allows to send multimedia between processes. This implies
       the support of packets in shared memory or dma-buffers.
       
-   It is *not* meant to be a format for achiving movies or music. In particular,
+   It is *not* meant to be a format for archiving movies or music. In particular,
    the fileformat will *not* be garantueed to be compatible between versions.
    You have been warned.
 */
@@ -121,7 +121,7 @@
   len:  64 bit len (or offset in case of GAVFTAIL) as signed, 0 if unknown
   
   Chunks *always* start at 8 byte boundaries (counted from the start of the GAVFPHDR).
-  Preceeding bytes (up to 7) are filled with zeros.
+  Preceding bytes (up to 7) are filled with zeros.
   
   CHUNK("GAVFPHDR")
   len bytes program header (dictionary)
@@ -303,7 +303,7 @@ const gavf_stream_header_t * gavf_get_stream(gavf_t *, int index, int type);
 #endif
 
 
-/* Mark this stream as skipable. */
+/* Mark this stream as skippable. */
 
 GAVL_PUBLIC
 void gavf_stream_set_skip(gavf_t * g, uint32_t id);

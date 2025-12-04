@@ -69,11 +69,11 @@ extern "C" {
 // GAVL_PUBLIC void
 // gavl_dictionary_free(gavl_dictionary_t * m);
 
-/** \brief Initialize structre
+/** \brief Initialize structure
  *  \arg m A metadata structure
  *
  *  Use this if you define a \ref gavl_dictionary_t
- *  structure in unintialized memory (e.g. on the stack)
+ *  structure in uninitialized memory (e.g. on the stack)
  *  before using it.
  */
   
@@ -358,9 +358,9 @@ gavl_metadata_delete_implicit_fields(gavl_dictionary_t * m);
 GAVL_PUBLIC void
 gavl_dictionary_set_string_endian(gavl_dictionary_t * m);
 
-/** \brief Check if endianess needs to be swapped
+/** \brief Check if endianness needs to be swapped
  *  \arg m Metadata
- *  \returns 1 if the stream was generated on a machine with different endianess, 0 else.
+ *  \returns 1 if the stream was generated on a machine with different endianness, 0 else.
  */
 
 GAVL_PUBLIC int

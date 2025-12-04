@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
     return EXIT_FAILURE;
     }
   
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Downladed http body %d bytes", buf.len);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Downloaded http body %d bytes", buf.len);
   gavl_buffer_free(&buf);
   
   }

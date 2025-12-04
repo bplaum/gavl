@@ -19,7 +19,7 @@
 #=======================================================================
 # This short test script compiles the file src_sinc.c into assembler
 # output and the greps the assembler output for the fldcw (FPU Load
-# Control Word) instruction which is very detrimental to the perfromance
+# Control Word) instruction which is very detrimental to the performance
 # of floating point code.
 
 echo -n "    Checking assembler output for bad code : "

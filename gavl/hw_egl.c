@@ -417,7 +417,7 @@ uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx)
     else
       {
 #if 0
-      fprintf(stderr, "Suported format: %c%c%c%c -> %s\n",
+      fprintf(stderr, "Supported format: %c%c%c%c -> %s\n",
               (formats[i] >> 0) & 0xff,
               (formats[i] >> 8) & 0xff,
               (formats[i] >> 16) & 0xff,
