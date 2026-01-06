@@ -196,7 +196,7 @@ char * gavl_escape_string(char * old_string, const char * escape_chars)
       new_len++;
     }
   
-  if(new_len == escape_len)
+  if(new_len == old_len)
     return old_string;
 
   new_string = malloc(new_len+1);
