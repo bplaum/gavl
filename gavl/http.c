@@ -18,12 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
+#define _XOPEN_SOURCE 700    // strptime
+#define _DEFAULT_SOURCE      // timegm und strcasecmp (modern)
 
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 #include <config.h>
 
@@ -671,14 +673,31 @@ int gavl_http_response_has_body(const gavl_dictionary_t * res)
     return 0;
   }
 
+void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, time_t t)
+  {
+  char date[80];
+  struct tm tm;
+  strftime(date, sizeof(date),"%a, %d %b %Y %H:%M:%S GMT", gmtime_r(&t, &tm));
+  gavl_dictionary_set_string(h, name, date);
+  }
+
+time_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name)
+  {
+  const char * var;
+  struct tm tm;
+
+  if(!(var = gavl_dictionary_get_string(h, name)))
+    return 0;
+
+  if(!strptime(var, "%a, %d %b %Y %H:%M:%S GMT", &tm))
+    return 0;
+  
+  return timegm(&tm);
+  }
+
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name)
   {
-  char date[30];
-  time_t curtime = time(NULL);
-  struct tm tm;
-  
-  strftime(date, 30,"%a, %d %b %Y %H:%M:%S GMT", gmtime_r(&curtime, &tm));
-  gavl_dictionary_set_string(h, name, date);
+  gavl_http_header_set_time(h, name, time(NULL));
   }
 
 int gavl_http_request_from_string(gavl_dictionary_t * req, const char * buf)

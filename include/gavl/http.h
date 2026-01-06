@@ -146,6 +146,12 @@ void gavl_http_header_set_empty_var(gavl_dictionary_t * h, const char * name);
 GAVL_PUBLIC
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 
+GAVL_PUBLIC
+void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, time_t t);
+
+GAVL_PUBLIC
+time_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name);
+
 /* http client */
 
 GAVL_PUBLIC
