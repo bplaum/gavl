@@ -56,9 +56,9 @@ typedef struct gavl_peak_detector_s gavl_peak_detector_t;
 /*! \brief Callback for getting the peaks across all channels
  *  \param priv Client data
  *  \param samples Number of samples of last update call
- *  \param min Minimum value (scaled betwen -1.0 and 1.0)
- *  \param min Maximum value (scaled betwen -1.0 and 1.0)
- *  \param abs Absolute value (scaled betwen 0.0 and 1.0)
+ *  \param min Minimum value (scaled between -1.0 and 1.0)
+ *  \param min Maximum value (scaled between -1.0 and 1.0)
+ *  \param abs Absolute value (scaled between 0.0 and 1.0)
  *
  *  Since 1.5.0
  */
@@ -70,9 +70,9 @@ typedef void (*gavl_update_peak_callback)(void * priv,
 /*! \brief Callback for getting the peaks for all channels separately
  *  \param priv Client data
  *  \param samples Number of samples of last update call
- *  \param min Minimum value (scaled betwen -1.0 and 1.0)
- *  \param min Maximum value (scaled betwen -1.0 and 1.0)
- *  \param abs Absolute value (scaled betwen 0.0 and 1.0)
+ *  \param min Minimum value (scaled between -1.0 and 1.0)
+ *  \param min Maximum value (scaled between -1.0 and 1.0)
+ *  \param abs Absolute value (scaled between 0.0 and 1.0)
  *
  *  Since 1.5.0
  */

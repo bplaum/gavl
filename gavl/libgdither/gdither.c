@@ -409,7 +409,7 @@ void gdither_runf(GDither s, unsigned int channel, unsigned int length,
         return;
     }
 
-    /* some common case handling code - looks a bit wierd, but it allows
+    /* some common case handling code - looks a bit weird, but it allows
      * the compiler to optiomise out the branches in the inner loop */
     if (s->bit_depth == 8 && s->dither_depth == 8) {
 	switch (s->type) {

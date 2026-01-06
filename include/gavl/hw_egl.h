@@ -34,7 +34,7 @@ gavl_hw_ctx_create_egl(EGLenum platform,
 
 GAVL_PUBLIC void gavl_hw_egl_swap_buffers(gavl_hw_context_t * ctx);
 
-/* Returned value (zero termiated) must be free()d */
+/* Returned value (zero terminated) must be free()d */
 GAVL_PUBLIC 
 uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx);
 

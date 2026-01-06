@@ -24,7 +24,7 @@
 
 /*
  *  Support for mmxext
- *  this macro procudes another set of
+ *  this macro produces another set of
  *  functions in ../mmxext
  */
 

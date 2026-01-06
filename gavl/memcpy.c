@@ -189,7 +189,7 @@ int d0, d1, d2;
 
 #ifdef HAVE_SSE
 /* SSE note: i tried to move 128 bytes a time instead of 64 but it
-didn't make any measureable difference. i'm using 64 for the sake of
+didn't make any measurable difference. i'm using 64 for the sake of
 simplicity. [MF] */
 static void * sse_memcpy(void * to, const void * from, size_t len)
 {

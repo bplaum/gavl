@@ -366,7 +366,7 @@ float get_scale_offset(int src_field, int dst_field,
 
   scale_fac *= chroma_scale_fac;
   
-  /* Different calculation for diffrent interlacing options */
+  /* Different calculation for different interlacing options */
   
   if(src_fields == 1) /* Progressive input -> Progressive */
     {
@@ -685,7 +685,7 @@ int gavl_video_scale_context_init(gavl_video_scale_context_t*ctx,
       gavl_video_scale_table_get_src_indices(&ctx->table_v,
                                              &src_rect_i.y, &src_rect_i.h);
 
-      /* Decide the scale order depending on whats computationally less expensive */
+      /* Decide the scale order depending on what's computationally less expensive */
       /* We calculate the sizes (in pixels) of the temporary frame for both options and
          take the smaller one */
 #if 0 

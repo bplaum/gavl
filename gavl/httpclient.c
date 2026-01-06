@@ -850,7 +850,7 @@ static int prepare_connection(gavl_io_t * io,
     if(strcmp(host, c->host))
       {
       do_close = 1;
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (host changed fromm %s to %s)",
+      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Closing keepalive connection (host changed from %s to %s)",
                c->host, host);
       }
     else if(strcmp(protocol, c->protocol))
@@ -899,7 +899,7 @@ static int prepare_connection(gavl_io_t * io,
   if(c->io_int)
     {
     ret = 1;
-    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Re-using keepalive connection");
+    gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Reusing keepalive connection");
     c->flags |= FLAG_USE_KEEPALIVE;
     goto end;
     }

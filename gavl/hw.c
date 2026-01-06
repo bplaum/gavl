@@ -267,10 +267,10 @@ types[] =
     // EGL Texture (associated with X11 connection)
     { GAVL_HW_EGL_GLES, "Opengl ES Texture (EGL)", "gles" },
 
-    // V4L2 buffers (mmap()ed, optionaly also with DMA handles)
+    // V4L2 buffers (mmap()ed, optionally also with DMA handles)
     { GAVL_HW_V4L2_BUFFER, "V4L2 Buffer", "v4l2" }, 
 
-    // DMA handles, can be exported by V4L and im- and exported by OpenGL and also mmaped to userspace
+    // DMA handles, can be exported by V4L and im- and exported by OpenGL and also mmapped to userspace
     { GAVL_HW_DMABUFFER,   "DMA Buffer", "dmabuf" },
 
     // Shared memory, which can be sent to other processes

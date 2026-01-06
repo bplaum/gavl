@@ -345,7 +345,7 @@ read_frame_internal(void * sp, gavl_audio_frame_t ** frame, int num_samples)
   while(samples_read < num_samples)
     {
     
-    /* Read new frame if neccesary */
+    /* Read new frame if necessary */
     if(!s->frame || !s->frame->valid_samples)
       {
       eat_all = 0;
