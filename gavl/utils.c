@@ -179,73 +179,41 @@ char * gavl_strcat(char * old, const char * tail)
 
 char * gavl_escape_string(char * old_string, const char * escape_chars)
   {
-  char escape_seq[3];
   char * new_string = NULL;
-  int i, done;
+  int i;
+  char * dst_pos;
+  
+  int new_len;
+  int old_len = strlen(old_string);
 
-  const char * start;
-  const char * end;
-  const char * pos;
+  new_len = old_len;
+  
+  /* 1st round: Count replacements */
 
-  int escape_len = strlen(escape_chars);
-
-  /* 1st round: Check if the string can be passed unchanged */
-
-  done = 1;
-  for(i = 0; i < escape_len; i++)
+  for(i = 0; i < old_len; i++)
     {
-    if(strchr(old_string, escape_chars[i]))
-      {
-      done = 0;
-      break;
-      }
+    if(strchr(escape_chars, old_string[i]))
+      new_len++;
     }
-  if(done)
+  
+  if(new_len == escape_len)
     return old_string;
 
-  /* 2nd round: Escape characters */
-
-  escape_seq[0] = '\\';
-  escape_seq[2] = '\0';
-
-  start = old_string;
-  end = start;
-
-  done = 0;
-
-  while(1)
+  new_string = malloc(new_len+1);
+  
+  dst_pos = new_string;
+  
+  for(i = 0; i < old_len; i++)
     {
-    /* Copy unescaped stuff */
-    while(!strchr(escape_chars, *end) && (*end != '\0'))
-      end++;
+    if(strchr(escape_chars, old_string[i]))
+      *(dst_pos++) = '\\';
 
-    if(end - start)
-      {
-      new_string = gavl_strncat(new_string, start, end);
-      start = end;
-      }
-
-    if(*end == '\0')
-      {
-      free(old_string);
-      return new_string;
-      }
-    /* Escape stuff */
-
-    while((pos = strchr(escape_chars, *start)))
-      {
-      escape_seq[1] = *pos;
-      new_string = gavl_strcat(new_string, escape_seq);
-      start++;
-      }
-    end = start;
-    if(*end == '\0')
-      {
-      free(old_string);
-      return new_string;
-      }
+    *(dst_pos++) = old_string[i];
     }
-  return NULL; // Never get here
+  *dst_pos = '\0';
+
+  free(old_string);
+  return new_string;
   }
 
 char * gavl_unescape_string(char * old_string, const char * escape_chars)

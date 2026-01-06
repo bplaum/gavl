@@ -406,12 +406,6 @@
 #define GAVL_META_TIME_PTS_TO_CLOCK "PTSToClock"
 #define GAVL_META_TIME_PTS_TO_START "PTSToStart"
 
-#if 0
-#define GAVL_META_CLOCK_TIME_MAP  "ClockTimeMap"
-#define GAVL_META_CLOCK_TIME            "ClockTime"
-#define GAVL_META_CLOCK_TIME_PTS        "PTS"
-#define GAVL_META_CLOCK_TIME_PTS_SCALE  "scale"
-#endif
 
 /*
  *  Several commands are expected in asynchronous mode.
@@ -524,7 +518,7 @@
  */
 
 #define GAVL_META_CLASS                     "MediaClass"
-#define GAVL_META_CHILD_CLASS                     "ChildClass"
+#define GAVL_META_CHILD_CLASS               "ChildClass"
 
 /* Value for class */
 #define GAVL_META_CLASS_ITEM                "item"
@@ -560,8 +554,8 @@
 #define GAVL_META_CLASS_SUBTITLE_FILE        "item.subtitles"
 
 // Stream comes from recording device
-#define GAVL_META_CLASS_AUDIO_RECORDER      "item.recorder.audio" 
-#define GAVL_META_CLASS_VIDEO_RECORDER      "item.recorder.video" 
+#define GAVL_META_CLASS_AUDIO_RECORDER      "item.audio.recorder" 
+#define GAVL_META_CLASS_VIDEO_RECORDER      "item.video.recorder" 
 
 /* Container values */
 #define GAVL_META_CLASS_CONTAINER           "container"       // Generic

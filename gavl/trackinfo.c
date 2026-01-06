@@ -91,7 +91,7 @@ void gavl_track_delete_implicit_fields(gavl_dictionary_t * track)
   gavl_dictionary_t * m;
   gavl_dictionary_t * s;
   gavl_array_t * arr;
-
+  
   m = gavl_track_get_metadata_nc(track);
   gavl_metadata_delete_implicit_fields(m);
   
