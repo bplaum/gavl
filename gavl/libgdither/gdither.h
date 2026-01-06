@@ -55,7 +55,7 @@ extern "C" {
  *
  * The Dither type is one of
  *
- *   GDitherNone - straight nearest neighbour rounding. Theres no pressing
+ *   GDitherNone - straight nearest neighbour rounding. There's no pressing
  *   reason to do this at 8 or 16 bit, but you might want to at 24, for some
  *   reason. At the lest it will save you writing int->float conversion code,
  *   which is arder than it sounds.
@@ -76,7 +76,7 @@ extern "C" {
  *
  * bit depth, sets the bit width of the output sample data, it can be one of:
  *
- *   GDither8bit   - 8 bit unsiged
+ *   GDither8bit   - 8 bit unsigned
  *   GDither16bit  - 16 bit signed
  *   GDither32bit  - 24+bits in upper bits of a 32 bit word
  *   GDitherFloat  - IEEE floating point (32bits)

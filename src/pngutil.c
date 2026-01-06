@@ -234,7 +234,7 @@ gavl_video_frame_t * read_png(const char * filename,
   fclose(file);
   free(rows);
   
-  /* Check wether to set up the converter */
+  /* Check whether to set up the converter */
 
   if((pixelformat != GAVL_PIXELFORMAT_NONE) && (format->pixelformat != pixelformat))
     {

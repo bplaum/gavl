@@ -28,9 +28,9 @@
 /** \defgroup utils Utilities
  *  \brief Utility functions
  *
- *  These are some utility functions, which should be used, whereever
+ *  These are some utility functions, which should be used, wherever
  *  possible, instead of their libc counterparts (if any). That's because
- *  they also handle portability issues, ans it's easier to make one single
+ *  they also handle portability issues, and it's easier to make one single
  *  function portable (with \#ifdefs if necessary) and use it throughout
  *  the code.
  *
@@ -45,7 +45,7 @@ GAVL_PUBLIC
 void gavl_dprintf(const char * format, ...)
   __attribute__ ((format (printf, 1, 2)));
 
-/** \brief Dump to stderr with intendation
+/** \brief Dump to stderr with indentation
  *  \param indent How many spaces to prepend
  *  \param format Format (printf compatible)
  */
@@ -97,7 +97,7 @@ char * gavl_sprintf(const char * format,...)
  *  \returns A copy of new_string
  *
  *  This function handles correctly the cases where either argument
- *  is NULL. The emtpy string is treated like a NULL (non-existant)
+ *  is NULL. The empty string is treated like a NULL (non-existent)
  *  string.
  */
 
@@ -126,7 +126,7 @@ char * gavl_strnrep(char * old_string,
  *  \returns A copy of new_string
  *
  *  This function handles correctly the cases where either argument
- *  is NULL. The emtpy string is treated like a NULL (non-existant)
+ *  is NULL. The empty string is treated like a NULL (non-existent)
  *  string.
  */
 
@@ -179,7 +179,7 @@ char * gavl_strtrim(char * str);
  *  \param escape_chars Characters to escape
  *
  *  This returns a newly allocated string with all characters
- *  occuring in escape_chars preceded by a backslash
+ *  occurring in escape_chars preceded by a backslash
  */
 
 GAVL_PUBLIC

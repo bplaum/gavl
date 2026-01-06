@@ -309,7 +309,7 @@ void gavl_timer_set(gavl_timer_t * timer, gavl_time_t t);
  * The returned value itself is meaningless since the
  * timescale depends on the system. Use this only for relative comparisons
  * for benchmarks. A textual description on how the values can be
- * interpreted can be ontained with \ref gavl_benchmark_get_desc
+ * interpreted can be obtained with \ref gavl_benchmark_get_desc
  */
 
 GAVL_PUBLIC

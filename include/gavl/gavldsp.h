@@ -580,7 +580,7 @@ int gavl_dsp_interpolate_video_frame(gavl_dsp_context_t * ctx,
                                       float factor);
 
 /*!
-  \brief Swap endianess an audio frame.
+  \brief Swap endianness an audio frame.
   \param ctx An initialized dsp context
   \param frame An audio frame
   \param format The format of the frame
@@ -597,13 +597,13 @@ int gavl_dsp_audio_frame_swap_endian(gavl_dsp_context_t * ctx,
                                       const gavl_audio_format_t * format);
 
 /*!
-  \brief Swap endianess a video frame.
+  \brief Swap endianness a video frame.
   \param ctx An initialized dsp context
   \param frame A video frame
   \param format The format of the frame
   \returns 1 on success, 0 if an error occurred
 
-  This function swaps endianess for pixelformats, which
+  This function swaps endianness for pixelformats, which
   have multibyte numbers as components.
   For 32 bit long formats with 8 bit components, it swaps the
   pixels as if they were 32 bit integers.

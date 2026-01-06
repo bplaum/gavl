@@ -36,8 +36,8 @@ struct gavl_audio_options_s
   {
   /*
    *  Quality setting from 1 to 5 (0 means undefined).
-   *  3 means Standard C routines or accellerated version with
-   *  equal quality. Lower numbers mean accellerated versions with lower
+   *  3 means Standard C routines or accelerated version with
+   *  equal quality. Lower numbers mean accelerated versions with lower
    *  quality.
    */
   int quality;         

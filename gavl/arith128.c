@@ -28,7 +28,7 @@
  * which are part of gnucash (http://gnucash.org). 
  *
  * Seems the gnucash people are prepared for hyperinflation with
- * their 128 bit arithmetics :)
+ * their 128 bit arithmetic :)
  */
 
 #include <inttypes.h>
