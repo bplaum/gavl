@@ -884,15 +884,15 @@ int gavl_ensure_directory(const char * dir, int priv)
   return ret;
   }
 
-char * gavl_search_cache_dir(const char * package, const char * directory)
+char * gavl_search_cache_dir(const char * package, const char * app, const char * directory)
   {
   const char * var;
   char * cache_dir;
   
   if((var = getenv("XDG_CACHE_HOME")))
-    cache_dir = gavl_sprintf("%s/%s/%s", var, package, directory);
+    cache_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
   else if((var = getenv("HOME")))
-    cache_dir = gavl_sprintf("%s/.cache/%s/%s", var, package, directory);
+    cache_dir = gavl_sprintf("%s/.cache/%s/%s/%s", var, package, app, directory);
   else
     return NULL;
   
@@ -904,15 +904,15 @@ char * gavl_search_cache_dir(const char * package, const char * directory)
   return cache_dir;
   }
 
-char * gavl_search_config_dir(const char * package, const char * directory)
+char * gavl_search_config_dir(const char * package, const char * app, const char * directory)
   {
   const char * var;
   char * config_dir;
   
   if((var = getenv("XDG_CONFIG_HOME")))
-    config_dir = gavl_sprintf("%s/%s/%s", var, package, directory);
+    config_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
   else if((var = getenv("HOME")))
-    config_dir = gavl_sprintf("%s/.config/%s/%s", var, package, directory);
+    config_dir = gavl_sprintf("%s/.config/%s/%s/%s", var, package, app, directory);
   else
     return NULL;
   
@@ -1113,4 +1113,68 @@ char * gavl_filename_ensure_extension(const char * filename,
     return gavl_strdup(filename);
   else
     return gavl_sprintf("%s.%s", filename, ext);
+  }
+
+
+int gavl_read_file_range(const char * filename, gavl_buffer_t * buf, int64_t start, int64_t len)
+  {
+  FILE * file;
+  
+  file = fopen(filename, "r");
+  if(!file)
+    return 0;
+
+  if(len < 1)
+    len = gavl_file_size(file) - start;
+
+  gavl_buffer_alloc(buf, len + 1);
+  
+  if(start > 0)
+    fseek(file, start, SEEK_SET);
+  
+  if(fread(buf->buf, 1, len, file) < len)
+    {
+    fclose(file);
+    gavl_buffer_free(buf);
+    return 0;
+    }
+  buf->len = len;
+  buf->buf[buf->len] = '\0';
+  fclose(file);
+  return 1;
+  }
+
+int gavl_read_file(const char * filename, gavl_buffer_t * buf)
+  {
+  return gavl_read_file_range(filename, buf, 0, 0);
+  }
+
+size_t gavl_file_size(FILE * f)
+  {
+  size_t ret;
+  size_t oldpos;
+
+  oldpos = ftell(f);
+
+  fseek(f, 0, SEEK_END);
+  ret = ftell(f);
+  fseek(f, oldpos, SEEK_SET);
+  return ret;
+  }
+
+int gavl_write_file(const char * filename, void * data, int len)
+  {
+  FILE * file;
+  
+  file = fopen(filename, "w");
+  if(!file)
+    return 0;
+  
+  if(fwrite(data, 1, len, file) < len)
+    {
+    fclose(file);
+    return 0;
+    }
+  fclose(file);
+  return 1;
   }

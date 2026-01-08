@@ -23,6 +23,8 @@
 #ifndef GAVL_UTILS_H_INCLUDED
 #define GAVL_UTILS_H_INCLUDED
 
+#include <stdio.h>
+
 #include <gavl/value.h>
 
 /** \defgroup utils Utilities
@@ -277,6 +279,17 @@ GAVL_PUBLIC
 char * gavl_filename_ensure_extension(const char * filename,
                                       const char * ext);
 
+GAVL_PUBLIC
+int gavl_read_file_range(const char * filename, gavl_buffer_t * buf, int64_t start, int64_t len);
+
+GAVL_PUBLIC
+int gavl_read_file(const char * filename, gavl_buffer_t * buf);
+
+GAVL_PUBLIC
+size_t gavl_file_size(FILE * f);
+
+GAVL_PUBLIC
+int gavl_write_file(const char * filename, void * data, int len);
 
 
 GAVL_PUBLIC
@@ -412,10 +425,10 @@ GAVL_PUBLIC
 int gavl_ensure_directory(const char * dir, int priv);
 
 GAVL_PUBLIC
-char * gavl_search_cache_dir(const char * package, const char * directory);
+char * gavl_search_cache_dir(const char * package, const char * app, const char * directory);
 
 GAVL_PUBLIC
-char * gavl_search_config_dir(const char * package, const char * directory);
+char * gavl_search_config_dir(const char * package, const char * app, const char * directory);
 
 /* Character set conversion usiong iconv */
 
