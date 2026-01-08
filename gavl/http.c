@@ -18,13 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-#define _XOPEN_SOURCE 700    // strptime
-#define _DEFAULT_SOURCE      // timegm und strcasecmp (modern)
+#define _GNU_SOURCE      // timegm und strcasecmp (modern)
 
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
 
 #include <config.h>
@@ -686,7 +684,7 @@ time_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name)
   const char * var;
   struct tm tm;
 
-  if(!(var = gavl_dictionary_get_string(h, name)))
+  if(!(var = gavl_dictionary_get_string_i(h, name)))
     return 0;
 
   if(!strptime(var, "%a, %d %b %Y %H:%M:%S GMT", &tm))
@@ -855,3 +853,4 @@ char * gavl_make_basic_auth(const char * username, const char * password)
   free(str_enc);
   return ret;
   }
+

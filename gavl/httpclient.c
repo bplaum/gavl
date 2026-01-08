@@ -18,13 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * *****************************************************************/
 
-
+#define _GNU_SOURCE
 
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include <config.h>
 
@@ -56,7 +57,9 @@
 #define FLAG_WAIT               (1<<8)
 #define FLAG_RESPONSE_BODY_DONE (1<<9)
 #define FLAG_ERROR              (1<<10)
-// #define FLAG_RECONNECT          (1<<11)
+
+#define FLAG_HAS_CACHE          (1<<11)
+#define FLAG_HAS_CACHE_FILE     (1<<12)
 
 #define STATE_START                 0
 #define STATE_RESOLVE               1
@@ -110,6 +113,8 @@ typedef struct
   int64_t pos;
   int started;
 
+  gavl_dictionary_t cache_info;
+  
   /* Set by gavl_http_client_open() */
   gavl_dictionary_t vars;
   gavl_dictionary_t vars_from_uri;
@@ -153,6 +158,100 @@ static int no_tunnel = 0;
 
 static int
 reopen(gavl_io_t * io);
+
+static int store_cache(gavl_http_client_t * c)
+  {
+  const char * etag;
+  const char * pos;
+  const char * cache_control;
+  const char * cache_file;
+  const char * mimetype;
+  time_t maxage = 0;
+  time_t mtime;
+
+  time_t cur;
+
+  if(!(c->flags & FLAG_HAS_CACHE))
+    return 0;
+
+  if(c->flags & FLAG_ERROR)
+    return 0;
+  
+  if(!(cache_control = gavl_dictionary_get_string_i(&c->resp, "Cache-Control")) ||
+     strcasestr(cache_control, "no-store"))
+    return 0;
+  
+  mtime = gavl_http_header_get_time(&c->resp, "Last-Modified");
+
+  etag = gavl_dictionary_get_string_i(&c->resp, GAVL_HTTP_ETAG);
+
+  mimetype = gavl_dictionary_get_string_i(&c->resp, "Content-Type");
+  
+  if(!mtime && !etag)
+    return 0;
+
+  cur = time(NULL);
+  
+  if((pos = strcasestr(cache_control, "max-age=")))
+    {
+    pos += strlen("max-age=");
+    maxage = strtoll(pos, NULL, 10);
+    }
+  else if(!strcasestr(cache_control, "no-cache") && mtime)
+    {
+    /* Guess max age */
+    maxage = (cur - mtime) / 10;
+    }
+
+  if(mtime)
+    gavl_dictionary_set_long(&c->cache_info, GAVL_META_MTIME, mtime);
+
+  gavl_dictionary_set_string(&c->cache_info, GAVL_HTTP_ETAG, etag);
+  gavl_dictionary_set_string(&c->cache_info, GAVL_META_MIMETYPE, mimetype);
+  
+  gavl_dictionary_set_long(&c->cache_info, GAVL_HTTP_CACHE_TIME, cur);
+  gavl_dictionary_set_long(&c->cache_info, GAVL_HTTP_CACHE_MAXAGE, maxage);
+
+  gavl_dictionary_set_int(&c->cache_info, GAVL_HTTP_CACHE_UPDATED, 1);
+  
+  cache_file = gavl_dictionary_get_string(&c->cache_info, GAVL_HTTP_CACHE_FILE);
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Saving cache file %s", cache_file);
+  //  gavl_dictionary_dump(&c->cache_info, 2);
+    
+  return gavl_write_file(cache_file, c->res_body->buf, c->res_body->len);
+  }
+
+gavl_dictionary_t * gavl_http_client_get_cache_info(gavl_io_t * io)
+  {
+  gavl_http_client_t * c = io->priv;
+  return &c->cache_info;
+  }
+
+/* Check for cached file without validation */
+static int check_cache_nonvalidate(gavl_http_client_t * c)
+  {
+  int64_t cache_time;
+  int64_t maxage;
+  const char * cache_file;
+  if(!(c->flags & FLAG_HAS_CACHE_FILE) ||
+     !gavl_dictionary_get_long(&c->cache_info, GAVL_HTTP_CACHE_TIME, &cache_time) ||
+     !gavl_dictionary_get_long(&c->cache_info, GAVL_HTTP_CACHE_MAXAGE, &maxage) ||
+     (cache_time + maxage < time(NULL)))
+    return 0;
+
+  cache_file = gavl_dictionary_get_string(&c->cache_info, GAVL_HTTP_CACHE_FILE);
+  
+  if(!gavl_read_file(cache_file, c->res_body))
+    return 0;
+  else
+    {
+    gavl_dictionary_set_string(&c->resp, "Content-Type",
+                               gavl_dictionary_get_string(&c->cache_info, GAVL_META_MIMETYPE));
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading cache file %s (unvalidated)", cache_file);
+    return 1;
+    }
+  }
 
 static void do_reset_connection(gavl_http_client_t * c)
   {
@@ -300,8 +399,8 @@ static void close_connection(gavl_http_client_t * c)
   c->protocol     = gavl_strrep(c->protocol, NULL);
   c->proxy_host   = gavl_strrep(c->proxy_host, NULL);
   c->proxy_auth   = gavl_strrep(c->proxy_auth, NULL);
-  /* Clear all flags except redirection */
-  c->flags        &= FLAG_GOT_REDIRECTION;
+  /* Clear all flags except redirection and caching stuff */
+  c->flags        &= (FLAG_GOT_REDIRECTION|FLAG_HAS_CACHE|FLAG_HAS_CACHE_FILE);
   c->port         = -1;
   c->proxy_port   = -1;
   c->num_reconnects = 0;
@@ -559,6 +658,9 @@ static int read_chunked(void * priv, uint8_t * data, int len, int block)
           /* End of body */
           c->state = STATE_COMPLETE;
           c->flags |= FLAG_RESPONSE_BODY_DONE;
+          
+          store_cache(c);
+
           check_keepalive(c);
           return bytes_read;
           }
@@ -1037,6 +1139,9 @@ static void prepare_header(gavl_http_client_t * c,
                            int port,
                            const char * path)
   {
+  const char * etag;
+  time_t mtime;
+
   if(c->flags & FLAG_USE_PROXY)
     {
     char * real_uri = NULL;
@@ -1095,6 +1200,17 @@ static void prepare_header(gavl_http_client_t * c,
 
     //    fprintf(stderr, "Set range: %s\n", gavl_dictionary_get_string(request, "Range"));
     }
+
+  if(c->flags & FLAG_HAS_CACHE_FILE)
+    {
+    if((etag = gavl_dictionary_get_string(&c->cache_info, GAVL_HTTP_ETAG)))
+      gavl_dictionary_set_string(&c->req, "If-None-Match", etag);
+    else if(gavl_dictionary_get_long(&c->cache_info, GAVL_META_MTIME, &mtime))
+      gavl_http_header_set_time(&c->req, "If-Modified-Since", mtime);
+    }
+
+    
+  
 
 #if 0
   if(c->range_start > 0)
@@ -1206,12 +1322,35 @@ static int handle_response(gavl_io_t * io)
     else
       goto fail;
     }
+  else if(status == 304) // Not modified -> take from cache
+    {
+    const char * cache_file = gavl_dictionary_get_string(&c->cache_info, GAVL_HTTP_CACHE_FILE);
+    
+    check_keepalive(c);
+    
+    if(!gavl_read_file(cache_file, c->res_body))
+      {
+      c->flags |= FLAG_ERROR;
+      return -1;
+      }
+    gavl_dictionary_set_int(&c->cache_info, GAVL_HTTP_CACHE_UPDATED, 1);
+    gavl_dictionary_set_long(&c->cache_info, GAVL_HTTP_CACHE_TIME, time(NULL));
+        
+    /* Mimetype might not be in the response header */
+    gavl_dictionary_set_string(&c->resp, "Content-Type",
+                               gavl_dictionary_get_string(&c->cache_info, GAVL_META_MIMETYPE));
+    gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Loading cache file %s after validation", cache_file);
+    
+    c->state = STATE_COMPLETE;
+    return 1;
+    }
+  
   else if(status < 400)
     {
     char * new_uri = NULL;
     /* Redirection */
     const char * location;
-
+    
     if(c->num_redirections > 5)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Too many redirections: %d %s", status,
@@ -1530,19 +1669,30 @@ int gavl_http_client_run_async(gavl_io_t * io,
                                const char * method,
                                const char * uri)
   {
+  const char * cache_file;
   gavl_http_client_t * c = gavl_io_get_priv(io);
 
   /* Clear earlier redirections */
   c->redirect_uri = gavl_strrep(c->redirect_uri, NULL);
   c->flags &= ~FLAG_GOT_REDIRECTION;
+
+  if((c->range_start <= 0) && (c->range_end <= 0) &&
+     c->res_body && (cache_file = gavl_dictionary_get_string(&c->cache_info, GAVL_HTTP_CACHE_FILE)))
+    {
+    c->flags |= FLAG_HAS_CACHE;
+
+    if(!access(cache_file, R_OK))
+      c->flags |= FLAG_HAS_CACHE_FILE;
+    else
+      c->flags &= ~FLAG_HAS_CACHE_FILE;
+    }
+  else
+    c->flags &= ~(FLAG_HAS_CACHE|FLAG_HAS_CACHE_FILE);
   
   c->state = STATE_START;
 
   gavl_log(GAVL_LOG_DEBUG, LOG_DOMAIN, "Opening %s method: %s", uri, method);
 
-  //  if(gavl_string_ends_with(uri, "webvtt"))
-  //    fprintf(stderr, "Blah");
-  
   gavl_dictionary_reset(&c->vars_from_uri);
   gavl_dictionary_reset(&c->req);
   gavl_dictionary_reset(&c->resp);
@@ -1558,6 +1708,9 @@ int gavl_http_client_run_async(gavl_io_t * io,
   return 1;
   }
 
+
+
+  
 static int async_iteration(gavl_io_t * io, int timeout)
   {
   int result;
@@ -1576,6 +1729,13 @@ static int async_iteration(gavl_io_t * io, int timeout)
     char * path = NULL;
     int port = -1;
 
+    /* CACHE */
+    if(check_cache_nonvalidate(c) > 0)
+      {
+      c->state = STATE_COMPLETE;
+      return (c->flags & FLAG_ERROR) ? -1 : 1;
+      }
+    
     if(!gavl_url_split(c->real_uri,
                        &protocol,
                        NULL,
@@ -1958,6 +2118,7 @@ static int async_iteration(gavl_io_t * io, int timeout)
       c->state = STATE_COMPLETE;
       c->flags |= FLAG_RESPONSE_BODY_DONE;
       check_keepalive(c);
+      store_cache(c);
       return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
     /* Not yet enough */

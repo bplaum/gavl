@@ -22,6 +22,11 @@
 #ifndef GAVLHTTP_H_INCLUDED
 #define GAVLHTTP_H_INCLUDED
 
+#define _GNU_SOURCE      // timegm und strcasecmp (modern)
+
+#include <time.h>
+
+
 /* Special variables for the first line of the HTTP requests and responses */
 
 #define GAVL_HTTP_META_PROTOCOL   "$PROTOCOL"
@@ -169,6 +174,22 @@ GAVL_PUBLIC
 int gavl_http_client_get_state(gavl_io_t * io);
 
 /*
+ *  Basic caching method:
+ *  Call gavl_http_client_get_cache_info( ) before passing the uri and
+ *  copy the fields such as:
+ *
+ *  GAVL_HTTP_MTIME, GAVL_HTTP_ETAG, GAVL_HTTP_CACHE_FILE, GAVL_HTTP_CACHE_EXPIRE_TIME
+ *  (taken from an SQL database or whatever).
+ *
+ *  The http client will take care of (re-)validation and returns the cached file if
+ *  appropriate. After gavl_http_client_open() or successful gavl_http_client_async_done(),
+ *  you need to check for the return code 304 and update the expiry time in the cache database.
+ */
+
+GAVL_PUBLIC
+gavl_dictionary_t * gavl_http_client_get_cache_info(gavl_io_t * io);
+
+/*
  *  Call before gavl_http_client_open() to specify extra header
  *  variables
  */
@@ -218,5 +239,30 @@ gavl_http_client_run_async_done(gavl_io_t * io, int timeout);
 
 GAVL_PUBLIC
 char * gavl_make_basic_auth(const char * username, const char * password);
+
+/* Cache info */
+
+#define GAVL_HTTP_ETAG  "ETag"
+
+#define GAVL_HTTP_CACHE_STATUS         "status"
+#define GAVL_HTTP_CACHE_STATUS_NEW     0
+#define GAVL_HTTP_CACHE_STATUS_VALID   1
+#define GAVL_HTTP_CACHE_STATUS_UPDATED 2
+#define GAVL_HTTP_CACHE_STATUS_INVALID 3
+
+/* When the cache item was last used */
+// #define GAVL_HTTP_CACHE_TIME           "cachetime"
+
+/* When item was put into the cache (can be updated by re-validations) */
+#define GAVL_HTTP_CACHE_TIME    "cachetime"
+
+/* When the cache item will expire */
+#define GAVL_HTTP_CACHE_MAXAGE  "maxage"
+
+/* File containing the http body */
+#define GAVL_HTTP_CACHE_FILE           "file"
+
+/* Set by the http client if DB should be updated */
+#define GAVL_HTTP_CACHE_UPDATED        "updated"
 
 #endif // GAVLHTTP_H_INCLUDED
