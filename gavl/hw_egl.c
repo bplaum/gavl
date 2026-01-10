@@ -863,7 +863,13 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   glGenTextures(1, &info->textures[0]);
   
   glBindTexture(GL_TEXTURE_EXTERNAL_OES, info->textures[0]);
-  egl->glEGLImageTargetTexture2DOES (GL_TEXTURE_EXTERNAL_OES, image);
+
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP);
+  glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP);
+  
+  egl->glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
   
   /* Destroy image */
 

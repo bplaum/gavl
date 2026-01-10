@@ -2505,7 +2505,6 @@ int gavl_track_get_num_children(const gavl_dictionary_t * track)
   return ret;
   }
 
-
 int gavl_track_get_num_item_children(const gavl_dictionary_t * track)
   {
   int ret = 0;
