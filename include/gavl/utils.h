@@ -430,6 +430,9 @@ char * gavl_search_cache_dir(const char * package, const char * app, const char 
 GAVL_PUBLIC
 char * gavl_search_config_dir(const char * package, const char * app, const char * directory);
 
+GAVL_PUBLIC
+char * gavl_search_state_dir(const char * package, const char * app, const char * directory);
+
 /* Character set conversion usiong iconv */
 
 #define GAVL_UTF8    "UTF-8"    // iconf string for UTF-8

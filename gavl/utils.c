@@ -887,48 +887,80 @@ int gavl_ensure_directory(const char * dir, int priv)
 char * gavl_search_cache_dir(const char * package, const char * app, const char * directory)
   {
   const char * var;
-  char * cache_dir;
-
-  if(!app)
-    app = "";
+  char * ret;
   
   if((var = getenv("XDG_CACHE_HOME")))
-    cache_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
+    ret = gavl_sprintf("%s/%s/%s", var, package, app);
   else if((var = getenv("HOME")))
-    cache_dir = gavl_sprintf("%s/.cache/%s/%s/%s", var, package, app, directory);
+    ret = gavl_sprintf("%s/.cache/%s/%s", var, package, app);
   else
     return NULL;
-  
-  if(!gavl_ensure_directory(cache_dir, 1))
+
+  if(directory)
     {
-    free(cache_dir);
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, directory);
+    }
+  if(!gavl_ensure_directory(ret, 1))
+    {
+    free(ret);
     return NULL;
     }
-  return cache_dir;
+  return ret;
   }
 
 char * gavl_search_config_dir(const char * package, const char * app, const char * directory)
   {
   const char * var;
-  char * config_dir;
-
-  if(!app)
-    app = "";
+  char * ret;
   
   if((var = getenv("XDG_CONFIG_HOME")))
-    config_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
+    ret = gavl_sprintf("%s/%s/%s", var, package, app);
   else if((var = getenv("HOME")))
-    config_dir = gavl_sprintf("%s/.config/%s/%s/%s", var, package, app, directory);
+    ret = gavl_sprintf("%s/.config/%s/%s", var, package, app);
   else
     return NULL;
-  
-  if(!gavl_ensure_directory(config_dir, 0))
+
+  if(directory)
     {
-    free(config_dir);
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, directory);
+    }
+  
+  if(!gavl_ensure_directory(ret, 0))
+    {
+    free(ret);
     return NULL;
     }
-  return config_dir;
+  return ret;
   }
+
+char * gavl_search_state_dir(const char * package, const char * app, const char * directory)
+  {
+  const char * var;
+  char * ret;
+
+  if((var = getenv("XDG_STATE_HOME")))
+    ret = gavl_sprintf("%s/%s/%s", var, package, app);
+  else if((var = getenv("HOME")))
+    ret = gavl_sprintf("%s/.local/state/%s/%s", var, package, app);
+  else
+    return NULL;
+
+  if(directory)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, directory);
+    }
+  
+  if(!gavl_ensure_directory(ret, 0))
+    {
+    free(ret);
+    return NULL;
+    }
+  return ret;
+  }
+
 
 /* 2D coordinate transforms */
 
