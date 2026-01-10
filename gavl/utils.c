@@ -888,6 +888,9 @@ char * gavl_search_cache_dir(const char * package, const char * app, const char 
   {
   const char * var;
   char * cache_dir;
+
+  if(!app)
+    app = "";
   
   if((var = getenv("XDG_CACHE_HOME")))
     cache_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
@@ -908,6 +911,9 @@ char * gavl_search_config_dir(const char * package, const char * app, const char
   {
   const char * var;
   char * config_dir;
+
+  if(!app)
+    app = "";
   
   if((var = getenv("XDG_CONFIG_HOME")))
     config_dir = gavl_sprintf("%s/%s/%s/%s", var, package, app, directory);
