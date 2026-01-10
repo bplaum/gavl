@@ -22,10 +22,6 @@
 #ifndef GAVLHTTP_H_INCLUDED
 #define GAVLHTTP_H_INCLUDED
 
-#define _GNU_SOURCE      // timegm und strcasecmp (modern)
-
-#include <time.h>
-
 
 /* Special variables for the first line of the HTTP requests and responses */
 
@@ -152,10 +148,10 @@ GAVL_PUBLIC
 void gavl_http_header_set_date(gavl_dictionary_t * h, const char * name);
 
 GAVL_PUBLIC
-void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, time_t t);
+void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, int64_t t);
 
 GAVL_PUBLIC
-time_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name);
+int64_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name);
 
 /* http client */
 

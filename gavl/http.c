@@ -20,6 +20,7 @@
 
 #define _GNU_SOURCE      // timegm und strcasecmp (modern)
 
+#include <time.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -671,7 +672,7 @@ int gavl_http_response_has_body(const gavl_dictionary_t * res)
     return 0;
   }
 
-void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, time_t t)
+void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, int64_t t)
   {
   char date[80];
   struct tm tm;
@@ -679,7 +680,7 @@ void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, time_t 
   gavl_dictionary_set_string(h, name, date);
   }
 
-time_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name)
+int64_t gavl_http_header_get_time(const gavl_dictionary_t * h, const char * name)
   {
   const char * var;
   struct tm tm;
