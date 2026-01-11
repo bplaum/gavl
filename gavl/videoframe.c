@@ -607,14 +607,23 @@ void gavl_video_frame_copy(const gavl_video_format_t * format,
     gavl_video_frame_t s;
     gavl_video_frame_t d;
 
+    gavl_rectangle_i_t src_rect;
+    gavl_rectangle_i_copy(&src_rect, &src->src_rect);
+    gavl_rectangle_i_crop_to_format(&src_rect, format);
+
+    //    fprintf(stderr, "Copy subframe\n");
+    //    gavl_rectangle_i_dump(&src_rect);
+    //    fprintf(stderr, "\n");
+    
+    
     gavl_video_format_copy(&fmt, format);
-    fmt.image_width  = src->src_rect.w;
-    fmt.image_height = src->src_rect.h;
+    fmt.image_width  = src_rect.w;
+    fmt.image_height = src_rect.h;
     
     memset(&s, 0, sizeof(s));
     memset(&d, 0, sizeof(d));
-    gavl_video_frame_get_subframe(format->pixelformat, dst, &d, &src->src_rect);
-    gavl_video_frame_get_subframe(format->pixelformat, src, &s, &src->src_rect);
+    gavl_video_frame_get_subframe(format->pixelformat, dst, &d, &src_rect);
+    gavl_video_frame_get_subframe(format->pixelformat, src, &s, &src_rect);
     gavl_video_frame_copy(&fmt, &d, &s);
     }
   
