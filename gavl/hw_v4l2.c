@@ -3050,72 +3050,14 @@ pixelformats[] =
     { V4L2_PIX_FMT_GREY, GAVL_GRAY_8,  GAVL_CODEC_ID_NONE, DRM_FORMAT_R8 },
     // #define V4L2_PIX_FMT_PAL8    v4l2_fourcc('P','A','L','8') /*  8  8-bit palette */
     // #define V4L2_PIX_FMT_YVU410  v4l2_fourcc('Y','V','U','9') /*  9  YVU 4:1:0     */
+#ifdef DRM_FORMAT_YVU410
     { V4L2_PIX_FMT_YVU410, GAVL_YUV_410_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU410 },
+#endif
     // #define V4L2_PIX_FMT_YVU420  v4l2_fourcc('Y','V','1','2') /* 12  YVU 4:2:0     */
-    { V4L2_PIX_FMT_YVU420,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU420 },
+#ifdef DRM_FORMAT_YVU420
+    { V4L2_PIX_FMT_YVU420, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU420 },
     { V4L2_PIX_FMT_YVU420M, GAVL_YUV_420_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YVU420 },
+#endif
     // #define V4L2_PIX_FMT_YUYV    v4l2_fourcc('Y','U','Y','V') /* 16  YUV 4:2:2     */
     { V4L2_PIX_FMT_YUYV, GAVL_YUY2, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUYV },
     // #define V4L2_PIX_FMT_UYVY    v4l2_fourcc('U','Y','V','Y') /* 16  YUV 4:2:2     */
@@ -3124,7 +3066,9 @@ pixelformats[] =
     { V4L2_PIX_FMT_YUV422P, GAVL_YUV_422_P, GAVL_CODEC_ID_NONE,  DRM_FORMAT_YUV422 },
     { V4L2_PIX_FMT_YUV422P, GAVL_YUVJ_422_P, GAVL_CODEC_ID_NONE,  DRM_FORMAT_YUV422},
     // #define V4L2_PIX_FMT_YUV411P v4l2_fourcc('4','1','1','P') /* 16  YVU411 planar */
+#ifdef DRM_FORMAT_YUV411
     { V4L2_PIX_FMT_YUV411P, GAVL_YUV_411_P, GAVL_CODEC_ID_NONE, DRM_FORMAT_YUV411 },
+#endif
     // #define V4L2_PIX_FMT_Y41P    v4l2_fourcc('Y','4','1','P') /* 12  YUV 4:1:1 (packed) */
     // #define V4L2_PIX_FMT_YUV444  v4l2_fourcc('Y','4','4','4') /* 16  xxxxyyyy uuuuvvvv */
     // #define V4L2_PIX_FMT_YUV555  v4l2_fourcc('Y','U','V','O') /* 16  YUV-5-5-5     */
