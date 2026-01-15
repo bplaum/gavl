@@ -2021,7 +2021,17 @@ static int async_iteration(gavl_io_t * io, int timeout)
 #endif
     
     if(!handle_response(io))
+      {
       return -1;
+      }
+
+    /* This is the case, e.g. if handle_response loaded the
+       cache file already */
+    
+    if(c->state == STATE_COMPLETE)
+      {
+      return 1;
+      }
     
     /* Handle redirection */
 

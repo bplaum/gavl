@@ -424,6 +424,8 @@ int gavl_is_directory(const char * dir, int wr);
 GAVL_PUBLIC
 int gavl_ensure_directory(const char * dir, int priv);
 
+/* Get XDG-compatible paths */
+
 GAVL_PUBLIC
 char * gavl_search_cache_dir(const char * package, const char * app, const char * directory);
 
@@ -432,6 +434,13 @@ char * gavl_search_config_dir(const char * package, const char * app, const char
 
 GAVL_PUBLIC
 char * gavl_search_state_dir(const char * package, const char * app, const char * directory);
+
+GAVL_PUBLIC
+char * gavl_search_data_dir(const char * package, const char * app, const char * directory);
+
+GAVL_PUBLIC
+char * gavl_search_data_dir_nocreate(const char * package, const char * app, const char * directory);
+
 
 /* Character set conversion usiong iconv */
 

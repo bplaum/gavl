@@ -890,17 +890,26 @@ char * gavl_search_cache_dir(const char * package, const char * app, const char 
   char * ret;
   
   if((var = getenv("XDG_CACHE_HOME")))
-    ret = gavl_sprintf("%s/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/%s", var, package);
   else if((var = getenv("HOME")))
-    ret = gavl_sprintf("%s/.cache/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/.cache/%s", var, package);
   else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot get cache directory: neither HOME nor XDG_CONFIG_HOME is defined");
     return NULL;
+    }
 
+  if(app)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, app);
+    }
   if(directory)
     {
     ret = gavl_strcat(ret, "/");
     ret = gavl_strcat(ret, directory);
     }
+  
   if(!gavl_ensure_directory(ret, 1))
     {
     free(ret);
@@ -915,12 +924,20 @@ char * gavl_search_config_dir(const char * package, const char * app, const char
   char * ret;
   
   if((var = getenv("XDG_CONFIG_HOME")))
-    ret = gavl_sprintf("%s/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/%s", var, package);
   else if((var = getenv("HOME")))
-    ret = gavl_sprintf("%s/.config/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/.config/%s", var, package);
   else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot get configuration directory: neither HOME nor XDG_CONFIG_HOME is defined");
     return NULL;
+    }
 
+  if(app)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, app);
+    }
   if(directory)
     {
     ret = gavl_strcat(ret, "/");
@@ -941,12 +958,21 @@ char * gavl_search_state_dir(const char * package, const char * app, const char 
   char * ret;
 
   if((var = getenv("XDG_STATE_HOME")))
-    ret = gavl_sprintf("%s/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/%s", var, package);
   else if((var = getenv("HOME")))
-    ret = gavl_sprintf("%s/.local/state/%s/%s", var, package, app);
+    ret = gavl_sprintf("%s/.local/state/%s", var, package);
   else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot get state directory: neither HOME nor XDG_CONFIG_HOME is defined");
     return NULL;
-
+    }
+  
+  if(app)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, app);
+    }
+  
   if(directory)
     {
     ret = gavl_strcat(ret, "/");
@@ -961,6 +987,47 @@ char * gavl_search_state_dir(const char * package, const char * app, const char 
   return ret;
   }
 
+char * gavl_search_data_dir_nocreate(const char * package, const char * app, const char * directory)
+  {
+  const char * var;
+  char * ret;
+
+  if((var = getenv("XDG_DATA_HOME")))
+    ret = gavl_sprintf("%s/%s", var, package);
+  else if((var = getenv("HOME")))
+    ret = gavl_sprintf("%s/.local/share/%s", var, package);
+  else
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot get data directory: neither HOME nor XDG_CONFIG_HOME is defined");
+    return NULL;
+    }
+  
+  if(app)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, app);
+    }
+  
+  if(directory)
+    {
+    ret = gavl_strcat(ret, "/");
+    ret = gavl_strcat(ret, directory);
+    }
+  return ret;
+  }
+
+char * gavl_search_data_dir(const char * package, const char * app, const char * directory)
+  {
+  char *  ret =
+    gavl_search_data_dir_nocreate(package, app, directory);
+  
+  if(!gavl_ensure_directory(ret, 0))
+    {
+    free(ret);
+    return NULL;
+    }
+  return ret;
+  }
 
 /* 2D coordinate transforms */
 
