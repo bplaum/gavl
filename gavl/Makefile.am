@@ -84,8 +84,7 @@ libsamplerate \
 $(mmx_subdirs) \
 $(sse_subdirs) \
 $(sse2_subdirs) \
-$(sse3_subdirs) \
-$(threednow_subdirs)
+$(sse3_subdirs)
 
 lib_LTLIBRARIES= libgavl.la
 #noinst_LTLIBRARIES = libgavl.la

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([gavl], [2.0.1pre1])
+AC_INIT([gavl], [2.0.1])
 AC_CONFIG_SRCDIR([include/gavl/gavl.h])
 AM_INIT_AUTOMAKE
 
