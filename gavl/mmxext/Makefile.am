@@ -3,7 +3,6 @@ AM_CFLAGS = @LIBGAVL_CFLAGS@
 noinst_LTLIBRARIES = libgavl_mmxext.la
 
 libgavl_mmxext_la_SOURCES = \
-deinterlace_blend_mmxext.c \
 dsp_mmxext.c \
 transform_mmxext.c \
 rgb_rgb_mmxext.c \

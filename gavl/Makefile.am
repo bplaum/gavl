@@ -42,7 +42,6 @@ hw_libva_cflags =
 hw_libva_libs   =
 endif
 
-
 if HAVE_GL
 hw_gl_sources = hw_gl.c
 hw_gl_cflags = @GL_CFLAGS@
@@ -52,7 +51,6 @@ hw_gl_sources =
 hw_gl_cflags = 
 hw_gl_libs = 
 endif
-
 
 if HAVE_EGL
 hw_egl_sources = hw_egl.c
@@ -69,8 +67,6 @@ hw_v4l2_sources = hw_v4l2.c
 else
 hw_v4l2_sources = 
 endif
-
-
 
 AM_CFLAGS = \
 @LIBGAVL_CFLAGS@ \
@@ -204,8 +200,6 @@ ssim_tab.h
 AM_LDFLAGS = -export-symbols-regex 'gav(l|f)' -version-info \
 @LTVERSION_CURRENT@:@LTVERSION_REVISION@:@LTVERSION_AGE@ \
 @LIBGAVL_LDFLAGS@ @GMERLIN_LIB_LDFLAGS@
-
-
 
 libgavl_la_LIBADD = \
 $(mmx_libs) \

@@ -93,15 +93,6 @@ int gavl_deinterlacer_init_blend(gavl_video_deinterlacer_t * d)
 #if HAVE_MMX  
   if(d->opt.accel_flags & GAVL_ACCEL_MMX)
     gavl_find_deinterlacer_blend_funcs_mmx(&tab, &d->opt, &d->format);
-  if((d->opt.accel_flags & GAVL_ACCEL_MMXEXT) && (d->opt.quality < 3))
-    gavl_find_deinterlacer_blend_funcs_mmxext(&tab, &d->opt, &d->format);
-#endif
-
-
-#if 0 // TODO: Test 3dnow
-  // #ifdef HAVE_3DNOW
-  if((d->opt.accel_flags & GAVL_ACCEL_3DNOW) && (d->opt.quality < 3))
-    gavl_find_deinterlacer_blend_funcs_3dnow(&tab, &d->opt, &d->format);
 #endif
   
   switch(d->format.pixelformat)
