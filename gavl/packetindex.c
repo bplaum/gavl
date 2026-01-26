@@ -240,8 +240,8 @@ void gavl_packet_index_sort_by_pts(gavl_packet_index_t * idx)
 void gavl_packet_index_extract_stream(const gavl_packet_index_t * src, gavl_packet_index_t * dst, int stream_id)
   {
   int i, idx;
-  /* 1. Count entries */
 
+  /* 1. Count entries */
   idx = 0;
   for(i = 0; i < src->num_entries; i++)
     {
