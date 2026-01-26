@@ -291,7 +291,7 @@ gavl_packet_source_peek_packet(void*sp, gavl_packet_t ** p)
 
   if(p)
     {
-    if(*p)
+    if(*p && (*p != s->out_packet))
       gavl_packet_copy(*p, s->out_packet);
     else
       *p = s->out_packet;
