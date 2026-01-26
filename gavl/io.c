@@ -1613,6 +1613,8 @@ int gavl_chunk_read_header(gavl_io_t * io, gavl_chunk_t * head)
   /* Byte align (if not already aligned) */
   if(!gavl_io_align_read(io))
     return 0;
+
+  head->start = gavl_io_position(io);
   
   if((gavl_io_read_data(io, (uint8_t*)head->eightcc, 8) < 8) ||
      !gavl_io_read_int64f(io, &head->len))
