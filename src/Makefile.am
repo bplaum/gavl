@@ -23,7 +23,6 @@ endif
 
 noinst_PROGRAMS = \
 $(png_programs) \
-$(libva_x11_programs) \
 $(v4l2_programs) \
 benchmark \
 charset \

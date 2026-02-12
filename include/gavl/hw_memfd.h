@@ -20,35 +20,17 @@
 
 
 
-#include <string.h>
-#include <X11/Xlib.h>
-#include <va/va.h>
 
-#include <gavl/gavl.h>
-#include <gavl/hw_vaapi_x11.h>
+#ifndef GAVL_HW_MEMFD_H_INCLUDED
+#define GAVL_HW_MEMFD_H_INCLUDED
 
-int main(int argc, char ** argv)
-  {
-  gavl_video_frame_t * f;
-  gavl_video_format_t fmt;
-  gavl_hw_context_t * ctx;
+typedef struct gavl_memfd_s gavl_memfd_t;
 
-  ctx = gavl_hw_ctx_create_vaapi_x11(NULL);
+/* gavl memfd is always one buffer per frame. For uncompressed
+   video frames, the values returned gavl_video_format_get_frame_layout()
+   are used to specify the plane offsets and strides */
 
-  memset(&fmt, 0, sizeof(fmt));
-  fmt.image_width  = 320;
-  fmt.image_height = 240;
-  fmt.frame_width  = 320;
-  fmt.frame_height = 240;
-  fmt.pixel_width  = 1;
-  fmt.pixel_height = 1;
-  fmt.pixelformat = GAVL_YUV_420_P;
 
-  gavl_hw_ctx_set_video(ctx, &fmt, GAVL_HW_FRAME_MODE_TRANSFER);
-  
-  f = gavl_hw_video_frame_create(ctx, 1);
-  gavl_video_frame_destroy(f);
-  
-  gavl_hw_ctx_destroy(ctx);
-  return 0;
-  }
+GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_memfd(void);
+
+#endif // GAVL_HW_SHM_H_INCLUDED

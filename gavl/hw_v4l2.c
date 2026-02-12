@@ -99,7 +99,7 @@
 
 static gavl_pixelformat_t * query_pixelformats(int fd, int buf_type);
 
-static gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev);
+
 
 static void format_gavl_to_v4l2(const gavl_video_format_t * gavl,
                                 struct v4l2_format * v4l, int type);
@@ -114,6 +114,11 @@ static void free_controls(gavl_v4l2_device_t * dev);
 #ifdef DUMP_CONTROLS
 static void dump_controls(gavl_v4l2_device_t * dev);
 #endif
+
+static void destroy_native_v4l2(void * native);
+static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to);
+static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_frame_t * src, gavl_video_frame_t * dst);
+
 
 typedef struct
   {
@@ -138,6 +143,12 @@ typedef struct
   gavl_compression_info_t ci;
 
   uint32_t frame_counter;
+
+  gavl_hw_context_t * ctx;
+
+  /* Device we belong to */
+  gavl_v4l2_device_t * dev;
+  
   } port_t; // Output or capture
 
 struct gavl_v4l2_device_s
@@ -153,8 +164,6 @@ struct gavl_v4l2_device_s
   
   int decoder_delay; // packets sent - frames read
   
-  gavl_packet_t packet;
-
   int timescale;
 
   gavl_packet_source_t * psrc_src;
@@ -169,9 +178,7 @@ struct gavl_v4l2_device_s
   
   int flags;
 
-  /* hwctx we belong to */
-  gavl_hw_context_t * hwctx;
-
+  
   gavl_dictionary_t * s; // Stream (not owned by us)
   
 #ifdef HAVE_DRM
@@ -185,6 +192,55 @@ struct gavl_v4l2_device_s
   gavl_pixelformat_t * sink_pixelformats;
   
   };
+
+static const gavl_hw_funcs_t capture_funcs =
+  {
+   .destroy_native         = destroy_native_v4l2,
+   //    .get_image_formats      = gavl_gl_get_image_formats,
+   //    .get_overlay_formats    = gavl_gl_get_overlay_formats,
+   //    .video_frame_create_hw  = video_frame_create_hw_egl,
+   //    .video_frame_destroy    = video_frame_destroy_egl,
+   //    .video_frame_to_ram     = video_frame_to_ram_egl,
+   //    .video_frame_to_hw      = video_frame_to_hw_egl,
+   //    .video_format_adjust    = gavl_gl_adjust_video_format,
+   //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
+    .can_export         = can_export_v4l2,
+    .export_video_frame = export_video_frame_v4l2,
+  };
+
+static const gavl_hw_funcs_t output_funcs =
+  {
+   .destroy_native         = destroy_native_v4l2,
+   
+  };
+
+/* These are called at the end of the gavl_v4l2_device_init_* functions */
+static void init_capture_context(gavl_v4l2_device_t * dev)
+  {
+  port_t * p = &dev->capture;
+  /* Set format */
+
+  if(p->ci.id == GAVL_CODEC_ID_NONE)
+    {
+    p->format.hwctx = p->ctx;
+    gavl_video_format_copy(&p->ctx->vfmt, &p->format);
+    }
+  
+  }
+
+static void init_output_context(gavl_v4l2_device_t * dev)
+  {
+  port_t * p = &dev->output;
+  
+  /* Set format */
+
+  if(p->ci.id == GAVL_CODEC_ID_NONE)
+    {
+    p->format.hwctx = p->ctx;
+    gavl_video_format_copy(&p->ctx->vfmt, &p->format);
+    }
+  
+  } 
 
 static const gavl_v4l2_control_t * control_by_id(const gavl_v4l2_device_t * dev, int id)
   {
@@ -757,6 +813,7 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * 
   struct v4l2_buffer buf;
   struct v4l2_plane planes[GAVL_MAX_PLANES];
 
+  /* Look for buffer, which were never queued before */
   if(type == dev->output.buf_type)
     {
     for(i = 0; i < dev->output.num_bufs; i++)
@@ -765,6 +822,8 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * 
         return i;
       }
     }
+  
+  //  fprintf(stderr, "dequeue_buffer: %d %d\n", type, dev->capture.buf_type);
   
   /* Dequeue buffer */
   memset(&buf, 0, sizeof(buf));
@@ -787,7 +846,7 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * 
 #ifdef DUMP_QUEUE
     gavl_dprintf("Dequeued buf %d\n", buf.index);
 #endif
-  
+    
   if(type == dev->capture.buf_type)
     {
     dev->capture.bufs[buf.index].bytesused = buf.bytesused;
@@ -850,16 +909,16 @@ static gavl_packet_t * gavl_v4l2_device_get_packet_write(gavl_v4l2_device_t * de
   if(!get_buffer_output(dev))
     return NULL;
   
-  dev->packet.buf.buf   = dev->output.current_buf->ptrs[0];
+  dev->output.packet.buf.buf   = dev->output.current_buf->ptrs[0];
   
   if(IS_PLANAR(dev->output.buf_type))
-    dev->packet.buf.alloc = dev->output.current_buf->planes[0].length;
+    dev->output.packet.buf.alloc = dev->output.current_buf->planes[0].length;
   else
-    dev->packet.buf.alloc = dev->output.current_buf->buf.length;
+    dev->output.packet.buf.alloc = dev->output.current_buf->buf.length;
   
-  dev->packet.buf.len   = 0;
+  dev->output.packet.buf.len   = 0;
   
-  return &dev->packet;
+  return &dev->output.packet;
   
   }
 
@@ -894,14 +953,14 @@ static gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t *
   //  fprintf(stderr, "Packet pts: %"PRId64"\n", dev->packet.pts);
   
   if(IS_PLANAR(dev->output.buf_type))
-    dev->output.current_buf->buf.m.planes[0].bytesused = dev->packet.buf.len;
+    dev->output.current_buf->buf.m.planes[0].bytesused = dev->output.packet.buf.len;
   else
-    dev->output.current_buf->buf.bytesused = dev->packet.buf.len;
+    dev->output.current_buf->buf.bytesused = dev->output.packet.buf.len;
   
-  if(dev->packet.flags & GAVL_PACKET_KEYFRAME)
+  if(dev->output.packet.flags & GAVL_PACKET_KEYFRAME)
     dev->output.current_buf->buf.flags |= V4L2_BUF_FLAG_KEYFRAME;
   
-  set_buf_pts(&dev->output.current_buf->buf, dev->packet.pts);
+  set_buf_pts(&dev->output.current_buf->buf, dev->output.packet.pts);
   
   dev->output.current_buf->buf.field = V4L2_FIELD_NONE;
 
@@ -1120,6 +1179,14 @@ gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev)
   
   const char * path;
 
+  ret->capture.dev = ret;
+  ret->output.dev = ret;
+
+  /* Set buf_idx to -1 because buffer indices should never be copied accidentally
+     from output to the capture port */
+  gavl_packet_init(&ret->output.packet);
+  gavl_packet_init(&ret->capture.packet);
+  
   gavl_dictionary_copy(&ret->dev, dev);
   
   if(!(path = gavl_dictionary_get_string(dev, GAVL_META_URI)))
@@ -1139,6 +1206,14 @@ gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev)
 #ifdef DUMP_CONTROLS
   dump_controls(ret);
 #endif
+  
+  ret->capture.ctx =
+    gavl_hw_context_create_internal(&ret->capture, &capture_funcs,
+                                    GAVL_HW_V4L2_BUFFER, GAVL_HW_SUPPORTS_VIDEO);
+  
+  ret->output.ctx =
+    gavl_hw_context_create_internal(&ret->output, &output_funcs,
+                                    GAVL_HW_V4L2_BUFFER, GAVL_HW_SUPPORTS_VIDEO);
   
   return ret;
 
@@ -1421,9 +1496,10 @@ static void buffer_to_video_frame_mmap(gavl_v4l2_device_t * dev, port_t * port)
       break;
     }
   
-  f->hwctx = dev->hwctx;
+  f->hwctx = port->ctx;
   f->storage = buf;
   f->buf_idx = buf->buf.index;
+  //  fprintf(stderr, "frame->buf_idx: %d\n", f->buf_idx);
   }
 
 
@@ -1433,10 +1509,9 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
   gavl_v4l2_device_t * dev = priv;
 
   int events_requested;
-
   
   /* Send frame back to the queue */
-  
+  /* TODO: Do this only for frames with zero refcount! */
   done_buffer_capture(dev);
   
   if(dev->flags & DECODER_GOT_EOS)
@@ -1486,8 +1561,9 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       
       gavl_packet_pts_cache_get_first(dev->cache, dev->capture.vframe);
       
-      //      fprintf(stderr, "Frame pts: %"PRId64"\n", dev->vframe_cap->timestamp);
-
+      //      fprintf(stderr, "Frame pts: %"PRId64" %d %d\n",
+      //              dev->capture.vframe->timestamp, idx, dev->capture.vframe->buf_idx);
+      
       if(frame)
         *frame = dev->capture.vframe;
       
@@ -1680,7 +1756,7 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
   return GAVL_SOURCE_OK;
   }
 
-int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream)
+int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * stream)
   {
   int caps = 0;
   uint32_t pixelformat;
@@ -1760,7 +1836,7 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
                         &dev->capture.format,
                         dev->capture.buf_type);
     //    gavl_video_format_dump(&dev->capture.format);
-    dev->capture.format.hwctx = dev->hwctx;
+    //    dev->capture.format.hwctx = dev->hwctx;
     }
   
   gavl_video_format_copy(gavl_stream_get_video_format_nc(stream),
@@ -1789,6 +1865,8 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
     }
 
   dev->capture.vframe = gavl_video_frame_create(NULL);
+
+  init_capture_context(dev);
   
   ret = 1;
   fail:
@@ -1796,7 +1874,7 @@ int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * s
   return ret;
   }
 
-int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev)
+int gavl_v4l2_device_start_capture(gavl_v4l2_device_t * dev)
   {
   gavl_stream_stats_t stats;
 
@@ -2054,7 +2132,6 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
 
   gavl_format = gavl_stream_get_video_format_nc(stream);
 
-  gavl_format->hwctx = dev->hwctx;
   
   dev->timescale = gavl_format->timescale;
 
@@ -2308,20 +2385,23 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   
   //  handle_decoder_event(dev);
   
+  
+  dev->capture.vframe = gavl_video_frame_create(NULL);
+
+  gavl_format->hwctx = dev->capture.ctx;
+  gavl_video_format_copy(&dev->capture.format, gavl_format);
+
+  init_capture_context(dev);
+  init_output_context(dev);
+
   dev->vsrc_priv = gavl_video_source_create(get_frame_decoder, dev,
                                             GAVL_SOURCE_SRC_ALLOC,
                                             gavl_format);
   
-  dev->capture.vframe = gavl_video_frame_create(NULL);
-
-  gavl_video_format_copy(&dev->capture.format, gavl_format);
-  
   ret = 1;
   fail:
-  
-  
+ 
   return ret;
-  
   }
 
 /* Generic video sink functions. Can hopefully be used by converters, encoders and outputs. */
@@ -2547,7 +2627,7 @@ static int init_video_output(gavl_v4l2_device_t * dev,
     /* Try to allocate dmabuf buffer */
     dev->hwctx_dmabuf = gavl_hw_ctx_create_dma();
 
-    if(gavl_hw_ctx_can_export(fmt->hwctx, dev->hwctx_dmabuf) &&
+    if(gavl_hw_ctx_can_transfer(fmt->hwctx, dev->hwctx_dmabuf) &&
        request_buffers_dmabuf(dev, dev->output.buf_type, num_bufs, dev->output.bufs))
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing DMA buffer");
@@ -2611,8 +2691,9 @@ static int init_video_capture(gavl_v4l2_device_t * dev, gavl_video_format_t * fm
   
   stream_on(dev, dev->capture.buf_type);
 
+  fmt->hwctx = dev->capture.ctx;
+  
   dev->vsrc_priv = gavl_video_source_create(get_frame_capture, dev, GAVL_SOURCE_SRC_ALLOC, fmt);
-  fmt->hwctx = dev->hwctx;
   
   return 1;
   fail:
@@ -2637,6 +2718,8 @@ int gavl_v4l2_device_init_output(gavl_v4l2_device_t * dev,
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot open V4L video output: Input format not supported");
     return 0;
     }
+
+  init_output_context(dev);
   
   return 1;
   }
@@ -2693,8 +2776,9 @@ int gavl_v4l2_device_init_converter(gavl_v4l2_device_t * dev,
     return 0;
     }
 #endif
-  
-  /* Initialize capture (src) */
+
+  init_capture_context(dev);
+  init_output_context(dev);
   
   return 0;
   }
@@ -2773,34 +2857,6 @@ gavl_packet_source_t * gavl_v4l2_device_get_packet_source(gavl_v4l2_device_t * d
   return dev->psrc_priv;
   }
 
-
-
-#if 0
-
-gavl_packet_sink_t * gavl_v4l2_device_get_packet_sink(gavl_v4l2_device_t * dev)
-  {
-
-  }
-
-
-int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev,
-                                 gavl_video_format_t * fmt)
-  {
-  
-  } 
-
-int gavl_v4l2_device_init_output(gavl_v4l2_device_t * dev,
-                           gavl_video_format_t * fmt)
-  {
-  
-  }
-
-/* Unused for now */
-int v4l_device_init_encoder(gavl_v4l2_device_t * dev,
-                            gavl_video_format_t * fmt,
-                            gavl_compression_info_t * cmp);
-
-#endif
 
 int gavl_v4l2_get_device_info(const char * path, gavl_dictionary_t * dev)
   {
@@ -3311,7 +3367,7 @@ static void format_gavl_to_v4l2(const gavl_video_format_t * gavl,
 
 static void destroy_native_v4l2(void * native)
   {
-  gavl_v4l2_device_close(native);
+  /* Nop */
   }
 
 
@@ -3329,8 +3385,11 @@ static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_
       uint32_t fmt = 0;
       gavl_dmabuf_video_frame_t * dma_frame = dst->storage;
       gavl_v4l2_buffer_t * v4l2_storage = src->storage;
-      gavl_v4l2_device_t * dev = src->hwctx->native;
+      gavl_v4l2_device_t * dev;
 
+      port = src->hwctx->native;
+      dev = port->dev;
+      
       if(IS_CAPTURE(v4l2_storage->buf.type))
         port = &dev->capture;
       else
@@ -3424,10 +3483,11 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
       int ret = 0;
       gavl_hw_context_t * dma_ctx = NULL;
       gavl_video_frame_t * dma_frame = NULL;
-      gavl_v4l2_device_t * dev = ctx->native;
-      port_t * port = &dev->capture;
+      port_t * port = ctx->native;
+      gavl_v4l2_device_t * dev = port->dev;
       gavl_video_frame_t * vframe_save = NULL;
       int current_buf_null = port->current_buf ? 0 : 1;
+      gavl_video_format_t fmt;
       
       if(dev->flags & DMABUF_CHECKED)
         return !!(dev->flags & DMABUF_SUPPORTED);
@@ -3448,12 +3508,14 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
         gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export not supported (no mmapped buffers)");
         return 0;
         }
-
+      
       vframe_save = port->vframe;
       port->vframe = gavl_video_frame_create(NULL);
       
+      gavl_video_format_copy(&fmt, &port->format);
+      
       dma_ctx = gavl_hw_ctx_create_dma();
-      gavl_hw_ctx_set_video(dma_ctx, &port->format, GAVL_HW_FRAME_MODE_IMPORT);
+      gavl_hw_ctx_set_video_importer(dma_ctx, ctx, &fmt);
       dma_frame = gavl_hw_video_frame_create(dma_ctx, 0);
       
       buffer_to_video_frame_mmap(dev, port);
@@ -3494,24 +3556,9 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
 
 
 
-static const gavl_hw_funcs_t funcs =
-  {
-   .destroy_native         = destroy_native_v4l2,
-   //    .get_image_formats      = gavl_gl_get_image_formats,
-   //    .get_overlay_formats    = gavl_gl_get_overlay_formats,
-   //    .video_frame_create_hw  = video_frame_create_hw_egl,
-   //    .video_frame_destroy    = video_frame_destroy_egl,
-   //    .video_frame_to_ram     = video_frame_to_ram_egl,
-   //    .video_frame_to_hw      = video_frame_to_hw_egl,
-   //    .video_format_adjust    = gavl_gl_adjust_video_format,
-   //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
-    .can_export             = can_export_v4l2,
-    .export_video_frame = export_video_frame_v4l2,
-  };
-
-
 /* hw context associated with a device */
 
+#if 0
 gavl_hw_context_t * gavl_hw_ctx_create_v4l2(const gavl_dictionary_t * dev_info)
   {
   gavl_hw_context_t * ret;
@@ -3526,4 +3573,14 @@ gavl_v4l2_device_t * gavl_hw_ctx_v4l2_get_device(gavl_hw_context_t * ctx)
   {
   return ctx->native;
   }
+#endif
 
+gavl_hw_context_t * gavl_v4l2_device_get_output_context(gavl_v4l2_device_t * dev)
+  {
+  return dev->output.ctx;
+  }
+
+gavl_hw_context_t * gavl_v4l2_device_get_capture_context(gavl_v4l2_device_t * dev)
+  {
+  return dev->capture.ctx;
+  }

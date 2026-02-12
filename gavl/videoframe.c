@@ -1726,6 +1726,9 @@ void gavl_video_frame_to_packet_metadata(const gavl_video_frame_t * frame,
   gavl_rectangle_i_copy(&pkt->src_rect, &frame->src_rect);
   pkt->dst_x = frame->dst_x;
   pkt->dst_y = frame->dst_y;
+
+  if(frame->buf_idx >= 0)
+    pkt->buf_idx = frame->buf_idx;
   }
 
 void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_frame_t * frame)
@@ -1737,10 +1740,12 @@ void gavl_packet_to_video_frame_metadata(const gavl_packet_t * p, gavl_video_fra
   frame->timecode  = p->timecode;
 
   gavl_rectangle_i_copy(&frame->src_rect, &p->src_rect);
-  frame->dst_x = p->dst_x;
-  frame->dst_y = p->dst_y;
-  }
+  frame->dst_x =   p->dst_x;
+  frame->dst_y =   p->dst_y;
 
+  if(p->buf_idx >= 0)
+    frame->buf_idx = p->buf_idx;
+  }
 
 /* Rotate video frames in multiples of 90 degrees */
 

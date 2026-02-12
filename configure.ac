@@ -347,7 +347,6 @@ AC_SUBST(LIBGAVL_LDFLAGS)
 AC_SUBST(APPS_LDFLAGS)
 
 AC_CONFIG_FILES([Makefile \
-gavl.spec \
 gavl.pc \
 doc/Makefile \
 doc/Doxyfile \

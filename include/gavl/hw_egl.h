@@ -23,6 +23,9 @@
 #ifndef GAVL_HW_EGL_H_INCLUDED
 #define GAVL_HW_EGL_H_INCLUDED
 
+#include <gavl/hw.h>
+
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 

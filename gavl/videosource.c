@@ -27,6 +27,9 @@
 
 #include <config.h>
 #include <gavl/connectors.h>
+#include <gavl/hw.h>
+
+
 #include <gavl/log.h>
 #define LOG_DOMAIN "videosource"
 
@@ -65,13 +68,6 @@ struct gavl_video_source_s
   
   gavl_video_frame_t * out_frame;
   
-  //  gavl_video_frame_t * fps_frame;
-  //  gavl_video_frame_t * next_still_frame;
-  // gavl_video_frame_t * transfer_frame;
- 
-  //  gavl_video_frame_pool_t * src_fp;
-  //  gavl_video_frame_pool_t * dst_fp;
-
   /* Callbacks set according to the configuration */
 
   gavl_source_status_t (*read_frame)(gavl_video_source_t * s,
@@ -218,15 +214,6 @@ void gavl_video_source_reset(gavl_video_source_t * s)
     s->out_frame->timestamp = GAVL_TIME_UNDEFINED;
   
   s->flags &= ~FLAG_EOS;
-  
-#if 0
-  if(s->src_fp)
-    gavl_video_frame_pool_reset(s->src_fp);
-  if(s->dst_fp)
-    gavl_video_frame_pool_reset(s->dst_fp);
-  s->next_still_frame = NULL;
-  s->fps_frame = NULL;
-#endif
   
   }
 

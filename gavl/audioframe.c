@@ -27,7 +27,10 @@
 #include <string.h>
 
 #include <config.h>
-#include <gavl.h>
+
+#include <gavl/gavl.h>
+#include <gavl/compression.h>
+
 #include <accel.h>
 #include <bswap.h>
 
@@ -684,6 +687,9 @@ void gavl_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
   {
   pkt->pts = frame->timestamp;
   pkt->duration = frame->valid_samples;
+
+  if(frame->buf_idx >= 0)
+    pkt->buf_idx = frame->buf_idx;
   }
 
 void gavl_packet_to_audio_frame_metadata(const gavl_packet_t * p,
@@ -691,6 +697,9 @@ void gavl_packet_to_audio_frame_metadata(const gavl_packet_t * p,
   {
   frame->timestamp     = p->pts;
   frame->valid_samples = p->duration;
+
+  if(p->buf_idx >= 0)
+    frame->buf_idx = p->buf_idx;
   }
 
 void gavl_audio_frame_set_from_packet(gavl_audio_frame_t * frame,

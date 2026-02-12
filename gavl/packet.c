@@ -34,6 +34,8 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "packet"
 
+#include <hw_private.h>
+
 static void free_extradata(gavl_packet_t * p)
   {
   int i;
@@ -101,16 +103,20 @@ void gavl_packet_copy(gavl_packet_t * dst,
                       const gavl_packet_t * src)
   {
   int data_alloc_save;
+  int buf_idx_save;
   uint8_t * data_save;
 
   data_alloc_save = dst->buf.alloc;
   data_save       = dst->buf.buf;
 
+  buf_idx_save    = dst->buf_idx;
+  
   memcpy(dst, src, sizeof(*src));
 
   dst->buf.alloc = data_alloc_save;
   dst->buf.buf   = data_save;
-
+  dst->buf_idx   = buf_idx_save;
+  
   gavl_packet_alloc(dst, src->buf.len);
   memcpy(dst->buf.buf, src->buf.buf, src->buf.len);
   }
@@ -119,7 +125,11 @@ void gavl_packet_copy_metadata(gavl_packet_t * dst,
                                const gavl_packet_t * src)
   {
   gavl_buffer_t buf_save;
+  int buf_idx_save;
+
   gavl_packet_extradata_t ext_data_save[GAVL_PACKET_MAX_EXTRADATA];
+
+  buf_idx_save    = dst->buf_idx;
   
   memcpy(&buf_save, &dst->buf, sizeof(buf_save));
   memcpy(ext_data_save, &dst->ext_data, sizeof(ext_data_save));
@@ -128,6 +138,9 @@ void gavl_packet_copy_metadata(gavl_packet_t * dst,
   
   memcpy(&dst->buf, &buf_save, sizeof(buf_save));
   memcpy(&dst->ext_data, ext_data_save, sizeof(ext_data_save));
+
+  dst->buf_idx   = buf_idx_save;
+  
   }
 
 static const char * coding_type_strings[4] =
@@ -227,6 +240,11 @@ gavl_packet_t * gavl_packet_create()
 
 void gavl_packet_destroy(gavl_packet_t * p)
   {
+  if(p->hwctx)
+    {
+    gavl_hw_destroy_packet(p->hwctx, p, 1);
+    return;
+    }
   gavl_packet_free(p);
   free(p);
   }
@@ -268,9 +286,6 @@ void * gavl_packet_add_extradata(gavl_packet_t * p, gavl_packet_extradata_type_t
     {
     case GAVL_PACKET_EXTRADATA_PALETTE:
       d->data = gavl_palette_create();
-      break;
-    case GAVL_PACKET_EXTRADATA_FDS:
-      d->data = calloc(1, sizeof(gavl_packet_fds_t));
       break;
     case GAVL_PACKET_EXTRADATA_NONE:
       break;

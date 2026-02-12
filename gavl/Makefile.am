@@ -125,7 +125,7 @@ edl.c \
 frametable.c \
 hw.c \
 hw_dmabuf.c \
-hw_shm.c \
+hw_memfd.c \
 http.c \
 httpclient.c \
 interleave.c \
@@ -158,13 +158,13 @@ peakdetector.c \
 psnr.c \
 ptscache.c \
 rectangle.c \
+reftable.c \
 sampleformat.c \
 samplerate.c \
 scale.c \
 scale_context.c \
 scale_kernels.c \
 scale_table.c \
-shm.c \
 socket.c \
 socketaddress.c \
 ssim.c \

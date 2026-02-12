@@ -198,20 +198,6 @@ static uint32_t fourcc_from_gavl(gavl_hw_context_t * ctx, gavl_pixelformat_t pfm
       return drm_formats[i].drm_fourcc;
       }
     
-#if 0
-    if(ctx->mode == GAVL_HW_FRAME_MODE_MAP)
-      return drm_formats[i].drm_fourcc;
-    if(ctx->mode == GAVL_HW_FRAME_MODE_TRANSFER)
-      {
-      if(drm_formats[i].flags & GAVL_DMABUF_FLAG_SHUFFLE)
-        return drm_formats[i].drm_fourcc;
-      }
-    else if(ctx->mode == GAVL_HW_FRAME_MODE_MAP)
-      {
-      if(!(drm_formats[i].flags & GAVL_DMABUF_FLAG_SHUFFLE))
-        return drm_formats[i].drm_fourcc;
-      }
-#endif
     i++;
     }
   return 0;
@@ -246,7 +232,6 @@ static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
   dma_native_t * native = f->hwctx->native;
   gavl_dmabuf_video_frame_t *dmabuf = f->storage;
 
-  dmabuf->wr = wr;
   
   /* Map the buffers. We'll keep this even if unmap is called */
   if(!f->planes[0])
@@ -259,7 +244,10 @@ static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
   
     for(i = 0; i < dmabuf->num_buffers; i++)
       {
-      if(dmabuf->buffers[i].drm_handle >= 0)
+      if(wr)
+        dmabuf->buffers[i].flags |= GAVL_HW_BUFFER_WR;
+      
+      if(dmabuf->drm_handles[i] >= 0)
         fd = native->drm_fd;
       else
         fd = dmabuf->buffers[i].fd;
@@ -308,8 +296,6 @@ video_frame_unmap_dmabuf(gavl_video_frame_t * f)
 #ifdef HAVE_LINUX_DMA_BUF_H
   struct dma_buf_sync sync;
   sync.flags = DMA_BUF_SYNC_END|DMA_BUF_SYNC_READ;
-  if(dmabuf->wr)
-    sync.flags |= DMA_BUF_SYNC_WRITE;
 #endif
   
   for(i = 0; i < dmabuf->num_buffers; i++)
@@ -323,11 +309,14 @@ video_frame_unmap_dmabuf(gavl_video_frame_t * f)
 
 #ifdef HAVE_LINUX_DMA_BUF_H
   for(i = 0; i < dmabuf->num_buffers; i++)
+    {
+    if(!i && (dmabuf->buffers[i].flags & GAVL_HW_BUFFER_WR))
+      sync.flags |= DMA_BUF_SYNC_WRITE;
+    
     ioctl(dmabuf->buffers[i].fd, DMA_BUF_IOCTL_SYNC, &sync);
+    }
 #endif
     }
-
-  dmabuf->wr = 0;
   
   return 1;
   }
@@ -473,7 +462,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
                "DRM_IOCTL_MODE_MAP_DUMB failed: %s", strerror(errno));
       }
     
-    f->buffers[i].drm_handle = create_struct.handle;
+    f->drm_handles[i] = create_struct.handle;
     f->planes[i].stride = create_struct.pitch;
     f->buffers[i].map_len    = create_struct.size;
     f->buffers[i].map_offset = map_struct.offset;
@@ -507,8 +496,10 @@ static gavl_video_frame_t * video_frame_create_hw_dmabuf(gavl_hw_context_t * ctx
     
   for(i = 0; i < GAVL_MAX_PLANES; i++)
     {
+    gavl_hw_buffer_init(&f->buffers[i]);
+    
     f->buffers[i].fd = -1;
-    f->buffers[i].drm_handle = -1;
+    f->drm_handles[i] = -1;
     }
   ret = gavl_video_frame_create(NULL);
   ret->storage = f;
@@ -566,20 +557,15 @@ video_frame_destroy_hw_dmabuf(gavl_video_frame_t * f,
 
     for(i = 0; i < GAVL_MAX_PLANES; i++)
       {
-      if(info->buffers[i].map_ptr)
-        munmap(info->buffers[i].map_ptr, info->buffers[i].map_len);
-
-      /* Even imported dma-bufs must be closed */
-      if(info->buffers[i].fd >= 0)
-        close(info->buffers[i].fd);
-
+      gavl_hw_buffer_cleanup(&info->buffers[i]);
+      
       if(destroy_resources)
         {
         struct drm_mode_destroy_dumb destroy;
         
-        if(info->buffers[i].drm_handle > 0)
+        if(info->drm_handles[i]  > 0)
           {
-          destroy.handle = info->buffers[i].drm_handle;
+          destroy.handle = info->drm_handles[i];
           drmIoctl(native->drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
           }
         }

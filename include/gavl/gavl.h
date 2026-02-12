@@ -103,6 +103,8 @@ typedef struct gavl_video_format_s gavl_video_format_t;
 
 typedef struct gavl_video_frame_s gavl_video_frame_t;
 
+/* Global handle for accessing a piece of hardware */
+typedef struct gavl_hw_context_s gavl_hw_context_t;
 
   
 /**
@@ -281,6 +283,8 @@ typedef struct
   float rear_level;   /*!< linear factor for mixing rear to front */
 
   gavl_channel_id_t channel_locations[GAVL_MAX_CHANNELS];   /*!< Which channel is stored where */
+
+  gavl_hw_context_t * hwctx;     /*!< Handle for accessing the frame */
   
   } gavl_audio_format_t;
 
@@ -628,6 +632,8 @@ typedef struct
   int64_t timestamp;             /*!< Timestamp in samplerate tics */
   int channel_stride;            /*!< Byte offset between channels. Total allocated size is always num_channels * channel_stride */
 
+  gavl_hw_context_t * hwctx;     /*!< Handle for accessing the frame */
+  void * storage;                /*!< Storage handle defined by hardware context */
   int buf_idx;
   } gavl_audio_frame_t;
 
@@ -2376,7 +2382,7 @@ gavl_interlace_mode_t gavl_short_string_to_interlace_mode(const char * mode);
 GAVL_PUBLIC
 int gavl_interlace_mode_is_mixed(gavl_interlace_mode_t mode);
   
-#include <gavl/hw.h> // Needs forward declarations
+  // #include <gavl/hw.h> // Needs forward declarations
 
 /* Video format structure */
 
@@ -4330,77 +4336,6 @@ gavl_frame_table_dump(const gavl_frame_table_t * t);
  * @}
  */
 
-/*! \defgroup video_frame_pool Video frame pool
- * \ingroup video
- *
- * This is used in scenarios where we want optimized
- * video pipelines. Allocated frames can be passed
- * forward or backwards in the pipeline while minimizing
- * the memcpy operations.
- *
- * The idea is to increment the refcount of a frame if
- * an application intends to use a frame beyond an actual
- * function call and decrement it when it's done with it.
- *
- * The frame pool takes care of the refcounts and allocates
- * frames on demand if necessary.
- * 
- * @{
- */
-
-/** \brief Video frame pool
- *
- * Since 1.5.0.
- */
-
-typedef struct gavl_video_frame_pool_s gavl_video_frame_pool_t;
-
-/** \brief Create a video frame pool
- *  \param create_frame Function used to create one video frame
- *  \param priv Private data to pass to create_frame
- *  \returns A video frame pool
- */
-  
-GAVL_PUBLIC
-gavl_video_frame_pool_t *
-gavl_video_frame_pool_create(gavl_hw_context_t * hwctx);
-
-/** \brief Create a video frame pool
- *  \param p A frame pool
- *  \returns A video frame, either newly allocated or reused
- */
-
-GAVL_PUBLIC
-gavl_video_frame_t * gavl_video_frame_pool_get(gavl_video_frame_pool_t *p);
-
-GAVL_PUBLIC
-void gavl_video_frame_pool_release(gavl_video_frame_t * frame);
-
-GAVL_PUBLIC
-int gavl_video_frame_pool_set_format(gavl_video_frame_pool_t *p, const gavl_video_format_t * fmt);
-
-GAVL_PUBLIC
-const gavl_video_format_t * gavl_video_frame_pool_get_format(const gavl_video_frame_pool_t *p);
-  
-/** \brief Destroy a video frame pool
- *  \param p A frame pool
- *
- *  This also frees all frames, which were allocated by this
- *  frame pool.
- */
-  
-GAVL_PUBLIC
-void gavl_video_frame_pool_destroy(gavl_video_frame_pool_t *p);
-
-/** \brief Reset a video frame pool
- *  \param p A frame pool
- *
- *  Set the reference counters of all frames to zero.
- *  This is typically called before a seek operation in the stream.
- */
-
-GAVL_PUBLIC
-void gavl_video_frame_pool_reset(gavl_video_frame_pool_t *p);
 
 /* Debayer routines */
 

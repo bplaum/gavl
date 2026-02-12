@@ -27,6 +27,7 @@
 #include <config.h>
 
 #include <gavl/gavl.h>
+#include <gavl/hw.h>
 #include <gavl/hw_gl.h>
 #include <gavl/log.h>
 #define LOG_DOMAIN "gl"

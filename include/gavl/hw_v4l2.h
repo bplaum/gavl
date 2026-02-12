@@ -124,8 +124,8 @@ GAVL_PUBLIC gavl_packet_source_t * gavl_v4l2_device_get_packet_source(gavl_v4l2_
 GAVL_PUBLIC gavl_video_sink_t * gavl_v4l2_device_get_video_sink(gavl_v4l2_device_t * dev);
 GAVL_PUBLIC gavl_video_source_t * gavl_v4l2_device_get_video_source(gavl_v4l2_device_t * dev);
 
-GAVL_PUBLIC int gavl_v4l_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * dict);
-GAVL_PUBLIC int gavl_v4l_device_start_capture(gavl_v4l2_device_t * dev);
+GAVL_PUBLIC int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * dict);
+GAVL_PUBLIC int gavl_v4l2_device_start_capture(gavl_v4l2_device_t * dev);
 
 GAVL_PUBLIC int gavl_v4l2_device_init_output(gavl_v4l2_device_t * dev,
                                              gavl_video_format_t * fmt);
@@ -142,8 +142,12 @@ GAVL_PUBLIC void gavl_v4l2_device_resync_decoder(gavl_v4l2_device_t * dev);
 GAVL_PUBLIC void gavl_v4l2_device_info(const char * dev);
 GAVL_PUBLIC void gavl_v4l2_device_infos(void);
 
-GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_v4l2(const gavl_dictionary_t * dev_info);
+// GAVL_PUBLIC gavl_v4l2_device_t * gavl_hw_ctx_v4l2_get_device(gavl_hw_context_t * ctx);
 
-GAVL_PUBLIC gavl_v4l2_device_t * gavl_hw_ctx_v4l2_get_device(gavl_hw_context_t * ctx);
+GAVL_PUBLIC gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t * dev);
+
+GAVL_PUBLIC gavl_hw_context_t * gavl_v4l2_device_get_output_context(gavl_v4l2_device_t*);
+GAVL_PUBLIC gavl_hw_context_t * gavl_v4l2_device_get_capture_context(gavl_v4l2_device_t*);
+
 
 #endif // GAVL_HW_V4L2_H_INCLUDED

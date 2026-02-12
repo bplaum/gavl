@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <gavl/gavl.h>
 #include <gavl/value.h>
+#include <gavl/hw.h>
 
 void gavl_video_format_copy(gavl_video_format_t * dst,
                             const gavl_video_format_t * src)

@@ -360,16 +360,10 @@ typedef enum
   {
     GAVL_PACKET_EXTRADATA_NONE = 0,
     GAVL_PACKET_EXTRADATA_PALETTE,
-    GAVL_PACKET_EXTRADATA_FDS,
   } gavl_packet_extradata_type_t;
 
-#define GAVL_PACKET_MAX_EXTRADATA 2
+#define GAVL_PACKET_MAX_EXTRADATA 1
   
-typedef struct
-  {
-  int fds[GAVL_MAX_PLANES];
-  int num_fds;
-  } gavl_packet_fds_t;
 
 typedef struct
   {
@@ -453,9 +447,9 @@ typedef struct gavl_packet_s
   int buf_idx;
 
   gavl_packet_extradata_t ext_data[GAVL_PACKET_MAX_EXTRADATA];
-  
-  //  int fds[GAVL_MAX_PLANES];
-  //  int num_fds;
+
+  gavl_hw_context_t * hwctx;
+  void * storage;
   } gavl_packet_t;
 
 /** \brief Initialize a packet
@@ -468,8 +462,6 @@ void gavl_packet_init(gavl_packet_t * p);
 
 GAVL_PUBLIC
 gavl_packet_t * gavl_packet_create(void);
-
-
   
 GAVL_PUBLIC
 void gavl_packet_destroy(gavl_packet_t * p);
@@ -526,7 +518,6 @@ void gavl_packet_copy(gavl_packet_t * dst,
 GAVL_PUBLIC
 void gavl_packet_copy_metadata(gavl_packet_t * dst,
                                const gavl_packet_t * src);
-
   
 /** \brief Reset a packet
  *  \param p Destination

@@ -23,6 +23,8 @@
 #ifndef GAVLPACKETINDEX_H_INCLUDED
 #define GAVLPACKETINDEX_H_INCLUDED
 
+#include <gavl/compression.h>
+
 typedef struct gavl_io_s gavl_io_t;
 
 #define GAVL_PACKET_INDEX_INTERLEAVED (1<<0)

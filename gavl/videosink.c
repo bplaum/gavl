@@ -24,6 +24,7 @@
 #include <stdio.h>
 
 #include <gavl/connectors.h>
+#include <gavl/hw.h>
 
 #define FLAG_GET_CALLED (1<<0)
 

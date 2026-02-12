@@ -33,6 +33,9 @@
 #include <gavl/log.h>
 #define LOG_DOMAIN "io"
 
+#include <gavl/compression.h>
+
+
 #include <io.h>
 #include <io_private.h>
 

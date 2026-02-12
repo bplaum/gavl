@@ -36,7 +36,6 @@
 
 int main(int argc, char ** argv)
   {
-  gavl_hw_context_t * hwctx;
   gavl_array_t devices;
   const gavl_dictionary_t * device_info;
   gavl_v4l2_device_t * dev;
@@ -56,9 +55,8 @@ int main(int argc, char ** argv)
   fprintf(stderr, "Got device:\n");
   gavl_dictionary_dump(device_info, 2);
   
-  hwctx = gavl_hw_ctx_create_v4l2(device_info);
-  dev = gavl_hw_ctx_v4l2_get_device(hwctx);
-
+  dev = gavl_v4l2_device_open(device_info);
+  
   memset(&in_fmt, 0, sizeof(in_fmt));
   memset(&out_fmt, 0, sizeof(out_fmt));
 
