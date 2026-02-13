@@ -124,6 +124,8 @@ void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx)
     free(ctx->image_formats_map);
   if(ctx->image_formats_transfer)
     free(ctx->image_formats_transfer);
+
+  gavl_hw_reftable_destroy(ctx);
   
   free(ctx);
   }
@@ -534,9 +536,13 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
 
   gavl_video_format_copy(&ctx->vfmt, &ctx_src->vfmt);
   ctx->vfmt.hwctx = ctx;
+
+  ctx->ctx_src = ctx_src;
   
   if(vfmt)
     gavl_video_format_copy(vfmt, &ctx->vfmt);
+
+  
   
   }
 
@@ -877,11 +883,14 @@ void gavl_hw_frame_pool_init(gavl_hw_context_t * ctx)
       
       }
     }
-  else
+  else if(ctx->flags & HW_CTX_FLAG_CREATOR)
     {
     /* Create new reftable in ordinary RAM */
-    ctx->reftab = gavl_hw_reftable_create_local(ctx);
+    ctx->reftab_priv = gavl_hw_reftable_create_local(ctx);
+    ctx->reftab = ctx->reftab_priv;
     }
+  else if(ctx->flags  & HW_CTX_FLAG_IMPORTER)
+    ctx->reftab = ctx->ctx_src->reftab;
   
   }
 

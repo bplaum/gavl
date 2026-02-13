@@ -205,6 +205,7 @@ struct gavl_hw_context_s
   char * shm_name;
   
   reftable_t * reftab;
+  reftable_t * reftab_priv;
   
   };
 
