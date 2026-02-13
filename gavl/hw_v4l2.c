@@ -242,6 +242,13 @@ static void init_output_context(gavl_v4l2_device_t * dev)
   
   } 
 
+static void port_cleanup(port_t * port)
+  {
+  if(port->ctx)
+    gavl_hw_ctx_destroy(port->ctx);
+  gavl_compression_info_free(&port->ci);
+  }
+
 static const gavl_v4l2_control_t * control_by_id(const gavl_v4l2_device_t * dev, int id)
   {
   int i;
@@ -2053,6 +2060,7 @@ static int check_compat(const gavl_dictionary_t * device,
     if(!gavl_stream_get_compression_info(dict, &ci))
       goto fail;
     codec_id = ci.id;
+    gavl_compression_info_free(&ci);
     } 
   
   if(!(dict = gavl_stream_get_metadata(dict)))
@@ -2114,7 +2122,6 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   int caps = 0;
   int ret = 0;
   gavl_video_format_t * gavl_format;
-  gavl_compression_info_t ci;
   gavl_stream_stats_t stats;
   
   int pollev = 0;
@@ -2143,9 +2150,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   
   memset(&sub, 0, sizeof(sub));
 
-  memset(&ci, 0, sizeof(ci));
-  
-  if(!gavl_stream_get_compression_info(stream, &ci))
+  if(!gavl_stream_get_compression_info(stream, &dev->output.ci))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no compression info");
     goto fail;
@@ -2198,7 +2203,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     //    fmt.fmt.pix_mp.width = gavl_format->image_width;
     //    fmt.fmt.pix_mp.height = gavl_format->image_height;
     
-    dev->output.fmt.fmt.pix_mp.pixelformat = gavl_v4l2_codec_id_to_pix_fmt(ci.id);
+    dev->output.fmt.fmt.pix_mp.pixelformat = gavl_v4l2_codec_id_to_pix_fmt(dev->output.ci.id);
     dev->output.fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_DEFAULT;
     dev->output.fmt.fmt.pix_mp.field      = V4L2_FIELD_NONE;
     
@@ -2219,7 +2224,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     //    fmt.fmt.pix.width = gavl_format->image_width;
     //    fmt.fmt.pix.height = gavl_format->image_height;
 
-    dev->output.fmt.fmt.pix.pixelformat = gavl_v4l2_codec_id_to_pix_fmt(ci.id);
+    dev->output.fmt.fmt.pix.pixelformat = gavl_v4l2_codec_id_to_pix_fmt(dev->output.ci.id);
     dev->output.fmt.fmt.pix.colorspace = V4L2_COLORSPACE_DEFAULT;
     dev->output.fmt.fmt.pix.sizeimage = max_packet_size;
     dev->output.fmt.fmt.pix.field      = V4L2_FIELD_NONE;
@@ -2232,7 +2237,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     }
 
 
-  if(ci.flags & GAVL_COMPRESSION_HAS_P_FRAMES)
+  if(dev->output.ci.flags & GAVL_COMPRESSION_HAS_P_FRAMES)
     num = DECODER_NUM_PACKETS;
   else
     num = 1;
@@ -2251,7 +2256,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   if(!stream_on(dev, dev->output.buf_type))
     goto fail;
         
-  if(ci.codec_header.len)
+  if(dev->output.ci.codec_header.len)
     {
     gavl_packet_t * p;
 
@@ -2263,7 +2268,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     p = gavl_v4l2_device_get_packet_write(dev);
 
     gavl_buffer_reset(&p->buf);
-    gavl_buffer_append(&p->buf, &ci.codec_header);
+    gavl_buffer_append(&p->buf, &dev->output.ci.codec_header);
     
     if(gavl_v4l2_device_put_packet_write(dev) != GAVL_SINK_OK)
       goto fail;
@@ -2837,6 +2842,16 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
     free(dev->sink_pixelformats);
   
   free_controls(dev);
+
+  if(dev->cache)
+    gavl_packet_pts_cache_destroy(dev->cache);
+
+  if(dev->vsrc_priv)
+    gavl_video_source_destroy(dev->vsrc_priv);
+
+  port_cleanup(&dev->capture);
+  port_cleanup(&dev->output);
+  
   free(dev);
   }
 
