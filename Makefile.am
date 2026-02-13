@@ -14,5 +14,4 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gavl.pc
 
 EXTRA_DIST=autogen.sh \
-gavl.spec.in \
 gavl.pc.in 
