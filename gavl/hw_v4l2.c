@@ -49,6 +49,12 @@
 
 #include <hw_private.h>
 
+/*
+ *  DMA buffer support is disabled for now because
+ *  my only available v4l2 sink right now is v4l4loopback, which can't that
+ *  It would be *extremly* interesting for a hardware based H.264 encoder though
+ */
+
 #ifdef HAVE_DRM
 #include <gavl/hw_dmabuf.h>
 #else
@@ -129,8 +135,9 @@ typedef struct
 typedef struct
   {
   int num_bufs;
-  gavl_v4l2_buffer_t bufs[MAX_BUFFERS]; // Output
+  gavl_v4l2_buffer_t * bufs;
   gavl_v4l2_buffer_t * current_buf;
+
   gavl_video_frame_t * vframe;
   
   gavl_packet_t packet;
@@ -246,6 +253,9 @@ static void port_cleanup(port_t * port)
   {
   if(port->ctx)
     gavl_hw_ctx_destroy(port->ctx);
+  if(port->bufs)
+    free(port->bufs);
+  
   gavl_compression_info_free(&port->ci);
   }
 
@@ -814,18 +824,19 @@ static int formats_compressed(const gavl_array_t * arr)
 #define IS_OUTPUT(buf_type)                                            \
   ((buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) || (buf_type == V4L2_BUF_TYPE_VIDEO_OUTPUT))
 
-static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * flags, gavl_time_t * timestamp)
+static int dequeue_buffer(port_t * p, int memory,
+                          int * flags, gavl_time_t * timestamp)
   {
   int i;
   struct v4l2_buffer buf;
   struct v4l2_plane planes[GAVL_MAX_PLANES];
 
   /* Look for buffer, which were never queued before */
-  if(type == dev->output.buf_type)
+  if(IS_OUTPUT(p->buf_type))
     {
-    for(i = 0; i < dev->output.num_bufs; i++)
+    for(i = 0; i < p->num_bufs; i++)
       {
-      if(!(dev->output.bufs[i].flags & GAVL_V4L2_BUFFER_FLAG_QUEUED))
+      if(!(p->bufs[i].flags & GAVL_V4L2_BUFFER_FLAG_QUEUED))
         return i;
       }
     }
@@ -835,17 +846,17 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * 
   /* Dequeue buffer */
   memset(&buf, 0, sizeof(buf));
 
-  if(IS_PLANAR(type))
+  if(IS_PLANAR(p->buf_type))
     {
     memset(planes, 0, GAVL_MAX_PLANES*sizeof(planes[0]));
     buf.m.planes = planes;
     buf.length = GAVL_MAX_PLANES;
     }
   
-  buf.type = type;
+  buf.type = p->buf_type;
   buf.memory = memory;
   
-  if(my_ioctl(dev->fd, VIDIOC_DQBUF, &buf) == -1)
+  if(my_ioctl(p->dev->fd, VIDIOC_DQBUF, &buf) == -1)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_DQBUF failed: %s", strerror(errno));
     return -1;
@@ -854,10 +865,10 @@ static int dequeue_buffer(gavl_v4l2_device_t * dev, int type, int memory, int * 
     gavl_dprintf("Dequeued buf %d\n", buf.index);
 #endif
     
-  if(type == dev->capture.buf_type)
+  if(IS_CAPTURE(p->buf_type))
     {
-    dev->capture.bufs[buf.index].bytesused = buf.bytesused;
-    dev->capture.current_buf = &dev->capture.bufs[buf.index];
+    p->bufs[buf.index].bytesused = buf.bytesused;
+    p->current_buf = &p->bufs[buf.index];
     }
   
   if(flags)
@@ -877,7 +888,7 @@ static gavl_v4l2_buffer_t * get_buffer_output(gavl_v4l2_device_t * dev)
   {
   int idx;
   
-  idx = dequeue_buffer(dev, dev->output.buf_type, V4L2_MEMORY_MMAP, NULL, NULL);
+  idx = dequeue_buffer(&dev->output, V4L2_MEMORY_MMAP, NULL, NULL);
   
   dev->output.current_buf = &dev->output.bufs[idx];
   dev->output.current_buf->flags &= ~GAVL_V4L2_BUFFER_FLAG_QUEUED;
@@ -1029,43 +1040,44 @@ static int send_decoder_packet(gavl_v4l2_device_t * dev)
   return 1;
   }
 
-static int request_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
+static int request_buffers_mmap(port_t * port, int count)
   {
   int i, j;
   
-  //  struct v4l2_buffer buf;
   struct v4l2_requestbuffers req;
 
-  //  struct v4l2_plane planes[GAVL_MAX_PLANES];
-
-  port_t * port = (IS_OUTPUT(type) ? &dev->output : &dev->capture);
-  
   memset(&req, 0, sizeof(req));
+
+  if(port->bufs)
+    free(port->bufs); // Paranoia
+
+  port->bufs = calloc(count, sizeof(*port->bufs));
   
   req.count = count;
-  req.type = type;
+  req.type = port->buf_type;
   req.memory = V4L2_MEMORY_MMAP;
 
-  if(my_ioctl(dev->fd, VIDIOC_REQBUFS, &req) == -1)
+  if(my_ioctl(port->dev->fd, VIDIOC_REQBUFS, &req) == -1)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting buffers failed: %s", strerror(errno));
     return 0;
     }
 
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Requested %d buffers for %s, got %d", count, buf_type_to_string(type), req.count);
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Requested %d buffers for %s, got %d", count,
+           buf_type_to_string(port->buf_type), req.count);
 
   for(i = 0; i < req.count; i++)
     {
     port->bufs[i].buf.index = i;
-    port->bufs[i].buf.type = type;
+    port->bufs[i].buf.type = port->buf_type;
     
-    if(IS_PLANAR(type))
+    if(IS_PLANAR(port->buf_type))
       {
       port->bufs[i].buf.m.planes = port->bufs[i].planes;
       port->bufs[i].buf.length = GAVL_MAX_PLANES;
       }
     
-    if(my_ioctl(dev->fd, VIDIOC_QUERYBUF, &port->bufs[i].buf) == -1)
+    if(my_ioctl(port->dev->fd, VIDIOC_QUERYBUF, &port->bufs[i].buf) == -1)
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_QUERYBUF failed: %s", strerror(errno));
       return 0;
@@ -1080,7 +1092,7 @@ static int request_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
     
     port->bufs[i].total = req.count;
     
-    if(IS_PLANAR(type))
+    if(IS_PLANAR(port->buf_type))
       {
       if(port->bufs[i].buf.length > GAVL_MAX_PLANES)
         {
@@ -1092,7 +1104,8 @@ static int request_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
         {
         port->bufs[i].ptrs[j] = mmap(NULL, port->bufs[i].buf.m.planes[j].length,
                                      PROT_READ | PROT_WRITE, MAP_SHARED,
-                                     dev->fd, port->bufs[i].buf.m.planes[j].m.mem_offset);
+                                     port->dev->fd,
+                                     port->bufs[i].buf.m.planes[j].m.mem_offset);
         }
 
       }
@@ -1100,7 +1113,7 @@ static int request_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
       {
       port->bufs[i].ptrs[0] = mmap(NULL, port->bufs[i].buf.length,
                                    PROT_READ | PROT_WRITE, MAP_SHARED,
-                                   dev->fd, port->bufs[i].buf.m.offset);
+                                   port->dev->fd, port->bufs[i].buf.m.offset);
       }
     
     }
@@ -1139,17 +1152,18 @@ static void release_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
   }
 
 #ifdef HAVE_DRM
-static int request_buffers_dmabuf(gavl_v4l2_device_t * dev, int type, int count, gavl_v4l2_buffer_t * bufs)
+
+static int request_buffers_dmabuf(port_t * port, int count)
   {
   int i;
   struct v4l2_requestbuffers req;
   memset(&req, 0, sizeof(req));
   
   req.count = count;
-  req.type = type;
+  req.type = port->buf_type;
   req.memory = V4L2_MEMORY_DMABUF;
 
-  if(my_ioctl(dev->fd, VIDIOC_REQBUFS, &req) == -1)
+  if(my_ioctl(port->dev->fd, VIDIOC_REQBUFS, &req) == -1)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting buffers failed: %s", strerror(errno));
     return 0;
@@ -1164,19 +1178,19 @@ static int request_buffers_dmabuf(gavl_v4l2_device_t * dev, int type, int count,
   return 1;
   }
 
-static void release_buffers_dmabuf(gavl_v4l2_device_t * dev, int type, int count, gavl_v4l2_buffer_t * bufs)
+static void release_buffers_dmabuf(port_t * port, int count)
   {
   struct v4l2_requestbuffers req;
   memset(&req, 0, sizeof(req));
   req.count = 0;
-  req.type = type;
+  req.type = port->buf_type;
   req.memory = V4L2_MEMORY_DMABUF;
 
-  if(my_ioctl(dev->fd, VIDIOC_REQBUFS, &req) == -1)
+  if(my_ioctl(port->dev->fd, VIDIOC_REQBUFS, &req) == -1)
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_REQBUFS for releasing failed: %s", strerror(errno));
     } 
-  memset(bufs, 0, count * sizeof(*bufs));
+  memset(port->bufs, 0, count * sizeof(*port->bufs));
   }
 #endif
 
@@ -1359,7 +1373,7 @@ static void handle_decoder_event(gavl_v4l2_device_t * dev)
             }
           //          dump_fmt(dev, &dev->capture.fmt);
           
-          dev->capture.num_bufs = request_buffers_mmap(dev, dev->capture.buf_type,
+          dev->capture.num_bufs = request_buffers_mmap(&dev->capture,
                                                        DECODER_NUM_FRAMES);
 
           for(i = 0; i < dev->capture.num_bufs; i++)
@@ -1557,7 +1571,7 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       {
       int idx;
       
-      idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, NULL, NULL);
+      idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, NULL, NULL);
       
       if(idx < 0)
         return GAVL_SOURCE_EOF;
@@ -1691,7 +1705,7 @@ static gavl_source_status_t read_packet_capture(void * priv, gavl_packet_t ** p)
 
   //  fprintf(stderr, "Poll done\n");
   
-  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, &flags, &pts)) < 0)
+  if((idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, &flags, &pts)) < 0)
     return GAVL_SOURCE_EOF;
 
   gavl_packet_init(&dev->capture.packet);
@@ -1739,14 +1753,13 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
 
   //  fprintf(stderr, "Poll...");
   
-  if(!do_poll(dev, events, &revents) ||
-     !(revents & POLLIN))
+  if(!do_poll(dev, events, &revents) || !(revents & POLLIN))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no frame");
     return GAVL_SOURCE_EOF;
     }
   
-  if((idx = dequeue_buffer(dev, dev->capture.buf_type, V4L2_MEMORY_MMAP, &flags, &pts) < 0))
+  if((idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, &flags, &pts) < 0))
     return GAVL_SOURCE_EOF;
   
   buffer_to_video_frame_mmap(dev, &dev->capture);
@@ -1850,7 +1863,7 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
                          &dev->capture.format);
 
   /* Request buffers */
-  if(!(dev->capture.num_bufs = request_buffers_mmap(dev, dev->capture.buf_type, 2)))
+  if(!(dev->capture.num_bufs = request_buffers_mmap(&dev->capture, 2)))
     goto fail;
 
   /* Queue frames */
@@ -2242,7 +2255,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   else
     num = 1;
   
-  if(!(dev->output.num_bufs = request_buffers_mmap(dev, dev->output.buf_type, num)))
+  if(!(dev->output.num_bufs = request_buffers_mmap(&dev->output, num)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting buffers failed");
     goto fail;
@@ -2633,7 +2646,7 @@ static int init_video_output(gavl_v4l2_device_t * dev,
     dev->hwctx_dmabuf = gavl_hw_ctx_create_dma();
 
     if(gavl_hw_ctx_can_transfer(fmt->hwctx, dev->hwctx_dmabuf) &&
-       request_buffers_dmabuf(dev, dev->output.buf_type, num_bufs, dev->output.bufs))
+       request_buffers_dmabuf(&dev->output, num_bufs))
       {
       gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Importing DMA buffer");
 
@@ -2659,7 +2672,7 @@ static int init_video_output(gavl_v4l2_device_t * dev,
     else
       put_func = sink_put_func_mmap;
 
-    if(!(dev->output.num_bufs = request_buffers_mmap(dev, dev->output.buf_type, num_bufs)))
+    if(!(dev->output.num_bufs = request_buffers_mmap(&dev->output, num_bufs)))
       {
       gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting buffers failed");
       goto fail;
@@ -2688,7 +2701,7 @@ static gavl_source_status_t get_frame_capture(void * priv, gavl_video_frame_t **
 static int init_video_capture(gavl_v4l2_device_t * dev, gavl_video_format_t * fmt, int num_bufs)
   {
 
-  if(!(dev->capture.num_bufs = request_buffers_mmap(dev, dev->capture.buf_type, num_bufs)))
+  if(!(dev->capture.num_bufs = request_buffers_mmap(&dev->capture, num_bufs)))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Requesting capture buffers failed");
     goto fail;
@@ -2802,7 +2815,7 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   
 #ifdef HAVE_DRM  
   if(dev->hwctx_dmabuf)
-    release_buffers_dmabuf(dev, dev->output.buf_type, dev->output.num_bufs, dev->output.bufs);
+    release_buffers_dmabuf(&dev->output, dev->output.num_bufs);
   else
 #endif
     {

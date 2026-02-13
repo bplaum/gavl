@@ -1178,3 +1178,41 @@ int gavl_hw_buffer_cleanup(gavl_hw_buffer_t * buf)
   return 1;
   }
 
+void gavl_hw_buf_desc_init(gavl_dictionary_t * dict, gavl_hw_type_t type)
+  {
+  gavl_dictionary_set_int(dict, GAVL_HW_BUF_TYPE, type);
+  }
+
+/* Append integer format (e.g.  */
+void gavl_hw_buf_desc_append_format(gavl_dictionary_t * dict,
+                                    const char * key, int fmt)
+  {
+  gavl_value_t val;
+  gavl_array_t * arr =
+    gavl_dictionary_get_array_create(dict, key);
+
+  gavl_value_init(&val);
+  gavl_value_set_int(&val, fmt);
+  gavl_array_splice_val_nocopy(arr, -1, 0, &val);
+  }
+
+int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
+                                     const char * key, int fmt)
+  {
+  int i;
+  int val_i = 0;
+  const gavl_array_t * arr =
+    gavl_dictionary_get_array(dict, key);
+
+  /* Nothing given: Assume everything is supported */
+  if(!arr)
+    return 1;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if(gavl_value_get_int(&arr->entries[i], &val_i) &&
+       (val_i == fmt))
+      return 1;
+    }
+  return 0;
+  }

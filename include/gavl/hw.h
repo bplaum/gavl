@@ -89,9 +89,25 @@ typedef enum
    via dictionaries.
 */
 
-#define GAVL_HW_BUF_TYPE "type" // gavl_hw_type_t 
-#define GAVL_HW_BUF_PFMTS "pfmts" // gavl_array_t
-#define GAVL_HW_BUF_SHARED "shared" // int
+#define GAVL_HW_BUF_TYPE         "type" // gavl_hw_type_t 
+#define GAVL_HW_BUF_PIXELFORMAT  "pfmt"
+#define GAVL_HW_BUF_SAMPLEFORMAT "sfmt"
+#define GAVL_HW_BUF_SAMPLERATE   "srate"
+#define GAVL_HW_BUF_SHARED       "shared" // int
+
+/* Write */
+void gavl_hw_buf_desc_init(gavl_dictionary_t * dict, gavl_hw_type_t type);
+
+/* Append integer format (e.g.  */
+void gavl_hw_buf_desc_append_format(gavl_dictionary_t * dict,
+                                    const char * key, int fmt);
+
+int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
+                                     const char * key, int fmt);
+
+
+/* */
+
 
 typedef struct
   {
