@@ -84,6 +84,15 @@ typedef enum
 
 #define GAVL_HW_BUFFER_WR (1<<0)
 
+/*
+   Plugins exchange information about supported buffer formats
+   via dictionaries.
+*/
+
+#define GAVL_HW_BUF_TYPE "type" // gavl_hw_type_t 
+#define GAVL_HW_BUF_PFMTS "pfmts" // gavl_array_t
+#define GAVL_HW_BUF_SHARED "shared" // int
+
 typedef struct
   {
   int fd;                // File handle
