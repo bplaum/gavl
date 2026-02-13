@@ -166,43 +166,52 @@ static int store_cache(gavl_http_client_t * c)
   const char * cache_control;
   const char * cache_file;
   const char * mimetype;
+  time_t expires;
+  
   time_t maxage = 0;
   time_t mtime;
 
   time_t cur;
 
+  //  fprintf(stderr, "store_cache %d\n", (c->flags & FLAG_HAS_CACHE));
+  
   if(!(c->flags & FLAG_HAS_CACHE))
     return 0;
 
   if(c->flags & FLAG_ERROR)
     return 0;
-  
-  if(!(cache_control = gavl_dictionary_get_string_i(&c->resp, "Cache-Control")) ||
-     strcasestr(cache_control, "no-store"))
-    return 0;
-  
-  mtime = gavl_http_header_get_time(&c->resp, "Last-Modified");
-
-  etag = gavl_dictionary_get_string_i(&c->resp, GAVL_HTTP_ETAG);
-
-  mimetype = gavl_dictionary_get_string_i(&c->resp, "Content-Type");
-  
-  if(!mtime && !etag)
-    return 0;
 
   cur = time(NULL);
-  
-  if((pos = strcasestr(cache_control, "max-age=")))
-    {
-    pos += strlen("max-age=");
-    maxage = strtoll(pos, NULL, 10);
-    }
-  else if(!strcasestr(cache_control, "no-cache") && mtime)
-    {
-    /* Guess max age */
-    maxage = (cur - mtime) / 10;
-    }
 
+  mtime = gavl_http_header_get_time(&c->resp, "Last-Modified");
+  etag = gavl_dictionary_get_string_i(&c->resp, GAVL_HTTP_ETAG);
+
+  
+  if((cache_control = gavl_dictionary_get_string_i(&c->resp, "Cache-Control")))
+    {
+    if(strcasestr(cache_control, "no-store"))
+      return 0;
+
+    if((pos = strcasestr(cache_control, "max-age=")))
+      {
+      pos += strlen("max-age=");
+      maxage = strtoll(pos, NULL, 10);
+      }
+    else if(!strcasestr(cache_control, "no-cache") && mtime)
+      {
+      /* Guess max age */
+      maxage = (cur - mtime) / 10;
+      }
+    
+    }
+  else if((expires = gavl_http_header_get_time(&c->resp, "Expires")))
+    maxage = expires - cur;
+  
+  mimetype = gavl_dictionary_get_string_i(&c->resp, "Content-Type");
+
+  if(!mtime && !etag && !maxage)
+    return 0;
+  
   if(mtime)
     gavl_dictionary_set_long(&c->cache_info, GAVL_META_MTIME, mtime);
 
@@ -234,6 +243,12 @@ static int check_cache_nonvalidate(gavl_http_client_t * c)
   int64_t cache_time;
   int64_t maxage;
   const char * cache_file;
+
+  /*  fprintf(stderr, "check_cache_nonvalidate %d %p %p\n",
+          (c->flags & FLAG_HAS_CACHE_FILE),
+          gavl_dictionary_get(&c->cache_info, GAVL_HTTP_CACHE_TIME),
+          gavl_dictionary_get(&c->cache_info, GAVL_HTTP_CACHE_MAXAGE)); */
+  
   if(!(c->flags & FLAG_HAS_CACHE_FILE) ||
      !gavl_dictionary_get_long(&c->cache_info, GAVL_HTTP_CACHE_TIME, &cache_time) ||
      !gavl_dictionary_get_long(&c->cache_info, GAVL_HTTP_CACHE_MAXAGE, &maxage) ||
@@ -2223,6 +2238,7 @@ static int async_iteration(gavl_io_t * io, int timeout)
       {
       c->state = STATE_COMPLETE;
       c->flags |= FLAG_RESPONSE_BODY_DONE;
+      store_cache(c);
       check_keepalive(c);
       return (c->flags & FLAG_ERROR) ? -1 : 1;
       }
