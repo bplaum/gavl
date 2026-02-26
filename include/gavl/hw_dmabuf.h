@@ -63,9 +63,6 @@ typedef struct
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create_dma(void);
 
 GAVL_PUBLIC gavl_pixelformat_t gavl_drm_pixelformat_from_fourcc(uint32_t fourcc, int * flags, int * drm_indices);
-GAVL_PUBLIC void gavl_hw_ctx_dma_set_supported_formats(gavl_hw_context_t * ctx, uint32_t * formats);
-
-GAVL_PUBLIC gavl_hw_frame_mode_t gavl_hw_ctx_dma_get_frame_mode(uint32_t format);
 
 #define GAVL_DMABUF_FLAG_SWAP_CHROMA (1<<0)
 #define GAVL_DMABUF_FLAG_SHUFFLE     (1<<1)

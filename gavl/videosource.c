@@ -38,9 +38,14 @@
 #define FLAG_SCALE_TIMESTAMPS (1<<2)
 #define FLAG_SUPPORT_HW       (1<<3) /* Support HW storage */
 
+
 #define FLAG_HW_TO_RAM        (1<<4) /* Transfer frames from hardware to RAM */
 
 #define FLAG_EOS              (1<<5) /* End of stream */
+#define FLAG_SUPPORT_SHUFFLE  (1<<6) /*  */
+
+#define FLAG_UNSHUFFLE_INPUT  (1<<7)
+#define FLAG_SHUFFLE_OUTPUT   (1<<8)
 
 struct gavl_video_source_s
   {
@@ -174,6 +179,11 @@ gavl_video_source_set_lock_funcs(gavl_video_source_t * src,
 void gavl_video_source_support_hw(gavl_video_source_t * s)
   {
   s->flags |= FLAG_SUPPORT_HW;
+  }
+
+void gavl_video_source_support_shuffle(gavl_video_source_t * s)
+  {
+  s->flags |= FLAG_SUPPORT_SHUFFLE;
   }
 
 const gavl_video_format_t *
@@ -613,3 +623,69 @@ void gavl_video_source_drain(gavl_video_source_t * s)
     fr = NULL;
   }
 
+typedef struct
+  {
+  gavl_hw_context_t * hwctx;
+  gavl_video_source_t * src;
+  } export_t;
+
+static gavl_source_status_t get_frame_export(void * priv, gavl_video_frame_t ** frame)
+  {
+  export_t * exp;
+  gavl_source_status_t st;
+  gavl_video_frame_t * frame1 = NULL;
+
+  exp = priv;
+  
+  if((st = gavl_video_source_read_frame(exp->src, &frame1)) != GAVL_SOURCE_OK)
+    return st;
+
+  if(!gavl_hw_ctx_export_video_frame(frame1, frame, exp->hwctx, NULL))
+    return GAVL_SOURCE_EOF;
+  else
+    return GAVL_SOURCE_OK;
+  
+  }
+
+static void free_export(void * priv)
+  {
+  export_t * exp = priv;
+
+  if(exp->hwctx)
+    gavl_hw_ctx_destroy(exp->hwctx);
+  free(exp);
+  }
+
+gavl_video_source_t *
+gavl_video_source_set_exporter(gavl_video_source_t * src, const gavl_array_t * import_formats)
+  {
+  export_t * priv;
+  const gavl_dictionary_t * fmt;
+  gavl_video_source_t * ret;
+
+  gavl_video_format_t vfmt;
+  
+  if(!src->src_format.hwctx || !(fmt = gavl_hw_ctx_can_export(src->src_format.hwctx, import_formats)))
+    return NULL;
+  
+  gavl_video_source_support_hw(src);  
+  
+  priv = calloc(1, sizeof(*priv));
+
+  priv->hwctx = gavl_hw_ctx_create_from_buffer_format(fmt);
+  priv->src = src;
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Exporting from %s to %s",
+           gavl_hw_type_to_string(gavl_hw_ctx_get_type(src->src_format.hwctx)),
+           gavl_hw_type_to_string(gavl_hw_ctx_get_type(priv->hwctx)));
+  
+  gavl_hw_ctx_set_video_importer(priv->hwctx, src->src_format.hwctx, &vfmt);
+  
+  //  gavl_video_format_copy(&vfmt, &src->src_format);
+  //  vfmt.hwctx = priv->hwctx;
+  
+  ret = gavl_video_source_create(get_frame_export, priv,
+                                 GAVL_SOURCE_SRC_ALLOC, &vfmt);
+  gavl_video_source_set_free_func(ret, free_export);
+  return ret;
+  }

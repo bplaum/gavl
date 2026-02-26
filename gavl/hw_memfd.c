@@ -84,26 +84,6 @@ static void memfd_buffer_attach(gavl_memfd_buffer_t * buf, int fd, int size)
   
 /* Functions */
 
-static gavl_pixelformat_t *
-get_image_formats_memfd(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
-  {
-  int i;
-  gavl_pixelformat_t * pixelformats = NULL;
-  int num_image_formats;
-
-  if(mode == GAVL_HW_FRAME_MODE_MAP)
-    {
-    num_image_formats = gavl_num_pixelformats();
-
-    pixelformats = calloc(num_image_formats+1, sizeof(*pixelformats));
-
-    for(i = 0; i < num_image_formats; i++)
-      pixelformats[i] = gavl_get_pixelformat(i);
-  
-    pixelformats[num_image_formats] = GAVL_PIXELFORMAT_NONE;
-    }
-  return pixelformats;
-  }
 
 static gavl_video_frame_t *
 video_frame_create_hw_memfd(gavl_hw_context_t * ctx, int alloc_resource)
@@ -276,7 +256,6 @@ static int packet_unmap_memfd(gavl_packet_t * p)
 
 static const gavl_hw_funcs_t funcs =
   {
-   .get_image_formats      = get_image_formats_memfd,
    .video_frame_create     = video_frame_create_hw_memfd,
    .video_frame_destroy    = video_frame_destroy_memfd,
    .video_frame_map        = video_frame_map_memfd,

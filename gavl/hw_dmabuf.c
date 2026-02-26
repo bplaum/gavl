@@ -66,7 +66,12 @@
 static void print_drm_info(int fd);
 #endif
 
-static uint32_t fourcc_from_gavl(gavl_hw_context_t * ctx, gavl_pixelformat_t pfmt, int * flags);
+static uint32_t fourcc_from_gavl_map(gavl_hw_context_t * ctx, gavl_pixelformat_t pfmt, int * flags);
+
+static gavl_hw_frame_mode_t gavl_hw_ctx_dma_get_frame_mode(uint32_t format);
+
+static void get_image_formats_dmabuf(gavl_hw_context_t * ctx);
+
 
 #define BPP_8  (1<<0)
 #define BPP_16 (1<<1)
@@ -133,10 +138,11 @@ drm_formats[] =
     { DRM_FORMAT_ABGR16161616,  GAVL_RGBA_64 },
     
     { DRM_FORMAT_ARGB8888,      GAVL_RGBA_32, GAVL_DMABUF_FLAG_SHUFFLE, { 2, 1, 0, 3 } },
+    //  fourcc_code('A', 'B', '2', '4')
     { DRM_FORMAT_ABGR8888,      GAVL_RGBA_32  },
     { DRM_FORMAT_XRGB8888,      GAVL_BGR_32  },
     { DRM_FORMAT_XBGR8888,      GAVL_RGB_32  },
-
+    
     { DRM_FORMAT_XRGB8888,      GAVL_RGB_32, GAVL_DMABUF_FLAG_SHUFFLE, { 2, 1, 0, 3 } },
     { DRM_FORMAT_XBGR8888,      GAVL_BGR_32, GAVL_DMABUF_FLAG_SHUFFLE, { 2, 1, 0, 3 } },
 
@@ -159,50 +165,39 @@ drm_formats[] =
     { /* */ }
   };
 
-
-#if 1
-static uint32_t fourcc_from_gavl(gavl_hw_context_t * ctx, gavl_pixelformat_t pfmt, int * flags)
+static uint32_t fourcc_from_gavl_map(gavl_hw_context_t * ctx, gavl_pixelformat_t pfmt, int * flags)
   {
   int i = 0;
-  dma_native_t * native = ctx->native;
-  
-  while(drm_formats[i].drm_fourcc)
-    {
-    if(drm_formats[i].pfmt != pfmt)
-      {
-      i++;
-      continue;
-      }
-    /* Check if it is actually supported */
-    if(native->supported_formats)
-      {
-      int j = 0;
-      while(native->supported_formats[j])
-        {
-        if(native->supported_formats[j] == drm_formats[i].drm_fourcc)
-          break;
-        j++;
-        }
 
-      if(!native->supported_formats[j])
-        {
-        i++;
-        continue;
-        }
-      }
-   
-    if(gavl_hw_ctx_dma_get_frame_mode(drm_formats[i].drm_fourcc) == ctx->mode)
+  const gavl_dictionary_t * dict;
+  const gavl_array_t * fourccs;
+  const gavl_array_t * pfmts;
+
+  int pixelformat = 0, fourcc = 0;
+  
+  if(!(dict = gavl_value_get_dictionary(&ctx->map_formats.entries[0])) ||
+     !(pfmts = gavl_dictionary_get_array(dict, GAVL_HW_BUF_PIXELFORMAT))  ||
+     !(fourccs = gavl_dictionary_get_array(dict, GAVL_HW_BUF_DMA_FOURCC)) ||
+     (fourccs->num_entries != pfmts->num_entries))
+    return 0;
+
+  for(i = 0; i < fourccs->num_entries; i++)
+    {
+    if(gavl_value_get_int(&fourccs->entries[i], &fourcc) &&
+       gavl_value_get_int(&pfmts->entries[i], &pixelformat))
       {
-      if(flags)
-        *flags = drm_formats[i].flags;
-      return drm_formats[i].drm_fourcc;
+      /*
+       *  We don't need to check if we support shuffling, because map_formats is
+       *  already set up correctly
+       */
+      
+      if(pixelformat == pfmt)
+        return fourcc;
       }
-    
-    i++;
     }
+  
   return 0;
   }
-#endif
 
 gavl_pixelformat_t gavl_drm_pixelformat_from_fourcc(uint32_t fourcc, int * flags, int * drm_indices)
   {
@@ -342,8 +337,9 @@ static int alloc_cma(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   int size;
   int flags = 0;
   gavl_dmabuf_video_frame_t *f = ret->storage;
+
   
-  f->fourcc = fourcc_from_gavl(ctx, ctx->vfmt.pixelformat, &flags);
+  f->fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
     
   gavl_video_format_get_frame_layout(&ctx->vfmt,
                                      offsets,
@@ -427,7 +423,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   create_struct.width  = ctx->vfmt.frame_width;
   create_struct.height = ctx->vfmt.frame_height; 
 
-  f->fourcc = fourcc_from_gavl(ctx, ctx->vfmt.pixelformat, &flags);
+  f->fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
   
   f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
   f->num_buffers = f->num_planes;
@@ -647,128 +643,92 @@ static int frame_to_hw_dmabuf(gavl_video_frame_t * dst,
   (gavl_drm_pixelformat_from_fourcc(fourcc, NULL, NULL) != GAVL_PIXELFORMAT_NONE) && \
   (gavl_hw_ctx_dma_get_frame_mode(fourcc) == mode)
 
-static int check_format(gavl_hw_context_t * ctx, uint32_t fourcc, gavl_hw_frame_mode_t mode)
+static gavl_pixelformat_t check_format(gavl_hw_context_t * ctx, uint32_t fourcc, gavl_hw_frame_mode_t * mode)
   {
-  int bpp;
+  int ret = 0;
   gavl_pixelformat_t pfmt;
   dma_native_t * native = ctx->native;
-  
   if((pfmt = gavl_drm_pixelformat_from_fourcc(fourcc, NULL, NULL)) == GAVL_PIXELFORMAT_NONE)
-    return 0;
-  
-  if(gavl_hw_ctx_dma_get_frame_mode(fourcc) != mode)
-    return 0;
+    return pfmt;
   
   if(native->bpp_supported == BPP_ALL)
-    return 1;
-  
-  bpp = get_bpp(pfmt);
-
-  switch(bpp)
-    {
-    case 8:
-      return !!(native->bpp_supported & BPP_8);
-      break;
-    case 16:
-      return !!(native->bpp_supported & BPP_16);
-      break;
-    case 24:
-      return !!(native->bpp_supported & BPP_24);
-      break;
-    case 32:
-      return !!(native->bpp_supported & BPP_32);
-      break;
-    case 64:
-      return !!(native->bpp_supported & BPP_64);
-      break;
-    }
-  
-  return 0;
-  }
-
-static gavl_pixelformat_t *
-get_image_formats_dmabuf(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
-  {
-  gavl_pixelformat_t * ret = NULL;
-
-  dma_native_t * native = ctx->native;
-  
-  int num = 0;
-  int i, j, k;
-  
-  if(native->supported_formats)
-    {
-    i = 0;
-    /* Count formats */
-    while(native->supported_formats[i])
-      {
-      if(check_format(ctx, native->supported_formats[i], mode))
-        {
-        num++;
-        }
-      i++;
-      }
-
-    ret = calloc(num + 1, sizeof(*ret));
-
-    j = 0;
-    i = 0;
-    while(native->supported_formats[i])
-      {
-      if(check_format(ctx, native->supported_formats[i], mode))
-        {
-        k = 0;
-        while(drm_formats[k].drm_fourcc)
-          {
-          if(drm_formats[k].drm_fourcc == native->supported_formats[i])
-            break;
-          k++;
-          }
-        
-        ret[j] = drm_formats[k].pfmt;
-        j++;
-        }
-      i++;
-      }
-    ret[j] = GAVL_PIXELFORMAT_NONE;
-    }
+    ret = 1;
   else
     {
-    /* Assume that everything is supported */
-
-    /* Count formats */
-
-    i = 0;
-    while(drm_formats[i].drm_fourcc)
+    int bpp;
+    bpp = get_bpp(pfmt);
+    switch(bpp)
       {
-      if(check_format(ctx, drm_formats[i].drm_fourcc, mode))
-        num++;
-      i++;
-      }
-      
-    ret = calloc(num + 1, sizeof(*ret));
-    
-    i = 0;
-    j = 0;
-    while(drm_formats[i].drm_fourcc)
-      {
-      if(check_format(ctx, drm_formats[i].drm_fourcc, mode))
-        {
-        ret[j] = drm_formats[i].pfmt;
-        j++;
-        }
-      i++;
+      case 8:
+        ret = !!(native->bpp_supported & BPP_8);
+        break;
+      case 16:
+        ret = !!(native->bpp_supported & BPP_16);
+        break;
+      case 24:
+        ret = !!(native->bpp_supported & BPP_24);
+        break;
+      case 32:
+        ret = !!(native->bpp_supported & BPP_32);
+        break;
+      case 64:
+        ret = !!(native->bpp_supported & BPP_64);
+        break;
       }
     }
-    
-  return ret;
+
+  if(ret)
+    {
+    *mode = gavl_hw_ctx_dma_get_frame_mode(fourcc);
+    return pfmt;
+    }
+  else
+    return GAVL_PIXELFORMAT_NONE;
+  }
+
+static void get_image_formats_dmabuf(gavl_hw_context_t * ctx)
+  {
+  gavl_pixelformat_t pfmt;
+
+  gavl_hw_frame_mode_t mode = 0;
+  int i;
+  
+  /* Assume that everything is supported */
+  gavl_dictionary_t * transfer_dict;
+  gavl_dictionary_t * map_dict;
+  
+  /* Count formats */
+
+  transfer_dict = gavl_hw_buf_desc_append(&ctx->transfer_formats, GAVL_HW_DMABUFFER);
+  map_dict = gavl_hw_buf_desc_append(&ctx->map_formats, GAVL_HW_DMABUFFER);
+  
+  i = 0;
+  while(drm_formats[i].drm_fourcc)
+    {
+    if((pfmt = check_format(ctx, drm_formats[i].drm_fourcc, &mode)) != GAVL_PIXELFORMAT_NONE)
+      {
+      switch(mode)
+        {
+        case GAVL_HW_FRAME_MODE_MAP:
+          gavl_hw_buf_desc_append_format(map_dict, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+          gavl_hw_buf_desc_append_format(map_dict, GAVL_HW_BUF_DMA_FOURCC,  drm_formats[i].drm_fourcc);
+          break;
+        case GAVL_HW_FRAME_MODE_TRANSFER:
+          gavl_hw_buf_desc_append_format(transfer_dict, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+          gavl_hw_buf_desc_append_format(transfer_dict, GAVL_HW_BUF_DMA_FOURCC,  drm_formats[i].drm_fourcc);
+          break;
+        default:
+          break;
+        }
+      }
+    i++;
+    }
   }
 
 static const gavl_hw_funcs_t funcs =
   {
 
     .destroy_native         = destroy_native_dmabuf,
-    .get_image_formats      = get_image_formats_dmabuf,
     .video_frame_create     = video_frame_create_hw_dmabuf,
     .video_frame_destroy    = video_frame_destroy_hw_dmabuf,
 
@@ -780,7 +740,6 @@ static const gavl_hw_funcs_t funcs =
 
    //    .video_format_adjust    = gavl_gl_adjust_video_format,
    //    .overlay_format_adjust  = gavl_gl_adjust_video_format,
-   //    .can_export             = exports_type_v4l2,
    //    .export_video_frame = export_video_frame_v4l2,
   };
 
@@ -796,7 +755,7 @@ static int test_heap_dev(dma_native_t * native, const char * dev)
   }
 
 
-gavl_hw_frame_mode_t gavl_hw_ctx_dma_get_frame_mode(uint32_t format)
+static gavl_hw_frame_mode_t gavl_hw_ctx_dma_get_frame_mode(uint32_t format)
   {
   int i = 0;
 
@@ -807,13 +766,12 @@ gavl_hw_frame_mode_t gavl_hw_ctx_dma_get_frame_mode(uint32_t format)
       i++;
       continue;
       }
-    if(gavl_pixelformat_is_yuv(drm_formats[i].pfmt) &&
-       (drm_formats[i].flags & GAVL_DMABUF_FLAG_SHUFFLE))
+    if(drm_formats[i].flags & GAVL_DMABUF_FLAG_SHUFFLE)
       return GAVL_HW_FRAME_MODE_TRANSFER;
     else
       return GAVL_HW_FRAME_MODE_MAP;
     }
-  return GAVL_HW_FRAME_MODE_MAP;
+  return GAVL_HW_FRAME_MODE_NONE;
   }
 
 
@@ -863,6 +821,7 @@ static int get_supported_bpp_values(int drm_fd)
 
 gavl_hw_context_t * gavl_hw_ctx_create_dma()
   {
+  gavl_hw_context_t * ctx;
   dma_native_t * native;
   int support_flags = GAVL_HW_SUPPORTS_VIDEO;
 
@@ -922,60 +881,11 @@ gavl_hw_context_t * gavl_hw_ctx_create_dma()
       }
     }
   
-  return gavl_hw_context_create_internal(native, &funcs, GAVL_HW_DMABUFFER, support_flags);
+  ctx = gavl_hw_context_create_internal(native, &funcs, GAVL_HW_DMABUFFER, support_flags);
+  get_image_formats_dmabuf(ctx);
+  return ctx;
   }
 
-void gavl_hw_ctx_dma_set_supported_formats(gavl_hw_context_t * ctx, uint32_t * formats)
-  {
-  int num;
-  int i, j;
-  dma_native_t * native = ctx->native;
-
-  if(native->supported_formats)
-    free(native->supported_formats);
-
-  num = 0;
-  i = 0;
-  while(drm_formats[i].drm_fourcc)
-    {
-    j = 0;
-    while(formats[j])
-      {
-      if(formats[j] == drm_formats[i].drm_fourcc)
-        {
-        num++;
-        break;
-        }
-      j++;
-      }
-    i++;
-    }
-
-  native->supported_formats = calloc(num+1, sizeof(*native->supported_formats));
-
-  num = 0;
-  i = 0;
-  while(drm_formats[i].drm_fourcc)
-    {
-    j = 0;
-    while(formats[j])
-      {
-      if(formats[j] == drm_formats[i].drm_fourcc)
-        {
-        native->supported_formats[num] = drm_formats[i].drm_fourcc;
-        num++;
-        break;
-        }
-      j++;
-      }
-    i++;
-    }
-
-  /* Set pixelformats for mapping */
-  //  if(ctx->
-
-  
-  }
 
 #ifdef DUMP_DEVICE_INFO
 

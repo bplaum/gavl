@@ -14,7 +14,7 @@ hw_dmabuf.h \
 hw_egl.h \
 hw_gl.h \
 hw.h \
-hw_shm.h \
+hw_memfd.h \
 hw_v4l2.h \
 hw_vaapi.h \
 io.h \

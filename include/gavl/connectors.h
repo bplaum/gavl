@@ -215,6 +215,8 @@ GAVL_PUBLIC void
 gavl_video_source_set_free_func(gavl_video_source_t * src,
                                 gavl_connector_free_func_t free_func);
 
+GAVL_PUBLIC gavl_video_source_t *
+gavl_video_source_set_exporter(gavl_video_source_t * src, const gavl_array_t * import_formats);
 
   
 /** \brief Get conversion options of a video source
@@ -259,6 +261,9 @@ void gavl_video_source_destroy(gavl_video_source_t * s);
 GAVL_PUBLIC
 void gavl_video_source_support_hw(gavl_video_source_t * s);
 
+GAVL_PUBLIC
+void gavl_video_source_support_shuffle(gavl_video_source_t * s);
+  
 /** \brief Get the native format
  *  \param s A video source
  *  \returns The native video format

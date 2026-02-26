@@ -34,6 +34,7 @@
 #include <config.h>
 
 #include <gavl/gavl.h>
+#include <gavl/hw.h>
 #include <gavl/hw_vaapi.h>
 #include <gavl/metatags.h>
 #include <gavl/trackinfo.h>
@@ -388,6 +389,7 @@ static void dump_image_format(const VAImageFormat * f)
   }
 #endif
 
+#if 0
 static gavl_pixelformat_t *
 gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
@@ -437,7 +439,7 @@ gavl_vaapi_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   ret[num_ret] = GAVL_PIXELFORMAT_NONE;
   return ret;
   }
-
+#endif
 
 static void gavl_vaapi_cleanup(void * priv)
   {
@@ -473,14 +475,6 @@ void gavl_vaapi_set_surface_id(gavl_video_frame_t * f, VASurfaceID id)
   *surf = id;
   }
 
-#if 0
-VASubpictureID gavl_vaapi_get_subpicture_id(const gavl_video_frame_t * f)
-  {
-  vaapi_frame_t * frame = f->storage;
-  return frame->ovl;
-  }
-#endif
-
 VAImageID gavl_vaapi_get_image_id(const gavl_video_frame_t * f)
   {
   gavl_vaapi_video_frame_t * frame = f->storage;
@@ -488,7 +482,8 @@ VAImageID gavl_vaapi_get_image_id(const gavl_video_frame_t * f)
   }
   
 static void gavl_vaapi_video_format_adjust(gavl_hw_context_t * ctx,
-                                    gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
+                                           gavl_video_format_t * fmt,
+                                           gavl_hw_frame_mode_t mode)
   {
   gavl_video_format_set_frame_size(fmt, 16, 16);
   }
@@ -663,27 +658,34 @@ static int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
   return 0;
   }
 
-static int gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_hw_context_t * other)
+static const gavl_dictionary_t * gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_array_t * arr)
   {
-  switch(other->type)
+  int hw = 0;
+  const gavl_dictionary_t * ret;
+
+  if(!arr || !arr->num_entries || !(ret = gavl_value_get_dictionary(&arr->entries[0])) ||
+     !gavl_dictionary_get_int(ret, GAVL_HW_BUF_TYPE, &hw))
+    return NULL;
+  
+  switch(hw)
     {
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
       {
-      return 1;
+      return ret;
       }
       break;
 #endif
     default:
       break;
     }
-  return 0;
+  return NULL;
   }
 
 static const gavl_hw_funcs_t funcs =
   {
     .destroy_native = gavl_vaapi_cleanup,
-    .get_image_formats = gavl_vaapi_get_image_formats,
+    //    .get_image_formats = gavl_vaapi_get_image_formats,
     .video_frame_create = gavl_vaapi_video_frame_create,
     .video_frame_destroy = gavl_vaapi_video_frame_destroy,
     .video_frame_map = gavl_vaapi_map_frame,

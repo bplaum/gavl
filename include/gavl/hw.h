@@ -39,6 +39,8 @@
 
 typedef enum
   {
+    /* Undefined / unsupported */
+    GAVL_HW_FRAME_MODE_NONE      = 0,
     /* Make a frame pool with mappable frames. Use this for
        sources, which write into user supplied memory */
     GAVL_HW_FRAME_MODE_MAP      = 1,
@@ -91,19 +93,79 @@ typedef enum
 
 #define GAVL_HW_BUF_TYPE         "type" // gavl_hw_type_t 
 #define GAVL_HW_BUF_PIXELFORMAT  "pfmt"
-#define GAVL_HW_BUF_SAMPLEFORMAT "sfmt"
-#define GAVL_HW_BUF_SAMPLERATE   "srate"
+
+/* fourcc for DMA buffer import (int array). */
+#define GAVL_HW_BUF_DMA_FOURCC   "dmafourcc"
+
+
+#define GAVL_HW_BUF_SAMPLEFORMAT     "sfmt"
+#define GAVL_HW_BUF_SAMPLERATE       "srate"
+#define GAVL_HW_BUF_INTERLEAVE_MODE  "interleave"
+#define GAVL_HW_BUF_SHUFFLE          "shuffle" // int
+
 #define GAVL_HW_BUF_SHARED       "shared" // int
+#define GAVL_HW_BUF_MAX_W        "max_w" // int
+#define GAVL_HW_BUF_MAX_H        "max_h" // int
+
+/* Set by sinks, which support shuffled RGBA, which is *not* supported
+   by gavl. E.g. the egl renderer can flip color channels via the colormatrix */
+   
+#define GAVL_HW_CAN_SHUFFLE_RGB  "can_shuffle_rgb" // int
+
+/* Source -> sink */
+
+#define GAVL_HW_MAX_FRAMES       "maxframes" 
+#define GAVL_HW_SHMADDR          "shmaddr"
+
 
 /* Write */
-void gavl_hw_buf_desc_init(gavl_dictionary_t * dict, gavl_hw_type_t type);
+GAVL_PUBLIC 
+gavl_dictionary_t * gavl_hw_buf_desc_append(gavl_array_t * arr, gavl_hw_type_t type);
 
 /* Append integer format (e.g.  */
+
+GAVL_PUBLIC
 void gavl_hw_buf_desc_append_format(gavl_dictionary_t * dict,
                                     const char * key, int fmt);
 
+GAVL_PUBLIC
+void gavl_hw_buf_desc_set_max_size(gavl_dictionary_t * dict, int w, int h);
+
+GAVL_PUBLIC
+int gavl_hw_buf_desc_get_max_size(const gavl_dictionary_t * dict, int * w, int * h);
+
+GAVL_PUBLIC
 int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
                                      const char * key, int fmt);
+
+GAVL_PUBLIC
+int gavl_hw_buf_desc_can_create_audio(const gavl_array_t * arr,
+                                      const gavl_audio_format_t * fmt);
+
+GAVL_PUBLIC
+gavl_hw_type_t gavl_hw_buf_desc_can_import_audio(const gavl_array_t * arr,
+                                                 const gavl_audio_format_t * fmt);
+
+/* Return the first array entry, which supports the format */
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_video_format(const gavl_array_t * arr,
+                                       const gavl_video_format_t * fmt);
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_dma_fourcc(const gavl_array_t * arr, int fourcc);
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_audio_format(const gavl_array_t * arr,
+                                       const gavl_audio_format_t * fmt);
+
+/* Return the array entry, for which the conversion price is minimal */
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_get_pixelformat_conversion(const gavl_array_t * arr,
+                                            const gavl_video_format_t * fmt,
+                                            gavl_pixelformat_t * pfmt,
+                                            int * price);
 
 
 /* */
@@ -130,9 +192,13 @@ GAVL_PUBLIC const char * gavl_hw_type_to_string(gavl_hw_type_t type);
 GAVL_PUBLIC const char * gavl_hw_type_to_id(gavl_hw_type_t type);
 GAVL_PUBLIC gavl_hw_type_t gavl_hw_type_from_id(const char * id);
 
-
 GAVL_PUBLIC int gavl_hw_ctx_can_transfer(gavl_hw_context_t * from, gavl_hw_context_t * to);
 
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_ctx_can_export(gavl_hw_context_t * ctx, const gavl_array_t * to);
+
+GAVL_PUBLIC 
+int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context_t * from);
 
 /*
  *  Set maximum number of frames to create.
@@ -172,6 +238,25 @@ GAVL_PUBLIC int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
                                                  gavl_video_frame_t ** frame2,
                                                  const gavl_video_format_t * fmt);
 
+/*
+ *  Import a video frame from another hardware context.
+ *
+ *  If *dst == NULL, we enable frame pool mode.
+ *
+ *  if *dst != NULL, fmt must specify the video format
+ */ 
+
+int gavl_hw_ctx_import_video_frame(gavl_video_frame_t * src,
+                                   gavl_video_frame_t ** dst,
+                                   gavl_hw_context_t * dst_ctx,
+                                   const gavl_video_format_t * fmt);
+
+int gavl_hw_ctx_export_video_frame(gavl_video_frame_t * src,
+                                   gavl_video_frame_t ** dst,
+                                   gavl_hw_context_t * dst_ctx,
+                                   const gavl_video_format_t * fmt);
+
+
 GAVL_PUBLIC 
 gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
                                                      int buf_idx);
@@ -180,18 +265,8 @@ GAVL_PUBLIC gavl_video_frame_t *
 gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx, int buf_idx);
 
 
-GAVL_PUBLIC const gavl_pixelformat_t *
-gavl_hw_ctx_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode);
-
 GAVL_PUBLIC gavl_hw_type_t gavl_hw_ctx_get_type(const gavl_hw_context_t * ctx);
 
-GAVL_PUBLIC void gavl_hw_video_format_adjust(gavl_hw_context_t * ctx,
-                                             gavl_video_format_t * fmt,
-                                             gavl_hw_frame_mode_t mode);
-
-GAVL_PUBLIC void gavl_hw_audio_format_adjust(gavl_hw_context_t * ctx,
-                                             gavl_audio_format_t * fmt,
-                                             gavl_hw_frame_mode_t mode);
 
 /* Format will be adjusted if it's not supported by the hardware */
 
@@ -294,9 +369,6 @@ GAVL_PUBLIC int gavl_video_frame_hw_can_transfer(gavl_hw_context_t * from,
 
 /* Store in a stream structure */
 
-#define GAVL_META_HW_TYPE       "hw-type"
-#define GAVL_META_HW_MAX_FRAMES "hw-maxframes"
-#define GAVL_META_HW_SHMADDR    "hw-shmaddr"
 
 GAVL_PUBLIC void
 gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict);
@@ -308,6 +380,19 @@ GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict)
 
 GAVL_PUBLIC gavl_hw_context_t * gavl_hw_ctx_create(gavl_hw_type_t type);
 
+GAVL_PUBLIC 
+gavl_hw_context_t * gavl_hw_ctx_create_from_buffer_format(const gavl_dictionary_t * dict);
+
+
+GAVL_PUBLIC const gavl_array_t * gavl_hw_ctx_get_import_formats(const gavl_hw_context_t *);
+GAVL_PUBLIC const gavl_array_t * gavl_hw_ctx_get_transfer_formats(const gavl_hw_context_t *);
+GAVL_PUBLIC const gavl_array_t * gavl_hw_ctx_get_map_formats(const gavl_hw_context_t *);
+
+GAVL_PUBLIC void gavl_hw_ctx_set_transfer_formats(gavl_hw_context_t *, const gavl_array_t *);
+GAVL_PUBLIC void gavl_hw_ctx_set_map_formats(gavl_hw_context_t *, const gavl_array_t *);
+
+GAVL_PUBLIC void gavl_hw_buffer_format_dump(const gavl_dictionary_t * dict);
+GAVL_PUBLIC void gavl_hw_buffer_formats_dump(const gavl_array_t * arr);
 
 
 

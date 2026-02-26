@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([gavl], [2.0.1])
+AC_INIT([gavl], [2.1.0])
 AC_CONFIG_SRCDIR([include/gavl/gavl.h])
 AM_INIT_AUTOMAKE
 
@@ -12,7 +12,7 @@ GAVL_VERSION_MAJOR=`echo $VERSION | cut -d . -f 1`
 GAVL_VERSION_MINOR=`echo $VERSION | cut -d . -f 2`
 GAVL_VERSION_MICRO=`echo $VERSION | cut -d . -f 3 | cut -d p -f 1`
 
-LTVERSION_CURRENT="3"
+LTVERSION_CURRENT="4"
 LTVERSION_REVISION="0"
 LTVERSION_AGE="0"
 

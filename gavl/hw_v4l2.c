@@ -122,7 +122,7 @@ static void dump_controls(gavl_v4l2_device_t * dev);
 #endif
 
 static void destroy_native_v4l2(void * native);
-static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to);
+static const gavl_dictionary_t * can_export_v4l2(gavl_hw_context_t * ctx, const gavl_array_t * arr);
 static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_frame_t * src, gavl_video_frame_t * dst);
 
 
@@ -188,7 +188,7 @@ struct gavl_v4l2_device_s
   
   gavl_dictionary_t * s; // Stream (not owned by us)
   
-#ifdef HAVE_DRM
+#if 0
   /* For importig DMA buffers */
   gavl_hw_context_t * hwctx_dmabuf;
 #endif // HAVE_DRM
@@ -1151,7 +1151,7 @@ static void release_buffers_mmap(gavl_v4l2_device_t * dev, int type, int count)
   memset(port->bufs, 0, count * sizeof(port->bufs[0]));
   }
 
-#ifdef HAVE_DRM
+#if 0
 
 static int request_buffers_dmabuf(port_t * port, int count)
   {
@@ -2442,7 +2442,7 @@ static gavl_video_frame_t * sink_get_func_mmap(void * priv)
   return dev->output.vframe;
   }
 
-#ifdef HAVE_DRM
+#if 0
 static gavl_sink_status_t sink_put_func_dmabuf(void * priv, gavl_video_frame_t * frame)
   {
   struct v4l2_buffer buf;
@@ -2596,7 +2596,7 @@ static gavl_sink_status_t sink_put_func_mmap(void * priv, gavl_video_frame_t * f
 static int init_video_output(gavl_v4l2_device_t * dev,
                              gavl_video_format_t * fmt, int num_bufs)
   {
-#ifdef HAVE_DRM
+#if 0
   int pixfmt_conversion;
 #endif
   gavl_video_sink_get_func get_func = NULL;
@@ -2608,7 +2608,7 @@ static int init_video_output(gavl_v4l2_device_t * dev,
   
   pfmt = gavl_pixelformat_get_best(fmt->pixelformat, dev->sink_pixelformats, NULL);
 
-#ifdef HAVE_DRM
+#if 0
   if(fmt->pixelformat != pfmt)
     pixfmt_conversion = 1;
 #endif
@@ -2638,7 +2638,7 @@ static int init_video_output(gavl_v4l2_device_t * dev,
     }
 #endif
   
-#ifdef HAVE_DRM
+#if 0
   /* Initialize output (src) */
   if(!pixfmt_conversion && fmt->hwctx)
     {
@@ -2813,7 +2813,7 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   if(dev->flags & OUTPUT_STREAM_ON)
     stream_off(dev, dev->output.buf_type);
   
-#ifdef HAVE_DRM  
+#if 0  
   if(dev->hwctx_dmabuf)
     release_buffers_dmabuf(&dev->output, dev->output.num_bufs);
   else
@@ -2840,7 +2840,7 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
     gavl_video_frame_destroy(dev->output.vframe);
     }
 
-#ifdef HAVE_DRM  
+#if 0  
   if(dev->hwctx_dmabuf)
     gavl_hw_ctx_destroy(dev->hwctx_dmabuf);
 #endif
@@ -3112,6 +3112,7 @@ static const struct
   gavl_pixelformat_t pixelformat;
   gavl_codec_id_t codec_id;
   uint32_t           drm;
+  int shuffle_indices[GAVL_MAX_COLOR_CHANNELS];
   }
 pixelformats[] =
   {
@@ -3123,15 +3124,45 @@ pixelformats[] =
     // #define V4L2_PIX_FMT_RGB555X v4l2_fourcc('R','G','B','Q') /* 16  RGB-5-5-5 BE  */
     // #define V4L2_PIX_FMT_RGB565X v4l2_fourcc('R','G','B','R') /* 16  RGB-5-6-5 BE  */
     // #define V4L2_PIX_FMT_BGR24   v4l2_fourcc('B','G','R','3') /* 24  BGR-8-8-8     */
+
     { V4L2_PIX_FMT_BGR24, GAVL_BGR_24, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGR888 },
     // #define V4L2_PIX_FMT_RGB24   v4l2_fourcc('R','G','B','3') /* 24  RGB-8-8-8     */
     { V4L2_PIX_FMT_RGB24, GAVL_RGB_24, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGB888 },
+    //#define V4L2_PIX_FMT_RGBA32  v4l2_fourcc('A', 'B', '2', '4') /* 32  RGBA-8-8-8-8  */
+    { V4L2_PIX_FMT_RGBA32, GAVL_RGBA_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_ABGR8888 },
+    // #define V4L2_PIX_FMT_GREY    v4l2_fourcc('G','R','E','Y') /*  8  Greyscale     */
+    { V4L2_PIX_FMT_GREY, GAVL_GRAY_8, GAVL_CODEC_ID_NONE, 0 },
+    //#define V4L2_PIX_FMT_RGBX32  v4l2_fourcc('X', 'B', '2', '4') /* 32  RGBX-8-8-8-8  */
+    { V4L2_PIX_FMT_RGBX32, GAVL_RGB_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_XBGR8888 },
     // #define V4L2_PIX_FMT_BGR32   v4l2_fourcc('B','G','R','4') /* 32  BGR-8-8-8-8   */
     { V4L2_PIX_FMT_BGR32, GAVL_BGR_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGRX8888 },
     // #define V4L2_PIX_FMT_RGB32   v4l2_fourcc('R','G','B','4') /* 32  RGB-8-8-8-8   */
     { V4L2_PIX_FMT_RGB32, GAVL_RGB_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGBX8888 },
-    // #define V4L2_PIX_FMT_GREY    v4l2_fourcc('G','R','E','Y') /*  8  Greyscale     */
+    //#define V4L2_PIX_FMT_BGRX32  v4l2_fourcc('R', 'X', '2', '4') /* 32  XBGR-8-8-8-8  */
+    { V4L2_PIX_FMT_BGRX32, GAVL_BGR_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGBX8888 },
+    
+#if 1
+    
+    //#define V4L2_PIX_FMT_ABGR32  v4l2_fourcc('A', 'R', '2', '4') /* 32  BGRA-8-8-8-8  */
+    { V4L2_PIX_FMT_ABGR32, GAVL_RGBA_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_ARGB8888, { 3, 2, 1, 0 } },
+
+    //#define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4') /* 32  BGRX-8-8-8-8  */
+    { V4L2_PIX_FMT_XBGR32, GAVL_RGB_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_XRGB8888, { 3, 2, 1, 0 } },
+
+    //#define V4L2_PIX_FMT_BGRA32  v4l2_fourcc('R', 'A', '2', '4') /* 32  ABGR-8-8-8-8  */
+    { V4L2_PIX_FMT_BGRA32, GAVL_RGBA_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_RGBA8888, { 2, 1, 0, 3 } },
+
+    //#define V4L2_PIX_FMT_ARGB32  v4l2_fourcc('B', 'A', '2', '4') /* 32  ARGB-8-8-8-8  */
+    { V4L2_PIX_FMT_ARGB32, GAVL_RGBA_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGRA8888, { 1, 2, 3, 0 } },
+
+    //#define V4L2_PIX_FMT_XRGB32  v4l2_fourcc('B', 'X', '2', '4') /* 32  XRGB-8-8-8-8  */
+    { V4L2_PIX_FMT_XRGB32, GAVL_RGB_32, GAVL_CODEC_ID_NONE, DRM_FORMAT_BGRX8888, { 1, 2, 3, 0 } },
+
+
+#endif
+
     { V4L2_PIX_FMT_GREY, GAVL_GRAY_8,  GAVL_CODEC_ID_NONE, DRM_FORMAT_R8 },
+
     // #define V4L2_PIX_FMT_PAL8    v4l2_fourcc('P','A','L','8') /*  8  8-bit palette */
     // #define V4L2_PIX_FMT_YVU410  v4l2_fourcc('Y','V','U','9') /*  9  YVU 4:1:0     */
 #ifdef DRM_FORMAT_YVU410
@@ -3500,15 +3531,21 @@ static int export_video_frame_v4l2(const gavl_video_format_t * vfmt, gavl_video_
   return 0;
   }
 
-static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to)
+static const gavl_dictionary_t * can_export_v4l2(gavl_hw_context_t * ctx, const gavl_array_t * arr)
   {
-  switch(to->type)
+  const gavl_dictionary_t * ret;
+  int hw = 0;
+  
+  if(!arr || !arr->num_entries || !(ret = gavl_value_get_dictionary(&arr->entries[0])) ||
+     !gavl_dictionary_get_int(ret, GAVL_HW_BUF_TYPE, &hw))
+    return NULL;
+
+  switch(hw)
     {
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
       {
       /* Test if buffer exporting actually works */
-      int ret = 0;
       gavl_hw_context_t * dma_ctx = NULL;
       gavl_video_frame_t * dma_frame = NULL;
       port_t * port = ctx->native;
@@ -3518,7 +3555,7 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
       gavl_video_format_t fmt;
       
       if(dev->flags & DMABUF_CHECKED)
-        return !!(dev->flags & DMABUF_SUPPORTED);
+        return ret;
       
       if(!port->num_bufs)
         {
@@ -3550,12 +3587,23 @@ static int can_export_v4l2(gavl_hw_context_t * ctx, const gavl_hw_context_t * to
       
       if(export_video_frame_v4l2(&port->format, port->vframe, dma_frame))
         {
-        ret = 1;
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export supported");
+        gavl_dmabuf_video_frame_t * dma_storage = dma_frame->storage;
+
+        if(!gavl_hw_buf_desc_supports_dma_fourcc(arr, dma_storage->fourcc))
+          {
+          gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                   "DMABUF export supported but fourcc cannot be imported");
+          ret = NULL;
+          }
+        else
+          gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+                   "DMABUF export supported");
         }
       else
         {
-        gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "DMABUF export not supported by driver");
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                 "DMABUF export not supported by driver");
+        ret = NULL;
         }
 
       if(dma_frame)

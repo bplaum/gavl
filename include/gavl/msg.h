@@ -209,6 +209,14 @@
 
 #define GAVL_CMD_SRC_SEEK              103
 
+/** \brief Set buffer info. To be called right before start()
+    arg0: type (gavl_stream_type_t as int)
+    arg1: array
+ */
+
+#define GAVL_CMD_SRC_SET_BUFFER_FORMATS  104
+
+
 /** \brief Start the source
  */
 

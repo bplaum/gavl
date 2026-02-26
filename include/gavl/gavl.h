@@ -1437,6 +1437,7 @@ float gavl_volume_to_float(int volume, float one, int steps);
  */
   
 #define GAVL_MAX_PLANES 4 /*!< Maximum number of planes */
+#define GAVL_MAX_COLOR_CHANNELS 4 /*!< Maximum number of color channels */
 
 /** \defgroup rectangle Rectangles
  * \ingroup video
@@ -1537,9 +1538,6 @@ void gavl_rectangle_crop_to_format_scale_f(gavl_rectangle_f_t * src_rect,
                                            gavl_rectangle_f_t * dst_rect,
                                            const gavl_video_format_t * src_format,
                                            const gavl_video_format_t * dst_format);
-
-  
-  
 
 /*! \brief Let an integer rectangle span the whole image size of a video format
  * \ingroup rectangle
@@ -2381,8 +2379,7 @@ gavl_interlace_mode_t gavl_short_string_to_interlace_mode(const char * mode);
   
 GAVL_PUBLIC
 int gavl_interlace_mode_is_mixed(gavl_interlace_mode_t mode);
-  
-  // #include <gavl/hw.h> // Needs forward declarations
+ 
 
 /* Video format structure */
 
@@ -2436,6 +2433,9 @@ struct gavl_video_format_s
   gavl_hw_context_t * hwctx;         //!< Handle for accessing the frames. If NULL, frames are in regular RAM
   
   gavl_image_orientation_t orientation;
+
+  int shuffle_indices[GAVL_MAX_COLOR_CHANNELS];
+  
   };
 
 /*!
@@ -2597,6 +2597,12 @@ void gavl_video_format_dump(const gavl_video_format_t * format);
 GAVL_PUBLIC
 void gavl_video_format_dumpi(const gavl_video_format_t * format, int indent);
 
+/* Color channels have a nonstandard order, a separate unshuffle step will be
+   added unless gavl_video_source_support_shuffle is called */
+GAVL_PUBLIC
+int gavl_video_format_has_shuffle(const gavl_video_format_t * format);
+
+  
 GAVL_PUBLIC
 void gavl_video_format_normalize_orientation(gavl_video_format_t * in_format,
                                              gavl_video_format_t * out_format);

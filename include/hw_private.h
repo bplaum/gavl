@@ -54,13 +54,11 @@
 typedef struct
   {
   void (*destroy_native)(void * native);
+  const gavl_dictionary_t * (*can_export)(gavl_hw_context_t * ctx, const gavl_array_t * arr);
   
-  int (*can_import)(gavl_hw_context_t * ctx, const gavl_hw_context_t * from);
-  int (*can_export)(gavl_hw_context_t * ctx, const gavl_hw_context_t * to);
-
   /* Video stuff */
     
-  gavl_pixelformat_t * (*get_image_formats)(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode);
+  //  gavl_pixelformat_t * (*get_image_formats)(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode);
   
   void (*video_format_adjust)(gavl_hw_context_t * ctx,
                               gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode);
@@ -180,8 +178,8 @@ struct gavl_hw_context_s
   
   int flags;
   
-  gavl_pixelformat_t * image_formats_map;
-  gavl_pixelformat_t * image_formats_transfer;
+  //  gavl_pixelformat_t * image_formats_map;
+  //  gavl_pixelformat_t * image_formats_transfer;
   
   int support_flags;
   
@@ -206,6 +204,10 @@ struct gavl_hw_context_s
   
   reftable_t * reftab;
   reftable_t * reftab_priv;
+
+  gavl_array_t import_formats;
+  gavl_array_t transfer_formats;
+  gavl_array_t map_formats;
   
   };
 

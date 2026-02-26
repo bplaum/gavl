@@ -38,6 +38,7 @@
 #include <gavl/hw.h>
 #include <hw_private.h>
 
+#include <gavl/utils.h>
 
 
 #include <hw_dmabuf.h>
@@ -45,18 +46,6 @@
 
 #define DEFAULT_MAX_FRAMES 16
 
-
-static void ensure_formats(gavl_hw_context_t * ret)
-  {
-  if(ret->image_formats_map || ret->image_formats_transfer)
-    return;
-
-  if(ret->funcs->get_image_formats)
-    {
-    ret->image_formats_map = ret->funcs->get_image_formats(ret, GAVL_HW_FRAME_MODE_MAP);
-    ret->image_formats_transfer = ret->funcs->get_image_formats(ret, GAVL_HW_FRAME_MODE_TRANSFER);
-    }
-  }
 
   
 
@@ -98,16 +87,6 @@ void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
   else
     gavl_hw_frame_pool_reset(ctx, 1);
   
-  if(ctx->image_formats_map)
-    {
-    free(ctx->image_formats_map);
-    ctx->image_formats_map = NULL;
-    }
-  if(ctx->image_formats_transfer)
-    {
-    free(ctx->image_formats_transfer);
-    ctx->image_formats_transfer = NULL;
-    }
   ctx->max_frames = DEFAULT_MAX_FRAMES;
   
   //  get_formats(ctx);
@@ -120,56 +99,14 @@ void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx)
   if(ctx->funcs->destroy_native)
     ctx->funcs->destroy_native(ctx->native);
 
-  if(ctx->image_formats_map)
-    free(ctx->image_formats_map);
-  if(ctx->image_formats_transfer)
-    free(ctx->image_formats_transfer);
 
   gavl_hw_reftable_destroy(ctx);
+
+  gavl_array_free(&ctx->import_formats);
+  gavl_array_free(&ctx->map_formats);
+  gavl_array_free(&ctx->transfer_formats);
   
   free(ctx);
-  }
-
-
-
-const gavl_pixelformat_t *
-gavl_hw_ctx_get_image_formats(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
-  {
-  ensure_formats(ctx);
-  
-  switch(mode)
-    {
-    case GAVL_HW_FRAME_MODE_MAP:
-      return ctx->image_formats_map;
-      break;
-    case GAVL_HW_FRAME_MODE_TRANSFER:
-      return ctx->image_formats_transfer;
-      break;
-    default:
-      break;
-    }
-  return NULL;
-  }
-
-
-void gavl_hw_video_format_adjust(gavl_hw_context_t * ctx,
-                                 gavl_video_format_t * fmt, gavl_hw_frame_mode_t mode)
-  {
-  if(ctx->funcs->get_image_formats)
-    fmt->pixelformat = gavl_pixelformat_get_best(fmt->pixelformat,
-                                                 gavl_hw_ctx_get_image_formats(ctx, mode),
-                                                 NULL);
-  
-  if(ctx->funcs->video_format_adjust)
-    ctx->funcs->video_format_adjust(ctx, fmt, mode);
-  }
-
-void gavl_hw_audio_format_adjust(gavl_hw_context_t * ctx,
-                                 gavl_audio_format_t * fmt, gavl_hw_frame_mode_t mode)
-  {
-  
-  if(ctx->funcs->audio_format_adjust)
-    ctx->funcs->audio_format_adjust(ctx, fmt, mode);
   }
 
 
@@ -379,17 +316,19 @@ gavl_hw_type_t gavl_hw_type_from_id(const char * id)
   }
 
 #if 1
-static int gavl_hw_ctx_can_export(gavl_hw_context_t * ctx, const gavl_hw_context_t * to)
+const gavl_dictionary_t * gavl_hw_ctx_can_export(gavl_hw_context_t * ctx, const gavl_array_t * to)
   {
-  if(ctx->funcs->can_export && ctx->funcs->can_export(ctx, to))
-    return 1;
+  const gavl_dictionary_t * ret;
+  if(ctx->funcs->can_export && (ret = ctx->funcs->can_export(ctx, to)))
+    return ret;
   else
-    return 0;
+    return NULL;
   }
 
-static int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context_t * from)
+int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context_t * from)
   {
-  if(ctx->funcs->can_import && ctx->funcs->can_import(ctx, from))
+  if((from->flags & HW_CTX_FLAG_VIDEO) &&
+     gavl_hw_buf_desc_supports_video_format(&ctx->import_formats, &from->vfmt))
     return 1;
   else
     return 0;
@@ -398,7 +337,7 @@ static int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context
 
 int gavl_hw_ctx_can_transfer(gavl_hw_context_t * from, gavl_hw_context_t * to)
   {
-  return gavl_hw_ctx_can_import(to, from) || gavl_hw_ctx_can_export(from, to);
+  return gavl_hw_ctx_can_import(to, from) || gavl_hw_ctx_can_export(from, &to->import_formats);
   }
 
 
@@ -432,6 +371,74 @@ gavl_video_frame_t * gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx,
   return f;
   }
 
+
+int gavl_hw_ctx_import_video_frame(gavl_video_frame_t * src,
+                                   gavl_video_frame_t ** dst,
+                                   gavl_hw_context_t * dst_ctx,
+                                   const gavl_video_format_t * fmt)
+  {
+  /* If dst is not given: Enable pool mode */
+  if(!*dst)
+    {
+    if(src->buf_idx < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot import video frame (need buf_idx)");
+      return 0;
+      }
+
+    /* Frame was already imported */
+    if((*dst = gavl_hw_ctx_get_imported_vframe(dst_ctx, src->buf_idx)))
+      {
+      gavl_video_frame_copy_metadata(*dst, src);
+      return 1;
+      }
+
+    *dst = gavl_hw_ctx_create_import_vframe(dst_ctx, src->buf_idx);
+    fmt = &dst_ctx->vfmt;
+    }
+  else if(!fmt)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Importing video frames without frame pool needs format");
+    return 0;
+    }
+  
+  return dst_ctx->funcs->import_video_frame(fmt, src, *dst);
+  }
+
+int gavl_hw_ctx_export_video_frame(gavl_video_frame_t * src,
+                                   gavl_video_frame_t ** dst,
+                                   gavl_hw_context_t * dst_ctx,
+                                   const gavl_video_format_t * fmt)
+  {
+  /* If dst is not given: Enable pool mode */
+  if(!*dst)
+    {
+    if(src->buf_idx < 0)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot export video frame (need buf_idx)");
+      return 0;
+      }
+
+    /* Frame was already imported */
+    if((*dst = gavl_hw_ctx_get_imported_vframe(dst_ctx, src->buf_idx)))
+      {
+      gavl_video_frame_copy_metadata(*dst, src);
+      return 1;
+      }
+
+    *dst = gavl_hw_ctx_create_import_vframe(dst_ctx, src->buf_idx);
+    fmt = &dst_ctx->vfmt;
+    }
+  else if(!fmt)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Exporting video frames without frame pool needs format");
+    return 0;
+    }
+  
+  return src->hwctx->funcs->export_video_frame(fmt, src, *dst);
+  }
+
+
 /* ctx1 exports frame to ctx2 */
 static int export_frame(gavl_hw_context_t * ctx1,
                         gavl_hw_context_t * ctx2,
@@ -455,7 +462,7 @@ static int import_frame(gavl_hw_context_t * ctx1,
   {
   if(!*dst)
     *dst = gavl_hw_ctx_create_import_vframe(ctx2, src->buf_idx);
-
+  
   //  fprintf(stderr, "Import frame: %d %d\n", src->buf_idx, (*dst)->buf_idx);
   
   return ctx2->funcs->import_video_frame(fmt, src, *dst);
@@ -470,6 +477,9 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
   gavl_hw_context_t * ctx1 = frame1->hwctx;
   //  gavl_hw_type_t t = gavl_hw_ctx_get_type(ctx1);
 
+  if(!fmt)
+    fmt = &ctx2->vfmt;
+  
   //  fprintf(stderr, "Transfer video frame: %p %p %p\n", frame1, frame1->hwctx, *frame2);
   
   if((frame1->buf_idx < 0) && !(*frame2))
@@ -501,7 +511,7 @@ int gavl_hw_ctx_transfer_video_frame(gavl_video_frame_t * frame1,
 
   //  t = gavl_hw_ctx_get_type(ctx2);
   
-  if(gavl_hw_ctx_can_export(ctx1, ctx2))
+  if(gavl_hw_ctx_can_export(ctx1, &ctx2->import_formats))
     {
     ret = export_frame(ctx1, ctx2, frame1, frame2, fmt);
     if(frame1 && *frame2)
@@ -521,10 +531,11 @@ void gavl_hw_ctx_set_video_creator(gavl_hw_context_t * ctx, gavl_video_format_t 
                                    gavl_hw_frame_mode_t mode)
   {
   ctx->mode = mode;
-  gavl_hw_video_format_adjust(ctx, fmt, mode);
   ctx->flags |= (HW_CTX_FLAG_CREATOR | HW_CTX_FLAG_VIDEO);
   gavl_video_format_copy(&ctx->vfmt, fmt);
   fmt->hwctx = ctx;
+
+  /* TODO: Check if format is valid (gmerlin clients make sure it is) */
   }
 
 void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
@@ -542,7 +553,7 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
   if(vfmt)
     gavl_video_format_copy(vfmt, &ctx->vfmt);
 
-  
+  /* TODO: Check if format is valid (gmerlin clients make sure it is) */
   
   }
 
@@ -765,7 +776,8 @@ frame_get_write(gavl_hw_context_t * ctx)
 
         ref(ctx, af->buf_idx);
         
-        gavl_hw_audio_frame_map(af, 1);
+        if(ctx->mode == GAVL_HW_FRAME_MODE_MAP) 
+          gavl_hw_audio_frame_map(af, 1);
         f = af;
         }
         break;
@@ -776,11 +788,10 @@ frame_get_write(gavl_hw_context_t * ctx)
         
         vf->buf_idx = ctx->num_frames;
 
-        fprintf(stderr, "gavl_hw_video_frame_create: %p %d\n", vf, vf->buf_idx);
-        
         ref(ctx, vf->buf_idx);
 
-        gavl_hw_video_frame_map(vf, 1);
+        if(ctx->mode == GAVL_HW_FRAME_MODE_MAP) 
+          gavl_hw_video_frame_map(vf, 1);
         f = vf;
         }
         break;
@@ -791,8 +802,9 @@ frame_get_write(gavl_hw_context_t * ctx)
         pkt->buf_idx = ctx->num_frames;
 
         ref(ctx, pkt->buf_idx);
-        
-        gavl_hw_packet_map(pkt, 1);
+
+        if(ctx->mode == GAVL_HW_FRAME_MODE_MAP) 
+          gavl_hw_packet_map(pkt, 1);
         f = pkt;
         }
         break;
@@ -952,9 +964,9 @@ void gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict)
   if(!ctx->shm_name)
     return;
   
-  gavl_dictionary_set_string(dict, GAVL_META_HW_TYPE, gavl_hw_type_to_id(ctx->type));
-  gavl_dictionary_set_int(dict, GAVL_META_HW_MAX_FRAMES, ctx->max_frames);
-  gavl_dictionary_set_string(dict, GAVL_META_HW_SHMADDR, ctx->shm_name);
+  gavl_dictionary_set_string(dict, GAVL_HW_BUF_TYPE, gavl_hw_type_to_id(ctx->type));
+  gavl_dictionary_set_int(dict,    GAVL_HW_MAX_FRAMES, ctx->max_frames);
+  gavl_dictionary_set_string(dict, GAVL_HW_SHMADDR, ctx->shm_name);
   
   }
 
@@ -966,14 +978,14 @@ gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict)
   int max_frames;
   gavl_hw_type_t type;
   
-  if(!(hw_id = gavl_dictionary_get_string(dict, GAVL_META_HW_TYPE)) ||
+  if(!(hw_id = gavl_dictionary_get_string(dict, GAVL_HW_BUF_TYPE)) ||
      ((type = gavl_hw_type_from_id(hw_id)) == GAVL_HW_NONE))
     return NULL;
     
-  if(!(gavl_dictionary_get_int(dict, GAVL_META_HW_MAX_FRAMES, &max_frames)))
+  if(!(gavl_dictionary_get_int(dict, GAVL_HW_MAX_FRAMES, &max_frames)))
     return NULL;
   
-  if(!(shm_name = gavl_dictionary_get_string(dict, GAVL_META_HW_SHMADDR)))
+  if(!(shm_name = gavl_dictionary_get_string(dict, GAVL_HW_SHMADDR)))
     return NULL;
 
   ret = gavl_hw_ctx_create(type);
@@ -1178,12 +1190,15 @@ int gavl_hw_buffer_cleanup(gavl_hw_buffer_t * buf)
   return 1;
   }
 
-void gavl_hw_buf_desc_init(gavl_dictionary_t * dict, gavl_hw_type_t type)
+gavl_dictionary_t * gavl_hw_buf_desc_append(gavl_array_t * arr, gavl_hw_type_t type)
   {
+  gavl_dictionary_t * dict;
+  dict = gavl_array_append_dictionary(arr);
   gavl_dictionary_set_int(dict, GAVL_HW_BUF_TYPE, type);
+  return dict;
   }
 
-/* Append integer format (e.g.  */
+/* Append integer format (e.g. gavl_pixelformat_t) */
 void gavl_hw_buf_desc_append_format(gavl_dictionary_t * dict,
                                     const char * key, int fmt)
   {
@@ -1195,6 +1210,19 @@ void gavl_hw_buf_desc_append_format(gavl_dictionary_t * dict,
   gavl_value_set_int(&val, fmt);
   gavl_array_splice_val_nocopy(arr, -1, 0, &val);
   }
+
+void gavl_hw_buf_desc_set_max_size(gavl_dictionary_t * dict, int w, int h)
+  {
+  gavl_dictionary_set_int(dict, GAVL_HW_BUF_MAX_W, w);
+  gavl_dictionary_set_int(dict, GAVL_HW_BUF_MAX_H, h);
+  }
+
+int gavl_hw_buf_desc_get_max_size(const gavl_dictionary_t * dict, int * w, int * h)
+  {
+  return gavl_dictionary_get_int(dict, GAVL_HW_BUF_MAX_W, w) &&
+    gavl_dictionary_get_int(dict, GAVL_HW_BUF_MAX_H, h);
+  }
+
 
 int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
                                      const char * key, int fmt)
@@ -1215,4 +1243,249 @@ int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
       return 1;
     }
   return 0;
+  }
+
+#if 0
+gavl_hw_type_t gavl_hw_buf_desc_supported_audio(const gavl_array_t * arr,
+                                                const gavl_audio_format_t * fmt)
+  {
+  int i;
+  int ret = GAVL_HW_NONE;
+  const gavl_dictionary_t * dict;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_SAMPLEFORMAT, fmt->sample_format) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_INTERLEAVE_MODE, fmt->interleave_mode) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_SAMPLERATE, fmt->samplerate))
+      {
+      gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &ret);
+      return ret;
+      }
+    }
+  return ret;
+  }
+
+gavl_hw_type_t gavl_hw_buf_desc_supported_video(const gavl_array_t * arr,
+                                                const gavl_video_format_t * fmt)
+  {
+  int i;
+  int ret = GAVL_HW_NONE;
+  const gavl_dictionary_t * dict;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_PIXELFORMAT, fmt->pixelformat))
+      {
+      gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &ret);
+      break;
+      }
+    }
+  return ret;
+  }
+
+
+
+#endif
+
+
+const gavl_dictionary_t *
+gavl_hw_buf_desc_get_pixelformat_conversion(const gavl_array_t * arr,
+                                            const gavl_video_format_t * fmt,
+                                            gavl_pixelformat_t * pfmt,
+                                            int * price)
+  {
+  int val_i = 0;
+  int i, j;
+  int test_penalty;
+  const gavl_array_t * pfmts;
+  const gavl_dictionary_t * dict = NULL;
+  const gavl_dictionary_t * ret = NULL;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       (pfmts = gavl_dictionary_get_array(dict, GAVL_HW_BUF_PIXELFORMAT)))
+      {
+      for(j = 0; j < pfmts->num_entries; j++)
+        {
+        if(gavl_value_get_int(&pfmts->entries[j], &val_i))
+          {
+          test_penalty = gavl_pixelformat_conversion_penalty(fmt->pixelformat, val_i);
+
+          if((*price == -1) || (*price > test_penalty))
+            {
+            *price = test_penalty;
+            *pfmt = val_i;
+            ret = dict;
+            }
+          }
+        }
+      }
+    }
+  return ret;
+  }
+
+
+const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_video_format(const gavl_array_t * arr,
+                                       const gavl_video_format_t * fmt)
+  {
+  int i;
+  int type = GAVL_HW_NONE;
+  const gavl_dictionary_t * dict;
+  int w = 0, h = 0;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_PIXELFORMAT, fmt->pixelformat) &&
+      /* Check image size */
+       (!gavl_hw_buf_desc_get_max_size(dict, &w, &h) || // No max size -> assume infinite
+        (!fmt->frame_width && !fmt->frame_height) ||    // No image size -> be optimistic
+        ((fmt->frame_width < w) && (fmt->frame_height < h))))
+      {
+      if(gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &type) &&
+         (!fmt->hwctx || (type == gavl_hw_ctx_get_type(fmt->hwctx))))
+        return dict;
+      }
+    }
+  return NULL;
+  }
+
+const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_dma_fourcc(const gavl_array_t * arr, int fourcc)
+  {
+  int i;
+  const gavl_dictionary_t * dict;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_DMA_FOURCC, fourcc))
+      {
+      return dict;
+      }
+    }
+  return NULL;
+  }
+
+
+const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_audio_format(const gavl_array_t * arr,
+                                       const gavl_audio_format_t * fmt)
+  {
+  int i;
+  int type = GAVL_HW_NONE;
+  const gavl_dictionary_t * dict;
+  
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_SAMPLEFORMAT, fmt->sample_format) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_INTERLEAVE_MODE, fmt->interleave_mode) &&
+       gavl_hw_buf_desc_supports_format(dict, GAVL_HW_BUF_SAMPLERATE, fmt->samplerate))
+      {
+      if(gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &type) &&
+         (!fmt->hwctx || (type == gavl_hw_ctx_get_type(fmt->hwctx))))
+        return dict;
+      }
+    }
+  return NULL;
+  }
+
+const gavl_array_t * gavl_hw_ctx_get_import_formats(const gavl_hw_context_t * ctx)
+  {
+  return &ctx->import_formats;
+  }
+
+const gavl_array_t * gavl_hw_ctx_get_transfer_formats(const gavl_hw_context_t * ctx)
+  {
+  return &ctx->transfer_formats;
+  }
+
+const gavl_array_t * gavl_hw_ctx_get_map_formats(const gavl_hw_context_t * ctx)
+  {
+  return &ctx->map_formats;
+  }
+
+void gavl_hw_ctx_set_transfer_formats(gavl_hw_context_t * ctx, const gavl_array_t * arr)
+  {
+  gavl_array_reset(&ctx->transfer_formats);
+  gavl_array_copy(&ctx->transfer_formats, arr);
+  
+  }
+
+void gavl_hw_ctx_set_map_formats(gavl_hw_context_t * ctx, const gavl_array_t * arr)
+  {
+  gavl_array_reset(&ctx->map_formats);
+  gavl_array_copy(&ctx->map_formats, arr);
+  
+  }
+
+
+gavl_hw_context_t * gavl_hw_ctx_create_from_buffer_format(const gavl_dictionary_t * dict)
+  {
+  gavl_hw_context_t * ret;
+  gavl_dictionary_t * dict_dst;
+  int type = GAVL_HW_NONE;
+
+  if(!gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &type) ||
+     !(ret = gavl_hw_ctx_create(type)))
+    return NULL;
+
+  /* We override the supported formats completely */
+  gavl_array_reset(&ret->map_formats);
+  dict_dst = gavl_array_append_dictionary(&ret->map_formats);
+  gavl_dictionary_copy(dict_dst, dict);
+  return ret;
+  }
+
+void gavl_hw_buffer_format_dump(const gavl_dictionary_t * dict)
+  {
+  int i;
+  int type = GAVL_HW_NONE;
+  const gavl_array_t * pfmts;
+  const gavl_array_t * fourccs;
+  int pfmt;
+  int fourcc;
+  
+  gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &type);
+  
+  gavl_dprintf("buffer format: %s\n", gavl_hw_type_to_string(type));
+
+  pfmts =   gavl_dictionary_get_array(dict, GAVL_HW_BUF_PIXELFORMAT);
+  fourccs = gavl_dictionary_get_array(dict, GAVL_HW_BUF_DMA_FOURCC);
+
+  if(!pfmts)
+    return;
+  
+  for(i = 0; i < pfmts->num_entries; i++)
+    {
+    gavl_value_get_int(&pfmts->entries[i], &pfmt);
+
+    if(fourccs)
+      {
+      gavl_value_get_int(&fourccs->entries[i], &fourcc);
+
+      gavl_dprintf("  %c%c%c%c (%s)\n",
+                   (fourcc) & 0xff, 
+                   (fourcc >> 8) & 0xff, 
+                   (fourcc >> 16) & 0xff, 
+                   (fourcc >> 24) & 0xff, 
+                   gavl_pixelformat_to_string(pfmt));
+      }
+    else
+      gavl_dprintf("  %s\n",
+                   gavl_pixelformat_to_string(pfmt));
+    }
+  }
+
+void gavl_hw_buffer_formats_dump(const gavl_array_t * arr)
+  {
+  int i;
+  for(i = 0; i < arr->num_entries; i++)
+    gavl_hw_buffer_format_dump(gavl_value_get_dictionary(&arr->entries[i]));
   }

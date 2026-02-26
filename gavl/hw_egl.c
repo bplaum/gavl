@@ -70,7 +70,6 @@ typedef struct
   EGLDisplay display;
   EGLConfig  config;
   EGLContext  context;
-  GLint max_texture_size;
   
   /* If off-screen rendering is used */
   EGLSurface surf;
@@ -196,26 +195,89 @@ static int video_frame_to_hw_egl(gavl_video_frame_t * dst,
   return 1;
   }
 
-static int exports_type_egl(gavl_hw_context_t * ctx, const gavl_hw_context_t * to)
+static const gavl_dictionary_t * exports_type_egl(gavl_hw_context_t * ctx, const gavl_array_t * arr)
   {
+  int hw = 0;
   const char * extensions;
   egl_t * priv = ctx->native;
-  gavl_hw_type_t hw = gavl_hw_ctx_get_type(to);
-
+  const gavl_dictionary_t * ret;
   extensions = eglQueryString(priv->display, EGL_EXTENSIONS);
+
+  if(!arr || !arr->num_entries || !(ret = gavl_value_get_dictionary(&arr->entries[0])) ||
+     !gavl_dictionary_get_int(ret, GAVL_HW_BUF_TYPE, &hw))
+    return NULL;
   
   switch(hw)
     {
     case GAVL_HW_DMABUFFER:
-      if(strstr(extensions, "EGL_MESA_image_dma_buf_export"))
-        return 1;
+      {
+      gavl_video_frame_t * frame;
+      gavl_gl_frame_info_t * gl_frame;
+      EGLImage image;
+
+      uint64_t modifier;
+      uint32_t format;
+      int num_planes;
+      
+      EGLint image_attrs[] =
+        {
+          EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
+          EGL_NONE
+        };
+      
+      if(!strstr(extensions, "EGL_MESA_image_dma_buf_export"))
+        return NULL;
+
+      if(!ctx->num_frames)
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                 "Cannot check for export to DMA-buffer: No frames created yet");
+        return NULL;
+        }
+
+      frame = ctx->frames[0].frame;
+
+      gl_frame = frame->storage;
+
+      gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
+      
+      
+      image = priv->eglCreateImage(priv->display, priv->context,
+                                   EGL_GL_TEXTURE_2D_KHR,
+                                   (EGLClientBuffer)(intptr_t)gl_frame->textures[0],
+                                   image_attrs);
+      
+      if(image == EGL_NO_IMAGE_KHR)
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                 "Cannot check for export to DMA-buffer: EGL-image creation failed");
+        gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
+        return NULL;
+        }
+      
+      if(!priv->eglExportDMABUFImageQueryMESA(priv->display, image,
+                                              (int*)&format, &num_planes,
+                                              &modifier))
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                 "Cannot check for export to DMA-buffer: Getting DMA buffer format failed");
+        priv->eglDestroyImage(priv->display, image);
+        gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
+        return NULL;
+        }
+      priv->eglDestroyImage(priv->display, image);
+      gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);
+      return gavl_hw_buf_desc_supports_dma_fourcc(arr, format);
+      
+      }
       break;
     default:
       break;
     }
-  return 0;
+  return NULL;
   }
 
+#if 0
 static int imports_type_egl(gavl_hw_context_t * ctx, const gavl_hw_context_t * from)
   {
   const char * extensions;
@@ -237,6 +299,7 @@ static int imports_type_egl(gavl_hw_context_t * ctx, const gavl_hw_context_t * f
     }
   return 0;
   }
+#endif
 
 static int import_video_frame_egl(const gavl_video_format_t * vfmt,
                                   gavl_video_frame_t * src,
@@ -298,7 +361,7 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
         EGL_NONE
       };
 
-      gavl_hw_egl_set_current(priv->context, EGL_NO_SURFACE);
+      gavl_hw_egl_set_current(src->hwctx, EGL_NO_SURFACE);
       for(i = 0; i < gl->num_textures; i++)
         {
         image = priv->eglCreateImage(priv->display, priv->context,
@@ -308,7 +371,7 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
       
         if(image == EGL_NO_IMAGE_KHR)
           {
-          printf("Fehler beim Erstellen des EGL-Images\n");
+          printf("EGL-Images creation failed\n");
           return 0;
           }
       
@@ -316,7 +379,7 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
                                                 (int*)&format, &num_planes,
                                                 &modifier))
           {
-          printf("Fehler beim Abfragen der DMA-Buffer-Informationen\n");
+          printf("Getting DMA buffer format failed\n");
           return 0;
           }
 
@@ -325,7 +388,7 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
         if(!priv->eglExportDMABUFImageMESA(priv->display, image,
                                            fds, strides, offsets))
           {
-          printf("Fehler beim Exportieren des DMA-Buffers\n");
+          printf("Exporting to DMA-Buffer failed\n");
           return 0;
           }
 
@@ -341,7 +404,7 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
         
         priv->eglDestroyImage(priv->display, image);
         }
-      gavl_hw_egl_unset_current(priv->context);
+      gavl_hw_egl_unset_current(src->hwctx);
       
       dma_frame->num_buffers = gl->num_textures;
       dma_frame->num_planes = gl->num_textures;
@@ -378,18 +441,27 @@ static int get_num_dma_import_formats(gavl_hw_context_t * ctx)
   return 0;
   }
 
-uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx)
+// uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx)
+
+static void get_import_formats(gavl_hw_context_t * ctx)
   {
-  EGLint *formats = NULL;
 #ifdef HAVE_DRM
   int i = 0;
   EGLint max_formats;
   egl_t * priv = ctx->native;
   int num_formats = get_num_dma_import_formats(ctx);
-  
+  gavl_pixelformat_t pfmt;
+  EGLint *formats = NULL;
+  gavl_dictionary_t * dict;
+  int flags = 0;
   if(!num_formats)
-    return NULL;
+    return;
 
+  if(ctx->import_formats.num_entries)
+    return;
+
+  dict = gavl_hw_buf_desc_append(&ctx->import_formats, GAVL_HW_DMABUFFER);
+  
   // fprintf(stderr, "Getting supported DMA formats\n");
 
   formats = calloc(num_formats+1, sizeof(*formats));
@@ -399,37 +471,50 @@ uint32_t * gavl_hw_ctx_egl_get_dma_import_formats(gavl_hw_context_t * ctx)
 
   while(i < num_formats)
     {
-    
-    if(gavl_drm_pixelformat_from_fourcc(formats[i], NULL, NULL) == GAVL_PIXELFORMAT_NONE)
-      {
-#if 0
-      fprintf(stderr, "Got unhandled format: %c%c%c%c\n",
-              (formats[i] >> 0) & 0xff,
-              (formats[i] >> 8) & 0xff,
-              (formats[i] >> 16) & 0xff,
-              (formats[i] >> 24) & 0xff);
-#endif 
-      /* We move the trailing zero */
-      memmove(formats + i, formats + i + 1, (num_formats - i)*sizeof(*formats));
-      num_formats--;
+    pfmt = gavl_drm_pixelformat_from_fourcc(formats[i], &flags, NULL);
 
-      }
-    else
+    /*
+     *  Important: We store all pixelformats we can import, regardless whether they
+     *  require shuffling. The actually supported formats for direct rendering
+     *  need to be put together at a higher level.
+     */
+      
+    gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_PIXELFORMAT, pfmt);
+    gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_DMA_FOURCC,  formats[i]);
+
+    switch(pfmt)
       {
-#if 0
-      fprintf(stderr, "Supported format: %c%c%c%c -> %s\n",
-              (formats[i] >> 0) & 0xff,
-              (formats[i] >> 8) & 0xff,
-              (formats[i] >> 16) & 0xff,
-              (formats[i] >> 24) & 0xff, gavl_pixelformat_to_string(gavl_drm_pixelformat_from_fourcc(formats[i], NULL, NULL)));
-#endif 
-      i++;
+      case GAVL_YUV_420_P:
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_PIXELFORMAT, GAVL_YUVJ_420_P);
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_DMA_FOURCC,  formats[i]);
+        break;
+      case GAVL_YUV_422_P:
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_PIXELFORMAT, GAVL_YUVJ_422_P);
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_DMA_FOURCC,  formats[i]);
+        break;
+      case GAVL_YUV_444_P:
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_PIXELFORMAT, GAVL_YUVJ_444_P);
+        gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_DMA_FOURCC,  formats[i]);
+        break;
+      default:
+        break;
       }
+      
+#if 0
+    fprintf(stderr, "Supported format: %c%c%c%c -> %s\n",
+            (formats[i] >> 0) & 0xff,
+            (formats[i] >> 8) & 0xff,
+            (formats[i] >> 16) & 0xff,
+            (formats[i] >> 24) & 0xff, gavl_pixelformat_to_string(gavl_drm_pixelformat_from_fourcc(formats[i], NULL, NULL)));
+#endif 
+    
+    i++;
     }
 #endif
-  return (uint32_t*)formats;
+  free(formats);
   }
 
+#if 0
 static gavl_pixelformat_t * get_image_formats_egl(gavl_hw_context_t * ctx, gavl_hw_frame_mode_t mode)
   {
   int num;
@@ -438,21 +523,20 @@ static gavl_pixelformat_t * get_image_formats_egl(gavl_hw_context_t * ctx, gavl_
   else
     return NULL;
   }
+#endif
 
 static const gavl_hw_funcs_t funcs =
   {
     .destroy_native         = destroy_native_egl,
     //    .video_format_adjust    = adjust_video_format_egl,
 
-    //    .get_image_formats      = gavl_gl_get_image_formats,
-    .get_image_formats      = get_image_formats_egl,
     .video_frame_create      = video_frame_create_hw_egl,
     .video_frame_destroy    = video_frame_destroy_egl,
     .video_frame_to_ram     = video_frame_to_ram_egl,
     .video_frame_to_hw      = video_frame_to_hw_egl,
     
     .can_export             = exports_type_egl,
-    .can_import             = imports_type_egl,
+    //    .can_import             = imports_type_egl,
     .import_video_frame     = import_video_frame_egl,
     .export_video_frame     = export_video_frame_egl
   };
@@ -584,16 +668,23 @@ gavl_hw_ctx_create_egl(EGLenum platform,
   ctx = gavl_hw_context_create_internal(priv, &funcs, type, support_flags);
 
   gavl_hw_egl_set_current(ctx, NULL);
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &priv->max_texture_size);
-
-  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created GL context");
+  
+  //  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created GL context");
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Created GL context %p", ctx);
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Type: %s", gavl_hw_type_to_string(type));
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "GL Version: %s", glGetString(GL_VERSION) );
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION) );
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Renderer: %s", glGetString(GL_RENDERER) );
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Vendor: %s", glGetString(GL_VENDOR) );
+
+  /* Get transfer formats */
+
+  gavl_gl_get_buffer_formats(ctx);
   
   gavl_hw_egl_unset_current(ctx);
+
+  /* Get import formats */
+  get_import_formats(ctx);
   
   return ctx;
   
@@ -603,13 +694,6 @@ gavl_hw_ctx_create_egl(EGLenum platform,
     destroy_native_egl(priv);
 
   return NULL;
-  }
-
-
-int gavl_hw_egl_get_max_texture_size(gavl_hw_context_t * ctx)
-  {
-  egl_t * p = ctx->native;
-  return p->max_texture_size;
   }
 
 EGLSurface gavl_hw_ctx_egl_create_window_surface(gavl_hw_context_t * ctx,
@@ -644,7 +728,7 @@ void gavl_hw_egl_set_current(gavl_hw_context_t * ctx, EGLSurface surf)
   {
   egl_t * p = ctx->native;
 
-  //  fprintf(stderr, "gavl_hw_glx_set_current %p %ld\n", ctx, drawable);
+  //  fprintf(stderr, "gavl_hw_egl_set_current %p %p\n", ctx, surf);
   
   if(surf == EGL_NO_SURFACE)
     {
@@ -679,7 +763,7 @@ void gavl_hw_egl_unset_current(gavl_hw_context_t * ctx)
 void gavl_hw_egl_swap_buffers(gavl_hw_context_t * ctx)
   {
   egl_t * p = ctx->native;
-  
+  // fprintf(stderr, "gavl_hw_egl_swap_buffers\n");
   eglSwapBuffers(p->display, p->current_surf);
  
   }
@@ -850,7 +934,7 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   
   if(!image)
     {
-    fprintf(stderr, "Creating Image failed %s\n", egl_strerror(eglGetError()));
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Creating image failed %s", egl_strerror(eglGetError()));
     return 0;
     }
   gavl_hw_egl_set_current(ctx, EGL_NO_SURFACE);

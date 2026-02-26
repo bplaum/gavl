@@ -90,16 +90,20 @@ int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format, GLenum * interna
   return 0;
   }
 
-gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx, int * num)
+void gavl_gl_get_buffer_formats(gavl_hw_context_t * ctx)
   {
   int src_idx = 0;
-  int dst_idx = 0;
+  gavl_dictionary_t * dict;
+  int max_texture_size;
+  if(ctx->transfer_formats.num_entries)
+    return;
+
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
   
-  gavl_pixelformat_t * ret;
-  //  glx_t * priv = ctx->native;
+  dict = gavl_hw_buf_desc_append(&ctx->transfer_formats, ctx->type);
 
-  ret = calloc(NUM_PIXELFORMATS, sizeof(*ret));
-
+  gavl_hw_buf_desc_set_max_size(dict, max_texture_size, max_texture_size);
+  
   while(pixelformats[src_idx].fmt)
     {
     /* Seems that GL ES supports no 16 bit colors */
@@ -109,16 +113,11 @@ gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx, int * nu
       src_idx++;
       continue;
       }
-    ret[dst_idx] = pixelformats[src_idx].fmt;
+
+    gavl_hw_buf_desc_append_format(dict, GAVL_HW_BUF_PIXELFORMAT, pixelformats[src_idx].fmt);
     
     src_idx++;
-    dst_idx++;
-
     }
-  ret[dst_idx] = GAVL_PIXELFORMAT_NONE;
-  if(num)
-    *num = dst_idx;
-  return ret;
   }
 
 

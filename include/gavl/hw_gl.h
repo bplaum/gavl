@@ -37,8 +37,8 @@ typedef struct
 GAVL_PUBLIC int gavl_get_gl_format(gavl_pixelformat_t fmt, GLenum * format,
                                    GLenum * internalformat, GLenum * type);
 
-GAVL_PUBLIC gavl_pixelformat_t * gavl_gl_get_image_formats(gavl_hw_context_t * ctx,
-                                                           int * num);
+/* Get the supported image formats. This requires a current GL context */
+GAVL_PUBLIC void gavl_gl_get_buffer_formats(gavl_hw_context_t * ctx); 
 
 GAVL_PUBLIC void gavl_gl_adjust_video_format(gavl_hw_context_t * ctx,
                                              gavl_video_format_t * fmt);
