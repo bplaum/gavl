@@ -545,14 +545,26 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
   ctx->mode = GAVL_HW_FRAME_MODE_IMPORT;
   ctx->flags |= (HW_CTX_FLAG_IMPORTER | HW_CTX_FLAG_VIDEO);
 
-  gavl_video_format_copy(&ctx->vfmt, &ctx_src->vfmt);
-  ctx->vfmt.hwctx = ctx;
+  if(ctx_src)
+    {
+    ctx->ctx_src = ctx_src;
 
-  ctx->ctx_src = ctx_src;
+    gavl_video_format_copy(&ctx->vfmt, &ctx_src->vfmt);
+    ctx->vfmt.hwctx = ctx;
+    
+    if(vfmt)
+      gavl_video_format_copy(vfmt, &ctx->vfmt);
+    
+    }
+  else
+    {
+    if(vfmt)
+      {
+      vfmt->hwctx = ctx;
+      gavl_video_format_copy(&ctx->vfmt, vfmt);
+      }
+    }
   
-  if(vfmt)
-    gavl_video_format_copy(vfmt, &ctx->vfmt);
-
   /* TODO: Check if format is valid (gmerlin clients make sure it is) */
   
   }
