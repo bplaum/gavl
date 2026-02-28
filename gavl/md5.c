@@ -22,6 +22,8 @@
 #include <gavl/gavl.h>
 #include <gavl/utils.h>
 #include <nettle/md5.h>
+#include <nettle/version.h>
+
 #include <string.h>
 
 void *
@@ -30,7 +32,15 @@ gavl_md5_buffer(const void *buffer, int len, void *resblock)
   struct md5_ctx ctx;
   md5_init(&ctx);
   md5_update(&ctx, len, buffer);
-  md5_digest(&ctx, GAVL_MD5_SIZE, resblock);
+
+#if NETTLE_VERSION_MAJOR > 3
+    /* nettle >= 4.0 */
+    md5_digest(&ctx, resblock);
+#else
+    /* nettle 3.x */
+    md5_digest(&ctx, GAVL_MD5_SIZE, resblock);
+#endif
+
   return resblock;
   }
 
