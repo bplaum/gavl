@@ -650,6 +650,7 @@ static int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
         dst->strides[i] = prime_desc.layers[0].pitch[i];
         }
       dst->buf_idx = src->buf_idx;
+      return 1;
       }
 #endif
     default:
@@ -658,11 +659,13 @@ static int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
   return 0;
   }
 
-static const gavl_dictionary_t * gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_array_t * arr)
+static const gavl_dictionary_t *
+gavl_vaapi_exports_type(gavl_hw_context_t * ctx, const gavl_array_t * arr)
   {
   int hw = 0;
   const gavl_dictionary_t * ret;
-
+  gavl_hw_vaapi_t * dev = ctx->native;
+  
   if(!arr || !arr->num_entries || !(ret = gavl_value_get_dictionary(&arr->entries[0])) ||
      !gavl_dictionary_get_int(ret, GAVL_HW_BUF_TYPE, &hw))
     return NULL;
@@ -672,6 +675,45 @@ static const gavl_dictionary_t * gavl_vaapi_exports_type(gavl_hw_context_t * ctx
 #ifdef HAVE_DRM
     case GAVL_HW_DMABUFFER:
       {
+      gavl_video_frame_t * frame;
+      gavl_vaapi_video_frame_t * vaapi_storage;
+      VADRMPRIMESurfaceDescriptor prime_desc;
+      int i;
+      if(!ctx->num_frames)
+        {
+        gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN,
+                 "Cannot check for export to DMA-buffer: No frames created yet");
+        return NULL;
+        }
+      
+      frame = ctx->frames[0].frame;
+      
+      vaapi_storage = frame->storage;
+      
+      //      fprintf(stderr, "Exports type %d\n", ctx->num_frames);
+
+      if(vaExportSurfaceHandle(dev->dpy, vaapi_storage->surface,
+                               VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME_2,
+                               VA_EXPORT_SURFACE_READ_WRITE|VA_EXPORT_SURFACE_COMPOSED_LAYERS,
+                               &prime_desc) != VA_STATUS_SUCCESS)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "vaExportSurfaceHandle failed");
+        return NULL;
+        }
+
+      fprintf(stderr, "exports_type\n");
+      gavl_hw_buffer_formats_dump(arr);
+      
+      ret = gavl_hw_buf_desc_supports_dma_fourcc(arr, prime_desc.layers[0].drm_format);
+
+      
+      
+      /* Close DMA buffers */
+      for(i = 0; i < prime_desc.num_objects; i++)
+        {
+        if(prime_desc.objects[i].fd > 0)
+          close(prime_desc.objects[i].fd);
+        }
       return ret;
       }
       break;
@@ -693,10 +735,7 @@ static const gavl_hw_funcs_t funcs =
     .video_format_adjust  = gavl_vaapi_video_format_adjust,
     .can_export = gavl_vaapi_exports_type,
     .export_video_frame = gavl_vaapi_export_video_frame,
-
   };
-
-
 
 static const char * drm_devices[] =
   {

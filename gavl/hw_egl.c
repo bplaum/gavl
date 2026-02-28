@@ -500,7 +500,7 @@ static void get_import_formats(gavl_hw_context_t * ctx)
         break;
       }
       
-#if 0
+#if 1
     fprintf(stderr, "Supported format: %c%c%c%c -> %s\n",
             (formats[i] >> 0) & 0xff,
             (formats[i] >> 8) & 0xff,

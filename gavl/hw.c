@@ -907,15 +907,12 @@ void gavl_hw_frame_pool_init(gavl_hw_context_t * ctx)
       
       }
     }
-  else if(ctx->flags & HW_CTX_FLAG_CREATOR)
+  else
     {
     /* Create new reftable in ordinary RAM */
     ctx->reftab_priv = gavl_hw_reftable_create_local(ctx);
     ctx->reftab = ctx->reftab_priv;
     }
-  else if(ctx->flags  & HW_CTX_FLAG_IMPORTER)
-    ctx->reftab = ctx->ctx_src->reftab;
-  
   }
 
 

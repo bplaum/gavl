@@ -84,6 +84,7 @@ void gavl_packet_pts_cache_push_packet(gavl_packet_pts_cache_t *c, const gavl_pa
   memcpy(&c->packets[c->num_packets], pkt, sizeof(*pkt));
   
   memset(&c->packets[c->num_packets].buf, 0, sizeof(c->packets[c->num_packets].buf));
+  c->packets[c->num_packets].buf_idx = -1;
   c->num_packets++;
   }
 

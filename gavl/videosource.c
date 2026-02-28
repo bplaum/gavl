@@ -47,6 +47,9 @@
 #define FLAG_UNSHUFFLE_INPUT  (1<<7)
 #define FLAG_SHUFFLE_OUTPUT   (1<<8)
 
+#define FLAG_IMPORTER         (1<<9)
+
+
 struct gavl_video_source_s
   {
   gavl_video_format_t src_format;
@@ -90,6 +93,9 @@ struct gavl_video_source_s
 
   int64_t pts_offset;
   };
+
+static void resync_importer(gavl_video_source_t * src);
+
 
 static gavl_video_frame_t * create_in_frame(gavl_video_source_t * src)
   {
@@ -224,7 +230,9 @@ void gavl_video_source_reset(gavl_video_source_t * s)
     s->out_frame->timestamp = GAVL_TIME_UNDEFINED;
   
   s->flags &= ~FLAG_EOS;
-  
+
+  if(s->flags & FLAG_IMPORTER)
+    resync_importer(s);
   }
 
 GAVL_PUBLIC
@@ -656,6 +664,12 @@ static void free_export(void * priv)
   free(exp);
   }
 
+static void resync_importer(gavl_video_source_t * src)
+  {
+  export_t * exp = src->priv;
+  gavl_hw_ctx_resync(exp->hwctx);
+  }
+
 gavl_video_source_t *
 gavl_video_source_set_exporter(gavl_video_source_t * src, const gavl_array_t * import_formats)
   {
@@ -686,6 +700,9 @@ gavl_video_source_set_exporter(gavl_video_source_t * src, const gavl_array_t * i
   
   ret = gavl_video_source_create(get_frame_export, priv,
                                  GAVL_SOURCE_SRC_ALLOC, &vfmt);
+
+  ret->flags |= FLAG_IMPORTER;
+
   gavl_video_source_set_free_func(ret, free_export);
   return ret;
   }
