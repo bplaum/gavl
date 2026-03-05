@@ -797,6 +797,41 @@ int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * inte
   
   }
 
+/* Join another group */
+int gavl_udp_socket_join_multicast(int fd,
+                                   gavl_socket_address_t * multicast_addr,
+                                   gavl_socket_address_t * interface_addr)
+  {
+  struct ip_mreq req;
+  struct sockaddr_in * a = (struct sockaddr_in *)&multicast_addr->addr;
+
+  if(multicast_addr->addr.ss_family != AF_INET)
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "IPV6 multicast not supported yet");
+    return 0;
+    }
+
+  memset(&req, 0, sizeof(req));
+    
+  memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
+
+  if(interface_addr)
+    {
+    a = (struct sockaddr_in *)&interface_addr->addr;
+    memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
+    }
+  else
+    req.imr_interface.s_addr = htonl(INADDR_ANY);
+  
+  if(setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
+             strerror(errno));
+    return 0;
+    }
+  return 1;
+  }
+
 int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
                                      gavl_socket_address_t * interface_addr)
   {
@@ -816,10 +851,16 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
     }
   
   if(setsockopt(ret, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
-
     {
     gavl_socket_close(ret);
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set SO_REUSEADDR: %s", strerror(errno));
+    return -1;
+    }
+
+  if(setsockopt(ret, SOL_SOCKET, SO_REUSEPORT, (char *)&reuse, sizeof(reuse)) < 0)
+    {
+    gavl_socket_close(ret);
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot set SO_REUSEPORT: %s", strerror(errno));
     return -1;
     }
 
@@ -843,40 +884,15 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
     gavl_socket_close(ret);
     return -1;
     }
-  
-  if(multicast_addr->addr.ss_family == AF_INET)
-    {
-    struct ip_mreq req;
-    struct sockaddr_in * a = (struct sockaddr_in *)&multicast_addr->addr;
-    memset(&req, 0, sizeof(req));
-    
-    memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
 
-    if(interface_addr)
-      {
-      a = (struct sockaddr_in *)&interface_addr->addr;
-      memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
-      }
-    else
-      req.imr_interface.s_addr = htonl(INADDR_ANY);
-    
-    if(setsockopt(ret, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
-      {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
-             strerror(errno));
-      gavl_socket_close(ret);
-      return -1;
-      }
-    }
-  else
+  if(!gavl_udp_socket_join_multicast(ret, multicast_addr, interface_addr))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "IPV6 multicast not supported yet");
     gavl_socket_close(ret);
     return -1;
     }
-  
+
   setsockopt(ret, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
-  
+    
   return ret;
   }
 
@@ -886,16 +902,18 @@ int gavl_udp_socket_receive(int fd, uint8_t * data, int data_size,
   socklen_t len = sizeof(addr->addr);
   ssize_t result;
 
-  if(addr)  
+  if(addr)
+    {
     result = recvfrom(fd, data, data_size, 0 /* int flags */,
                       (struct sockaddr *)&addr->addr, &len);
+    addr->len = len;
+    }
   else
     result = recv(fd, data, data_size, 0);
 
   if(result < 0)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "UDP Receive failed");
   
-  addr->len = len;
   return result;
   }
 

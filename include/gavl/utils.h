@@ -496,6 +496,13 @@ void gavl_2d_transform_transform_inplace(const double matrix[2][3], float * dst)
 GAVL_PUBLIC
 void gavl_2d_transform_prepend(double dst[2][3], const double src[2][3]);
 
+/* SDP uri en-/decoding */
+GAVL_PUBLIC
+char * gavl_sdp_to_uri(const char * sdp);
+
+GAVL_PUBLIC
+char * gavl_uri_to_sdp(const char * uri);
+
 
 #endif // GAVL_UTILS_H_INCLUDED
 

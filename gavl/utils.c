@@ -1283,3 +1283,26 @@ int gavl_write_file(const char * filename, void * data, int len)
   fclose(file);
   return 1;
   }
+
+char * gavl_sdp_to_uri(const char * sdp)
+  {
+  char * ret;
+  char * sdp_enc = gavl_base64_encode_data_urlsafe(sdp, strlen(sdp)+1);
+  ret = gavl_sprintf("sdp://%s", sdp_enc);
+  free(sdp_enc);
+  return ret;
+  }
+
+char * gavl_uri_to_sdp(const char * uri)
+  {
+  gavl_buffer_t buf;
+  
+  if(!gavl_string_starts_with(uri, "sdp://"))
+    return NULL;
+
+  gavl_buffer_init(&buf);
+  
+  gavl_base64_decode_data_urlsafe(uri + 6, &buf);
+  return (char*)buf.buf;
+  }
+

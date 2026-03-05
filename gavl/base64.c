@@ -60,7 +60,7 @@ base64_decode_data_internal(const char * str, gavl_buffer_t * ret, int urlsafe)
   else
     base64_decode_init(&ctx);
   
-  gavl_buffer_alloc(ret, BASE64_DECODE_LENGTH(len));
+  gavl_buffer_alloc(ret, BASE64_DECODE_LENGTH(len)+1);
 
   base64_decode_update(&ctx,
                        &dst_length,
@@ -70,6 +70,7 @@ base64_decode_data_internal(const char * str, gavl_buffer_t * ret, int urlsafe)
 
   ret->len = dst_length;
   ret->pos = 0;
+  ret->buf[ret->len] = '\0';
   
   base64_decode_final(&ctx);
   return 1;
