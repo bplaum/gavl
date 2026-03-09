@@ -785,7 +785,8 @@ int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * inte
     
     if(setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &a->sin_addr, sizeof(a->sin_addr)) < 0) 
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Setting multicast interface failed: %s", strerror(errno));
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN,
+               "Setting multicast interface failed: %s", strerror(errno));
       return 0;
       }
     else
