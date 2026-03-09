@@ -161,6 +161,7 @@ rectangle.c \
 reftable.c \
 sampleformat.c \
 samplerate.c \
+sap.c \
 scale.c \
 scale_context.c \
 scale_kernels.c \

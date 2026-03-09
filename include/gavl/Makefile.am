@@ -27,6 +27,7 @@ numptr.h \
 parameter.h \
 packetindex.h \
 peakdetector.h \
+sap.h \
 state.h \
 threadpool.h \
 timecode.h \
