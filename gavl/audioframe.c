@@ -687,7 +687,8 @@ void gavl_audio_frame_to_packet_metadata(const gavl_audio_frame_t * frame,
   {
   pkt->pts = frame->timestamp;
   pkt->duration = frame->valid_samples;
-
+  pkt->flags = 0;
+  
   if(frame->buf_idx >= 0)
     pkt->buf_idx = frame->buf_idx;
   }

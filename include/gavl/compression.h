@@ -450,6 +450,9 @@ typedef struct gavl_packet_s
 
   gavl_hw_context_t * hwctx;
   void * storage;
+
+  
+
   } gavl_packet_t;
 
 /** \brief Initialize a packet

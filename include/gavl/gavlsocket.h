@@ -230,13 +230,6 @@ int gavl_socket_send_file(int fd, const char * filename,
                         int64_t offset, int64_t len);
 
 GAVL_PUBLIC
-int gavl_socket_send_fds(int socket, const int * fds, int n);
-
-GAVL_PUBLIC
-int gavl_socket_recv_fds(int socket, int * fds, int n);
-
-
-GAVL_PUBLIC
 void gavl_socket_close(int fd);
 
 #endif // GAVLSOCKET_H_INCLUDED

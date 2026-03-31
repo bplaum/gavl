@@ -66,9 +66,6 @@ typedef enum
 #define GAVL_HW_SUPPORTS_PACKET_MAP  (1<<17)
 #define GAVL_HW_SUPPORTS_PACKET_POOL (1<<18)
 
-/* Supports a pool shared among different processes */
-#define GAVL_HW_SUPPORTS_SHARED_POOL (1<<24)
-
 /* Buffer handles can be passed to other processes in terms of fds */
 #define GAVL_HW_SUPPORTS_FDS         (1<<25)
 
@@ -138,13 +135,6 @@ GAVL_PUBLIC
 int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
                                      const char * key, int fmt);
 
-GAVL_PUBLIC
-int gavl_hw_buf_desc_can_create_audio(const gavl_array_t * arr,
-                                      const gavl_audio_format_t * fmt);
-
-GAVL_PUBLIC
-gavl_hw_type_t gavl_hw_buf_desc_can_import_audio(const gavl_array_t * arr,
-                                                 const gavl_audio_format_t * fmt);
 
 /* Return the first array entry, which supports the format */
 
@@ -207,6 +197,7 @@ int gavl_hw_ctx_can_import(gavl_hw_context_t * ctx, const gavl_hw_context_t * fr
  */
 
 GAVL_PUBLIC void gavl_hw_ctx_set_max_frames(gavl_hw_context_t * ctx, int num);
+GAVL_PUBLIC int gavl_hw_ctx_get_max_frames(gavl_hw_context_t * ctx);
 
 /*
  *  Put the reference table into shared memory so other processes can
@@ -263,6 +254,13 @@ gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
 
 GAVL_PUBLIC gavl_video_frame_t *
 gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx, int buf_idx);
+
+GAVL_PUBLIC 
+gavl_audio_frame_t * gavl_hw_ctx_get_imported_aframe(gavl_hw_context_t * ctx,
+                                                     int buf_idx);
+
+GAVL_PUBLIC gavl_audio_frame_t *
+gavl_hw_ctx_create_import_aframe(gavl_hw_context_t * ctx, int buf_idx);
 
 
 GAVL_PUBLIC gavl_hw_type_t gavl_hw_ctx_get_type(const gavl_hw_context_t * ctx);
@@ -331,7 +329,6 @@ gavl_hw_video_frame_unmap(gavl_video_frame_t * frame);
 /* Get a frame for writing */
 // GAVL_PUBLIC gavl_video_frame_t *
 // gavl_hw_video_frame_get(gavl_hw_context_t * ctx);
-
 
 GAVL_PUBLIC gavl_video_frame_t *
 gavl_hw_video_frame_get_write(gavl_hw_context_t * ctx);

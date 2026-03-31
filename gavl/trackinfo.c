@@ -2406,6 +2406,12 @@ void gavl_stream_set_compression_info(gavl_dictionary_t * s, const gavl_compress
     gavl_compression_info_dump(info);
     }
 #endif
+
+  if(!info)
+    {
+    gavl_dictionary_set(s, COMPRESSION_INFO_KEY, NULL);
+    return;
+    }
   
   cmp = gavl_dictionary_get_dictionary_create(s, COMPRESSION_INFO_KEY);
   gavl_dictionary_reset(cmp);
@@ -3227,4 +3233,23 @@ int gavl_stream_is_sbr(const gavl_dictionary_t * s)
 
   gavl_compression_info_free(&ci);
   return ret;
+  }
+
+void
+gavl_stream_clear_compression_fields(gavl_dictionary_t * s)
+  {
+  gavl_dictionary_t * m;
+  
+  gavl_stream_set_compression_info(s, NULL);
+
+  if((m = gavl_stream_get_metadata_nc(s)))
+    {
+    gavl_dictionary_set(m, GAVL_META_BITRATE, NULL);
+    gavl_dictionary_set(m, GAVL_META_SOFTWARE, NULL);
+    gavl_dictionary_set(m, GAVL_META_PROFILE, NULL);
+    gavl_dictionary_set(m, GAVL_META_LEVEL, NULL);
+    gavl_dictionary_set(m, GAVL_META_FORMAT, NULL);
+    }
+  
+
   }

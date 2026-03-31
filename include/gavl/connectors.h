@@ -149,6 +149,14 @@ typedef gavl_source_status_t
 
 #define GAVL_SOURCE_SRC_DISCONTINUOUS       (1<<3)
 
+/* Destination flags */
+
+/* Destination can handle varying samples per frame */
+#define GAVL_SOURCE_DST_FRAMESIZE_MAX       (1<<0)
+
+/* Destination can handle hardware surfaces */
+#define GAVL_SOURCE_DST_SUPPORTS_HW         (1<<1)
+
 
 /* Called by the source */
 
@@ -346,6 +354,9 @@ void gavl_audio_source_drain(gavl_audio_source_t * s);
 
 GAVL_PUBLIC
 void gavl_audio_source_set_pts_offset(gavl_audio_source_t * src, int64_t offset);
+
+GAVL_PUBLIC
+void gavl_audio_source_support_hw(gavl_audio_source_t * s);
 
   
 /** \brief Create an audio source from another source

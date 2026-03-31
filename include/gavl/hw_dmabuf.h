@@ -42,9 +42,8 @@ typedef struct
 
 typedef struct
   {
-  gavl_hw_buffer_t buffers[GAVL_MAX_PLANES];
-  int drm_handles[GAVL_MAX_PLANES];
-  
+  uint32_t fourcc; // drm fourcc
+
   struct
     {
     int buf_idx;
@@ -52,11 +51,16 @@ typedef struct
     int stride;
     uint64_t modifiers;
     } planes[GAVL_MAX_PLANES];
-  
-  uint32_t fourcc; // drm fourcc
-  
-  int num_buffers;
   int num_planes;
+  } gavl_dmabuf_frame_info_t;
+
+typedef struct
+  {
+  gavl_hw_buffer_t buffers[GAVL_MAX_PLANES];
+  int drm_handles[GAVL_MAX_PLANES];
+  int num_buffers;
+
+  gavl_dmabuf_frame_info_t frame_info;
   
   } gavl_dmabuf_video_frame_t;
 

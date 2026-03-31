@@ -639,14 +639,14 @@ static int gavl_vaapi_export_video_frame(const gavl_video_format_t * fmt,
         dma_frame->buffers[i].map_len = prime_desc.objects[i].size;
         }
       
-      dma_frame->num_planes = prime_desc.layers[0].num_planes;
-      dma_frame->fourcc = prime_desc.layers[0].drm_format;
+      dma_frame->frame_info.num_planes = prime_desc.layers[0].num_planes;
+      dma_frame->frame_info.fourcc = prime_desc.layers[0].drm_format;
       
-      for(i = 0; i < dma_frame->num_planes; i++)
+      for(i = 0; i < dma_frame->frame_info.num_planes; i++)
         {
-        dma_frame->planes[i].buf_idx = prime_desc.layers[0].object_index[i];
-        dma_frame->planes[i].offset = prime_desc.layers[0].offset[i];
-        dma_frame->planes[i].stride = prime_desc.layers[0].pitch[i];
+        dma_frame->frame_info.planes[i].buf_idx = prime_desc.layers[0].object_index[i];
+        dma_frame->frame_info.planes[i].offset = prime_desc.layers[0].offset[i];
+        dma_frame->frame_info.planes[i].stride = prime_desc.layers[0].pitch[i];
         dst->strides[i] = prime_desc.layers[0].pitch[i];
         }
       dst->buf_idx = src->buf_idx;

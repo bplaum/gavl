@@ -508,6 +508,9 @@ GAVL_PUBLIC
 void gavl_value_move(gavl_value_t * dst, gavl_value_t * src);
 
 GAVL_PUBLIC
+void gavl_value_swap(gavl_value_t * val1, gavl_value_t * val2);
+
+GAVL_PUBLIC
 void gavl_value_dump(const gavl_value_t * v, int indent);
 
 GAVL_PUBLIC

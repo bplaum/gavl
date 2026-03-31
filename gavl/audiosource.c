@@ -223,7 +223,8 @@ gavl_audio_source_set_dst(gavl_audio_source_t * s, int dst_flags,
   
   if(!(s->flags & FLAG_DO_CONVERT) &&
      (s->src_format.samples_per_frame == s->dst_format.samples_per_frame) &&
-     !(s->src_flags & GAVL_SOURCE_SRC_FRAMESIZE_MAX))
+     (!(s->src_flags & GAVL_SOURCE_SRC_FRAMESIZE_MAX) ||
+      (s->dst_flags & GAVL_SOURCE_DST_FRAMESIZE_MAX)))
     s->flags |= (FLAG_PASSTHROUGH | FLAG_PASSTHROUGH_INIT);
   else
     s->flags &= ~(FLAG_PASSTHROUGH | FLAG_PASSTHROUGH_INIT);

@@ -435,6 +435,12 @@ void gavl_msg_free(gavl_msg_t * m)
   m->ID = -1;
   }
 
+void gavl_msg_reset(gavl_msg_t * m)
+  {
+  gavl_msg_free(m);
+  }
+
+
 void gavl_msg_destroy(gavl_msg_t * m)
   {
   gavl_msg_free(m);
@@ -823,6 +829,7 @@ void gavl_msg_get_msg_src_seek(const gavl_msg_t * dst, int64_t * time, int * sca
   if(scale)
     *scale = gavl_msg_get_arg_int(dst, 1);
   }
+
 
 
 #if 0

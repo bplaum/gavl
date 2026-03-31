@@ -98,13 +98,15 @@ void gavl_hw_ctx_destroy(gavl_hw_context_t * ctx)
   
   if(ctx->funcs->destroy_native)
     ctx->funcs->destroy_native(ctx->native);
-
-
+  
   gavl_hw_reftable_destroy(ctx);
 
   gavl_array_free(&ctx->import_formats);
   gavl_array_free(&ctx->map_formats);
   gavl_array_free(&ctx->transfer_formats);
+
+  if(ctx->shm_name)
+    free(ctx->shm_name);
   
   free(ctx);
   }
@@ -340,9 +342,8 @@ int gavl_hw_ctx_can_transfer(gavl_hw_context_t * from, gavl_hw_context_t * to)
   return gavl_hw_ctx_can_import(to, from) || gavl_hw_ctx_can_export(from, &to->import_formats);
   }
 
-
-gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
-                                                     int buf_idx)
+static void * get_imported_frame(gavl_hw_context_t * ctx,
+                                 int buf_idx)
   {
   if(!(ctx->flags & HW_CTX_FLAG_IMPORTER))
     return NULL;
@@ -351,6 +352,18 @@ gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
     return ctx->frames[buf_idx].frame;
   else
     return NULL;
+  }
+
+gavl_video_frame_t * gavl_hw_ctx_get_imported_vframe(gavl_hw_context_t * ctx,
+                                                     int buf_idx)
+  {
+  return get_imported_frame(ctx, buf_idx);
+  }
+
+gavl_audio_frame_t * gavl_hw_ctx_get_imported_aframe(gavl_hw_context_t * ctx,
+                                                     int buf_idx)
+  {
+  return get_imported_frame(ctx, buf_idx);
   }
 
 gavl_video_frame_t * gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx,
@@ -371,6 +384,24 @@ gavl_video_frame_t * gavl_hw_ctx_create_import_vframe(gavl_hw_context_t * ctx,
   return f;
   }
 
+
+gavl_audio_frame_t *
+gavl_hw_ctx_create_import_aframe(gavl_hw_context_t * ctx, int buf_idx)
+  {
+  gavl_audio_frame_t * f;
+
+  if(!(ctx->flags & HW_CTX_FLAG_IMPORTER))
+    return NULL;
+  
+  f = gavl_hw_audio_frame_create(ctx, 0);
+  if(!gavl_hw_frame_pool_add(ctx, f, buf_idx))
+    {
+    gavl_hw_destroy_audio_frame(ctx, f, 0);
+    return NULL;
+    }
+  f->buf_idx = buf_idx;
+  return f;
+  }
 
 int gavl_hw_ctx_import_video_frame(gavl_video_frame_t * src,
                                    gavl_video_frame_t ** dst,
@@ -572,10 +603,12 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
 void gavl_hw_ctx_set_audio_creator(gavl_hw_context_t * ctx, gavl_audio_format_t * fmt,
                                    gavl_hw_frame_mode_t mode)
   {
-  ctx->flags |= (HW_CTX_FLAG_CREATOR | HW_CTX_FLAG_VIDEO);
+  ctx->mode = mode;
+  ctx->flags |= (HW_CTX_FLAG_CREATOR | HW_CTX_FLAG_AUDIO);
 
+  fmt->hwctx = ctx;
   gavl_audio_format_copy(&ctx->afmt, fmt);
-  ctx->vfmt.hwctx = ctx;
+  ctx->afmt.hwctx = ctx;
 
   
   }
@@ -586,9 +619,14 @@ void gavl_hw_ctx_set_audio_importer(gavl_hw_context_t * ctx,
   {
   ctx->mode = GAVL_HW_FRAME_MODE_IMPORT;
   ctx->flags |= (HW_CTX_FLAG_IMPORTER | HW_CTX_FLAG_AUDIO);
-  
-  }
 
+  if(fmt)
+    {
+    fmt->hwctx = ctx;
+    gavl_audio_format_copy(&ctx->afmt, fmt);
+    }
+  }
+  
 void gavl_hw_ctx_set_packet_creator(gavl_hw_context_t * ctx, int max_size)
   {
   ctx->flags |= (HW_CTX_FLAG_CREATOR | HW_CTX_FLAG_PACKET);
@@ -654,6 +692,7 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
                                       1, memory_order_release)) == 1)
     {
     /* Increase free frames */
+    //    fprintf(stderr, "sem_post\n");
     sem_post(&ctx->reftab->free_buffers);
     }
   }
@@ -759,16 +798,21 @@ frame_get_write(gavl_hw_context_t * ctx)
     return NULL;
 
   gavl_hw_frame_pool_init(ctx);
+
+  sem_getvalue(&ctx->reftab->free_buffers, &result);
   
-  // fprintf(stderr, "gavl_hw_video_frame_get: %d\n", ctx->created.num_frames);
+  //  fprintf(stderr, "get_frame_write: num_frames: %d sem: %d\n", ctx->num_frames, result);
 
   while(1)
     {
+
     result = sem_trywait(&ctx->reftab->free_buffers);
 
     if(!result)
+      {
+      //      fprintf(stderr, "bla 1\n");
       return get_free_frame(ctx);
-    
+      }
     if(errno == EINTR)
       continue;
     else
@@ -825,6 +869,7 @@ frame_get_write(gavl_hw_context_t * ctx)
     gavl_hw_frame_pool_add(ctx, f, -1);
     
     /* Add a reference, which is passed to the caller */
+    //    fprintf(stderr, "bla 2\n");
     return f;
     }
   else
@@ -853,6 +898,7 @@ frame_get_write(gavl_hw_context_t * ctx)
       if(errno != EINTR)
         return NULL;
       }
+    //    fprintf(stderr, "bla 3\n");
     return get_free_frame(ctx);
     }
   
@@ -870,9 +916,11 @@ gavl_hw_video_frame_get_write(gavl_hw_context_t * ctx)
 gavl_audio_frame_t *
 gavl_hw_audio_frame_get_write(gavl_hw_context_t * ctx)
   {
+  gavl_audio_frame_t * ret;
   if(!(ctx->flags & HW_CTX_FLAG_AUDIO))
     return NULL;
-  return frame_get_write(ctx);
+  ret = frame_get_write(ctx);
+  return ret;
   }
 
 gavl_packet_t *
@@ -900,11 +948,14 @@ void gavl_hw_frame_pool_init(gavl_hw_context_t * ctx)
     if(ctx->flags & HW_CTX_FLAG_CREATOR)
       {
       /* Create new shm segment */
+      ctx->reftab_priv = gavl_hw_reftable_create_shared(ctx);
+      ctx->reftab = ctx->reftab_priv;
       }
     else
       {
       /* Map existing shm segment */
-      
+      ctx->reftab_priv = gavl_hw_reftable_create_remote(ctx);
+      ctx->reftab = ctx->reftab_priv;
       }
     }
   else
@@ -943,6 +994,7 @@ void gavl_hw_frame_pool_reset(gavl_hw_context_t * ctx, int free_resources)
     switch(ctx->flags & HW_CTX_MODE_MASK)
       {
       case HW_CTX_FLAG_AUDIO:
+        gavl_hw_destroy_audio_frame(ctx, ctx->frames[i].frame, free_resources);
         break;
       case HW_CTX_FLAG_VIDEO:
         gavl_hw_destroy_video_frame(ctx, ctx->frames[i].frame, free_resources);
@@ -972,6 +1024,8 @@ void gavl_hw_ctx_store(gavl_hw_context_t * ctx, gavl_dictionary_t * dict)
   {
   if(!ctx->shm_name)
     return;
+
+  gavl_hw_frame_pool_init(ctx);
   
   gavl_dictionary_set_string(dict, GAVL_HW_BUF_TYPE, gavl_hw_type_to_id(ctx->type));
   gavl_dictionary_set_int(dict,    GAVL_HW_MAX_FRAMES, ctx->max_frames);
@@ -996,11 +1050,13 @@ gavl_hw_context_t * gavl_hw_ctx_load(const gavl_dictionary_t * dict)
   
   if(!(shm_name = gavl_dictionary_get_string(dict, GAVL_HW_SHMADDR)))
     return NULL;
-
-  ret = gavl_hw_ctx_create(type);
   
+  ret = gavl_hw_ctx_create(type);
+
+  ret->shm_name = gavl_strdup(shm_name);
   ret->max_frames = max_frames;
-  ret->reftab = gavl_hw_reftable_create_remote(ret);
+  ret->reftab_priv = gavl_hw_reftable_create_remote(ret);
+  ret->reftab = ret->reftab_priv;
   return ret;
   }
 
@@ -1009,7 +1065,7 @@ gavl_hw_video_frame_map(gavl_video_frame_t * frame, int wr)
   {
   if(!frame->hwctx)
     return 1;
-
+  
   if(!(frame->hwctx->support_flags & GAVL_HW_SUPPORTS_VIDEO_MAP))
     {
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot map frame: Not supported by context");
@@ -1041,6 +1097,8 @@ gavl_hw_video_frame_unmap(gavl_video_frame_t * frame)
 int
 gavl_hw_audio_frame_map(gavl_audio_frame_t * frame, int wr)
   {
+  //  fprintf(stderr, "gavl_audio_frame_map %p\n", frame->hwctx);
+  
   if(!frame->hwctx)
     return 1;
 
@@ -1139,14 +1197,13 @@ void gavl_hw_ctx_set_max_frames(gavl_hw_context_t * ctx, int num)
   ctx->max_frames = num;
   }
 
+int gavl_hw_ctx_get_max_frames(gavl_hw_context_t * ctx)
+  {
+  return ctx->max_frames;
+  }
+
 int gavl_hw_ctx_set_shared(gavl_hw_context_t * ctx)
   {
-  if(!(ctx->support_flags & GAVL_HW_SUPPORTS_SHARED_POOL))
-    {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "hw_ctx doesn't support process sharing");
-    return 0;
-    }
-  
   ctx->shm_name = gavl_hw_reftable_create_name();
   return 1; 
   }
@@ -1440,11 +1497,15 @@ gavl_hw_context_t * gavl_hw_ctx_create_from_buffer_format(const gavl_dictionary_
   gavl_hw_context_t * ret;
   gavl_dictionary_t * dict_dst;
   int type = GAVL_HW_NONE;
-
+  int shared = 0;
+  
   if(!gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &type) ||
      !(ret = gavl_hw_ctx_create(type)))
     return NULL;
 
+  if(gavl_dictionary_get_int(dict, GAVL_HW_BUF_SHARED, &shared) && shared)
+    gavl_hw_ctx_set_shared(ret);
+    
   /* We override the supported formats completely */
   gavl_array_reset(&ret->map_formats);
   dict_dst = gavl_array_append_dictionary(&ret->map_formats);

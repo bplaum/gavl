@@ -149,5 +149,7 @@ GAVL_PUBLIC gavl_v4l2_device_t * gavl_v4l2_device_open(const gavl_dictionary_t *
 GAVL_PUBLIC gavl_hw_context_t * gavl_v4l2_device_get_output_context(gavl_v4l2_device_t*);
 GAVL_PUBLIC gavl_hw_context_t * gavl_v4l2_device_get_capture_context(gavl_v4l2_device_t*);
 
+GAVL_PUBLIC 
+void gavl_v4l2_device_set_buffer_formats(gavl_v4l2_device_t * dev, const gavl_array_t * arr);
 
 #endif // GAVL_HW_V4L2_H_INCLUDED

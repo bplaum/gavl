@@ -187,11 +187,6 @@ void gavl_video_source_support_hw(gavl_video_source_t * s)
   s->flags |= FLAG_SUPPORT_HW;
   }
 
-void gavl_video_source_support_shuffle(gavl_video_source_t * s)
-  {
-  s->flags |= FLAG_SUPPORT_SHUFFLE;
-  }
-
 const gavl_video_format_t *
 gavl_video_source_get_src_format(gavl_video_source_t * s)
   {

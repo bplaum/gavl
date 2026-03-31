@@ -978,3 +978,12 @@ char * gavl_value_join_arr(const gavl_value_t * val, const char * glue)
     return NULL;
 
   }
+
+void gavl_value_swap(gavl_value_t * val1, gavl_value_t * val2)
+  {
+  gavl_value_t swp;
+  gavl_value_move(&swp, val1);
+  gavl_value_move(val1, val2);
+  gavl_value_move(val2, &swp);
+  }
+   

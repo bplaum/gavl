@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 #include <config.h>
 
@@ -208,11 +209,12 @@ static int video_frame_map_memfd(gavl_video_frame_t * f, int wr)
 static int audio_frame_map_memfd(gavl_audio_frame_t * f, int wr)
   {
   gavl_hw_buffer_t * buf = f->storage;
-  
+
   if(!f->samples.s_8)
     {
     if(!gavl_hw_buffer_map(buf, wr))
       return 0;
+
     gavl_audio_frame_from_data(f, &f->hwctx->afmt, buf->map_ptr, buf->map_len);
     }
   begin_access(buf);
@@ -277,7 +279,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_memfd()
   {
   return gavl_hw_context_create_internal(NULL, &funcs, GAVL_HW_MEMFD,
                                          GAVL_HW_SUPPORTS_VIDEO | GAVL_HW_SUPPORTS_VIDEO_MAP |
-                                         GAVL_HW_SUPPORTS_SHARED_POOL);
+                                         GAVL_HW_SUPPORTS_AUDIO | GAVL_HW_SUPPORTS_AUDIO_MAP );
   }
 
 

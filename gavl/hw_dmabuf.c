@@ -261,12 +261,12 @@ static int video_frame_map_dmabuf(gavl_video_frame_t * f, int wr)
         }
       }
   
-    for(i = 0; i < dmabuf->num_planes; i++)
+    for(i = 0; i < dmabuf->frame_info.num_planes; i++)
       {
       /* Set plane pointer */
-      f->strides[i] = dmabuf->planes[i].stride;
-      f->planes[i] = dmabuf->buffers[dmabuf->planes[i].buf_idx].map_ptr +
-        dmabuf->planes[i].offset;
+      f->strides[i] = dmabuf->frame_info.planes[i].stride;
+      f->planes[i] = dmabuf->buffers[dmabuf->frame_info.planes[i].buf_idx].map_ptr +
+        dmabuf->frame_info.planes[i].offset;
       }
     }
 
@@ -339,7 +339,7 @@ static int alloc_cma(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   gavl_dmabuf_video_frame_t *f = ret->storage;
 
   
-  f->fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
+  f->frame_info.fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
     
   gavl_video_format_get_frame_layout(&ctx->vfmt,
                                      offsets,
@@ -370,13 +370,13 @@ static int alloc_cma(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   f->buffers[0].map_len = size;
   f->num_buffers = 1;
     
-  f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
+  f->frame_info.num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
 
-  for(i = 0; i < f->num_planes; i++)
+  for(i = 0; i < f->frame_info.num_planes; i++)
     {
-    f->planes[i].buf_idx = 0;
-    f->planes[i].offset = offsets[i];
-    f->planes[i].stride = ret->strides[i];
+    f->frame_info.planes[i].buf_idx = 0;
+    f->frame_info.planes[i].offset = offsets[i];
+    f->frame_info.planes[i].stride = ret->strides[i];
     }
 
   if(!(flags & GAVL_DMABUF_FLAG_SWAP_CHROMA))
@@ -423,10 +423,10 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   create_struct.width  = ctx->vfmt.frame_width;
   create_struct.height = ctx->vfmt.frame_height; 
 
-  f->fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
+  f->frame_info.fourcc = fourcc_from_gavl_map(ctx, ctx->vfmt.pixelformat, &flags);
   
-  f->num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
-  f->num_buffers = f->num_planes;
+  f->frame_info.num_planes = gavl_pixelformat_num_planes(ctx->vfmt.pixelformat);
+  f->num_buffers = f->frame_info.num_planes;
 
   if(native->drm_fd < 0)
     {
@@ -435,7 +435,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
   
   create_struct.bpp = get_bpp(ctx->vfmt.pixelformat);
   
-  for(i = 0; i < f->num_planes; i++)
+  for(i = 0; i < f->frame_info.num_planes; i++)
     {
     if(i == 1)
       {
@@ -459,7 +459,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
       }
     
     f->drm_handles[i] = create_struct.handle;
-    f->planes[i].stride = create_struct.pitch;
+    f->frame_info.planes[i].stride = create_struct.pitch;
     f->buffers[i].map_len    = create_struct.size;
     f->buffers[i].map_offset = map_struct.offset;
 
@@ -472,7 +472,7 @@ static int alloc_drm(gavl_hw_context_t * ctx, gavl_video_frame_t * ret)
       
       }
     
-    f->planes[i].buf_idx = i;
+    f->frame_info.planes[i].buf_idx = i;
     f->buffers[i].fd = prime.fd;
     }
 
@@ -610,7 +610,7 @@ static int frame_to_hw_dmabuf(gavl_video_frame_t * dst,
 
   dma_native_t * native = dst->hwctx->native;
   gavl_dmabuf_video_frame_t * fp = dst->storage;
-  gavl_drm_pixelformat_from_fourcc(fp->fourcc, &flags, drm_indices);
+  gavl_drm_pixelformat_from_fourcc(fp->frame_info.fourcc, &flags, drm_indices);
   gavl_hw_video_frame_map(dst, 1);
   
   if(flags & GAVL_DMABUF_FLAG_SHUFFLE)
@@ -902,12 +902,12 @@ static void print_capabilities(int fd)
     printf("Dumb Buffer Support: %s\n", cap ? "Yes" : "No");
     }
   
-  if (drmGetCap(fd, DRM_CAP_VBLANK_HIGH_CRTC, &cap) == 0)
+  if(drmGetCap(fd, DRM_CAP_VBLANK_HIGH_CRTC, &cap) == 0)
     {
     printf("High CRTC VBlank: %s\n", cap ? "Yes" : "No");
     }
   
-  if (drmGetCap(fd, DRM_CAP_PRIME, &cap) == 0)
+  if(drmGetCap(fd, DRM_CAP_PRIME, &cap) == 0)
     {
     printf("PRIME Support: ");
     if (cap & DRM_PRIME_CAP_IMPORT) printf("Import ");
@@ -916,17 +916,17 @@ static void print_capabilities(int fd)
     printf("\n");
     }
     
-  if (drmGetCap(fd, DRM_CAP_ASYNC_PAGE_FLIP, &cap) == 0)
+  if(drmGetCap(fd, DRM_CAP_ASYNC_PAGE_FLIP, &cap) == 0)
     {
     printf("Async Page Flip: %s\n", cap ? "Yes" : "No");
     }
   
-  if (drmGetCap(fd, DRM_CAP_CURSOR_WIDTH, &cap) == 0)
+  if(drmGetCap(fd, DRM_CAP_CURSOR_WIDTH, &cap) == 0)
     {
     printf("Max Cursor Width: %lu\n", cap);
     }
   
-  if (drmGetCap(fd, DRM_CAP_CURSOR_HEIGHT, &cap) == 0)
+  if(drmGetCap(fd, DRM_CAP_CURSOR_HEIGHT, &cap) == 0)
     {
     printf("Max Cursor Height: %lu\n", cap);
     }
@@ -935,7 +935,7 @@ static void print_capabilities(int fd)
 static void print_version_info(int fd)
   {
   drmVersionPtr version = drmGetVersion(fd);
-  if (!version)
+  if(!version)
     {
     printf("Failed to get version info\n");
     return;

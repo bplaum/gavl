@@ -122,6 +122,10 @@ gavl_stream_get_id(const gavl_dictionary_t * s, int * id);
 GAVL_PUBLIC void
 gavl_stream_set_id(gavl_dictionary_t * s, int id);
 
+/* Make stream look like it's uncompressed */
+GAVL_PUBLIC void
+gavl_stream_clear_compression_fields(gavl_dictionary_t * s);
+
 
 GAVL_PUBLIC int
 gavl_stream_is_sbr(const gavl_dictionary_t * s);

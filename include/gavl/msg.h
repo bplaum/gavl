@@ -248,12 +248,6 @@
 
 #define GAVL_CMD_SRC_SET_STREAM_ACTION   109
 
-/*
- *  arg0: audio_storage 
- *  arg1: video_storage 
- */
-
-#define GAVL_CMD_SRC_SET_FRAME_STORAGE   110
 
 /* GUI Events */
 
@@ -480,6 +474,10 @@ void gavl_msg_free(gavl_msg_t * msg);
 
 GAVL_PUBLIC
 void gavl_msg_copy(gavl_msg_t * dst, const gavl_msg_t * src);
+
+/* free + init */
+GAVL_PUBLIC
+void gavl_msg_reset(gavl_msg_t * m);
 
 
 GAVL_PUBLIC

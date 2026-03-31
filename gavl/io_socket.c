@@ -229,6 +229,14 @@ gavl_io_t * gavl_io_create_socket(int fd, int read_timeout, int socket_flags)
 
 int gavl_io_get_socket(gavl_io_t * io)
   {
-  socket_t * s = gavl_io_get_priv(io);
+  socket_t * s;
+  
+  if(!(io->flags & GAVL_IO_IS_SOCKET))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_io_get_socket called for non socket io");
+    return -1;
+    }
+  
+  s = io->priv;
   return s->fd;
   }

@@ -160,15 +160,18 @@ void gavl_hw_reftable_destroy(gavl_hw_context_t * ctx)
     }
   else
     {
-    if(ctx->reftab_priv)
-      free(ctx->reftab_priv);
+    free(ctx->reftab_priv);
     }
   
   if((ctx->flags & HW_CTX_FLAG_CREATOR) && ctx->shm_name)
     shm_unlink(ctx->shm_name);
+
+  sem_destroy(&ctx->reftab->free_buffers);
   
   ctx->reftab = NULL;
   ctx->reftab_priv = NULL;
+
+  
   
   }
 

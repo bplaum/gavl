@@ -453,7 +453,7 @@ gavl_io_t * gavl_io_create_tls_client_async(int fd, const char * server_name, in
   tls_t * p;
   //  int result;
   gavl_io_t * io;
-  int flags = GAVL_IO_CAN_READ | GAVL_IO_CAN_WRITE | GAVL_IO_IS_DUPLEX | GAVL_IO_IS_SOCKET;
+  int flags = GAVL_IO_CAN_READ | GAVL_IO_CAN_WRITE | GAVL_IO_IS_DUPLEX;
 
   tls_global_init();
   

@@ -395,10 +395,10 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
         dma_frame->buffers[i].fd = fds[0];
         dma_frame->buffers[i].map_len = 0; // Frames are not meant for mapping
 
-        dma_frame->planes[i].buf_idx = i;
-        dma_frame->planes[i].offset = offsets[i];
-        dma_frame->planes[i].stride = strides[i];
-        dma_frame->planes[i].modifiers = modifier;
+        dma_frame->frame_info.planes[i].buf_idx = i;
+        dma_frame->frame_info.planes[i].offset = offsets[i];
+        dma_frame->frame_info.planes[i].stride = strides[i];
+        dma_frame->frame_info.planes[i].modifiers = modifier;
         
         dst->strides[i] = strides[i];
         
@@ -407,8 +407,8 @@ static int export_video_frame_egl(const gavl_video_format_t * fmt,
       gavl_hw_egl_unset_current(src->hwctx);
       
       dma_frame->num_buffers = gl->num_textures;
-      dma_frame->num_planes = gl->num_textures;
-      dma_frame->fourcc = format;
+      dma_frame->frame_info.num_planes = gl->num_textures;
+      dma_frame->frame_info.fourcc = format;
       
       }
 #endif
@@ -811,15 +811,14 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   attrs[aidx++] = fmt->image_height;
 
   attrs[aidx++] = EGL_LINUX_DRM_FOURCC_EXT;
-  attrs[aidx++] = dmabuf->fourcc;
+  attrs[aidx++] = dmabuf->frame_info.fourcc;
 #if 0
   fprintf(stderr, "Importing frame: %c%c%c%c %dx%d strides: %d, %d %d\n",
-          (dmabuf->fourcc) & 0xff,
-          (dmabuf->fourcc >> 8) & 0xff,
-          (dmabuf->fourcc >> 16) & 0xff,
-          (dmabuf->fourcc >> 24) & 0xff, fmt->image_width, fmt->image_height, src->strides[0],
-          (int)(src->planes[2] - src->planes[1]),
-          (int)(src->planes[1] - src->planes[0]));
+          (dmabuf->frame_info.fourcc) & 0xff,
+          (dmabuf->frame_info.fourcc >> 8) & 0xff,
+          (dmabuf->frame_info.fourcc >> 16) & 0xff,
+          (dmabuf->frame_info.fourcc >> 24) & 0xff, fmt->image_width, fmt->image_height, src->strides[0],
+          src->strides[1], src->strides[2]);
 #endif
   if(gavl_pixelformat_is_yuv(fmt->pixelformat))
     {
@@ -860,65 +859,65 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   
   /* Plane 0 */
   attrs[aidx++] = EGL_DMA_BUF_PLANE0_FD_EXT;
-  attrs[aidx++] = dmabuf->buffers[dmabuf->planes[0].buf_idx].fd;
+  attrs[aidx++] = dmabuf->buffers[dmabuf->frame_info.planes[0].buf_idx].fd;
   
   attrs[aidx++] = EGL_DMA_BUF_PLANE0_OFFSET_EXT;
-  attrs[aidx++] = dmabuf->planes[0].offset;
+  attrs[aidx++] = dmabuf->frame_info.planes[0].offset;
   
   attrs[aidx++] = EGL_DMA_BUF_PLANE0_PITCH_EXT;
   attrs[aidx++] = src->strides[0];
 
-  if(dmabuf->planes[0].modifiers)
+  if(dmabuf->frame_info.planes[0].modifiers)
     {
     attrs[aidx++] = EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT;
-    attrs[aidx++] = (dmabuf->planes[0].modifiers >> 32);
+    attrs[aidx++] = (dmabuf->frame_info.planes[0].modifiers >> 32);
 
     attrs[aidx++] = EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT;
-    attrs[aidx++] = (dmabuf->planes[0].modifiers & (uint64_t)0xffffffff);
+    attrs[aidx++] = (dmabuf->frame_info.planes[0].modifiers & (uint64_t)0xffffffff);
     }
   
-  if(dmabuf->num_planes > 1)
+  if(dmabuf->frame_info.num_planes > 1)
     {
     /* Plane 1 */
     attrs[aidx++] = EGL_DMA_BUF_PLANE1_FD_EXT;
-    attrs[aidx++] = dmabuf->buffers[dmabuf->planes[1].buf_idx].fd;
+    attrs[aidx++] = dmabuf->buffers[dmabuf->frame_info.planes[1].buf_idx].fd;
 
     attrs[aidx++] = EGL_DMA_BUF_PLANE1_OFFSET_EXT;
-    attrs[aidx++] = dmabuf->planes[1].offset;
+    attrs[aidx++] = dmabuf->frame_info.planes[1].offset;
       
     attrs[aidx++] = EGL_DMA_BUF_PLANE1_PITCH_EXT;
     attrs[aidx++] = src->strides[1];
 
-    if(dmabuf->planes[1].modifiers)
+    if(dmabuf->frame_info.planes[1].modifiers)
       {
       attrs[aidx++] = EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT;
-      attrs[aidx++] = (dmabuf->planes[1].modifiers >> 32);
+      attrs[aidx++] = (dmabuf->frame_info.planes[1].modifiers >> 32);
 
       attrs[aidx++] = EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT;
-      attrs[aidx++] = (dmabuf->planes[1].modifiers & (uint64_t)0xffffffff);
+      attrs[aidx++] = (dmabuf->frame_info.planes[1].modifiers & (uint64_t)0xffffffff);
       }
     
     }
 
-  if(dmabuf->num_planes > 2)
+  if(dmabuf->frame_info.num_planes > 2)
     {
     /* Plane 2 */
     attrs[aidx++] = EGL_DMA_BUF_PLANE2_FD_EXT;
-    attrs[aidx++] = dmabuf->buffers[dmabuf->planes[2].buf_idx].fd;
+    attrs[aidx++] = dmabuf->buffers[dmabuf->frame_info.planes[2].buf_idx].fd;
 
     attrs[aidx++] = EGL_DMA_BUF_PLANE2_OFFSET_EXT;
-    attrs[aidx++] = dmabuf->planes[2].offset;
+    attrs[aidx++] = dmabuf->frame_info.planes[2].offset;
       
     attrs[aidx++] = EGL_DMA_BUF_PLANE2_PITCH_EXT;
     attrs[aidx++] = src->strides[2];
 
-    if(dmabuf->planes[2].modifiers)
+    if(dmabuf->frame_info.planes[2].modifiers)
       {
       attrs[aidx++] = EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT;
-      attrs[aidx++] = (dmabuf->planes[2].modifiers >> 32);
+      attrs[aidx++] = (dmabuf->frame_info.planes[2].modifiers >> 32);
 
       attrs[aidx++] = EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT;
-      attrs[aidx++] = (dmabuf->planes[2].modifiers & (uint64_t)0xffffffff);
+      attrs[aidx++] = (dmabuf->frame_info.planes[2].modifiers & (uint64_t)0xffffffff);
       }
     }
   
