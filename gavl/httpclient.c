@@ -1155,7 +1155,7 @@ static void prepare_header(gavl_http_client_t * c,
                            const char * path)
   {
   const char * etag;
-  time_t mtime;
+  int64_t mtime;
 
   if(c->flags & FLAG_USE_PROXY)
     {
