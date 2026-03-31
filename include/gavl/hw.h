@@ -94,7 +94,6 @@ typedef enum
 /* fourcc for DMA buffer import (int array). */
 #define GAVL_HW_BUF_DMA_FOURCC   "dmafourcc"
 
-
 #define GAVL_HW_BUF_SAMPLEFORMAT     "sfmt"
 #define GAVL_HW_BUF_SAMPLERATE       "srate"
 #define GAVL_HW_BUF_INTERLEAVE_MODE  "interleave"
@@ -135,12 +134,22 @@ GAVL_PUBLIC
 int gavl_hw_buf_desc_supports_format(const gavl_dictionary_t * dict,
                                      const char * key, int fmt);
 
+GAVL_PUBLIC void
+gavl_hw_buf_desc_set_shared(gavl_array_t * arr);
+
+GAVL_PUBLIC int
+gavl_hw_buf_desc_is_shared(const gavl_dictionary_t * dict);
+
 
 /* Return the first array entry, which supports the format */
 
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_hw_buf_desc_supports_video_format(const gavl_array_t * arr,
                                        const gavl_video_format_t * fmt);
+
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_type(const gavl_array_t * arr,
+                               gavl_hw_type_t type);
 
 GAVL_PUBLIC const gavl_dictionary_t *
 gavl_hw_buf_desc_supports_dma_fourcc(const gavl_array_t * arr, int fourcc);

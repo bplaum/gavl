@@ -813,7 +813,7 @@ static int egl_import_dmabuf(gavl_hw_context_t * ctx,
   attrs[aidx++] = EGL_LINUX_DRM_FOURCC_EXT;
   attrs[aidx++] = dmabuf->frame_info.fourcc;
 #if 0
-  fprintf(stderr, "Importing frame: %c%c%c%c %dx%d strides: %d, %d %d\n",
+  fprintf(stderr, "Importing frame: %c%c%c%c %dx%d strides: %d %d %d\n",
           (dmabuf->frame_info.fourcc) & 0xff,
           (dmabuf->frame_info.fourcc >> 8) & 0xff,
           (dmabuf->frame_info.fourcc >> 16) & 0xff,

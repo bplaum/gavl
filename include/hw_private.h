@@ -47,8 +47,10 @@
 #define HW_CTX_FLAG_PACKET          (1<<5)
 #define HW_CTX_MODE_MASK    (HW_CTX_FLAG_AUDIO | HW_CTX_FLAG_VIDEO | HW_CTX_FLAG_PACKET)
 
+#define HW_CTX_FLAG_SHARED          (1<<6)
+
 /* Frame was already written, transmit just the buffer index from now on */
-#define HW_FRAME_WRITTEN            (1<<0)
+// #define HW_FRAME_WRITTEN            (1<<0)
 
 /* Functions */
 typedef struct

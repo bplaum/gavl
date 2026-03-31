@@ -60,7 +60,6 @@ gavl_hw_context_t * gavl_hw_context_create_internal(void * native,
   ret->funcs = funcs;
   ret->support_flags = support_flags;
   ret->max_frames = DEFAULT_MAX_FRAMES;
-  
   return ret;
   }
 
@@ -76,8 +75,6 @@ void gavl_hw_ctx_resync(gavl_hw_context_t * ctx)
   if(ctx->flags & HW_CTX_FLAG_IMPORTER)
     gavl_hw_frame_pool_reset(ctx, 0);
 
-  for(i = 0; i < ctx->num_frames; i++)
-    ctx->frames[i].flags &= ~HW_FRAME_WRITTEN;
   }
 
 void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
@@ -585,6 +582,9 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
     
     if(vfmt)
       gavl_video_format_copy(vfmt, &ctx->vfmt);
+
+    ctx->shm_name = gavl_strrep(ctx->shm_name, ctx_src->shm_name);
+      
     
     }
   else
@@ -625,6 +625,10 @@ void gavl_hw_ctx_set_audio_importer(gavl_hw_context_t * ctx,
     fmt->hwctx = ctx;
     gavl_audio_format_copy(&ctx->afmt, fmt);
     }
+  
+  if(ctx_src)
+    ctx->shm_name = gavl_strrep(ctx->shm_name, ctx_src->shm_name);
+  
   }
   
 void gavl_hw_ctx_set_packet_creator(gavl_hw_context_t * ctx, int max_size)
@@ -1462,6 +1466,28 @@ gavl_hw_buf_desc_supports_audio_format(const gavl_array_t * arr,
   return NULL;
   }
 
+GAVL_PUBLIC const gavl_dictionary_t *
+gavl_hw_buf_desc_supports_type(const gavl_array_t * arr,
+                               gavl_hw_type_t type)
+  {
+  int i;
+  int arr_type = GAVL_HW_NONE;
+  const gavl_dictionary_t * dict;
+
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    
+    if((dict = gavl_value_get_dictionary(&arr->entries[i])) &&
+       gavl_dictionary_get_int(dict, GAVL_HW_BUF_TYPE, &arr_type) &&
+       (type == arr_type))
+      {
+      return dict;
+      }
+    }
+  return NULL;
+  }
+
+
 const gavl_array_t * gavl_hw_ctx_get_import_formats(const gavl_hw_context_t * ctx)
   {
   return &ctx->import_formats;
@@ -1505,7 +1531,7 @@ gavl_hw_context_t * gavl_hw_ctx_create_from_buffer_format(const gavl_dictionary_
 
   if(gavl_dictionary_get_int(dict, GAVL_HW_BUF_SHARED, &shared) && shared)
     gavl_hw_ctx_set_shared(ret);
-    
+  
   /* We override the supported formats completely */
   gavl_array_reset(&ret->map_formats);
   dict_dst = gavl_array_append_dictionary(&ret->map_formats);
@@ -1558,4 +1584,22 @@ void gavl_hw_buffer_formats_dump(const gavl_array_t * arr)
   int i;
   for(i = 0; i < arr->num_entries; i++)
     gavl_hw_buffer_format_dump(gavl_value_get_dictionary(&arr->entries[i]));
+  }
+
+void gavl_hw_buf_desc_set_shared(gavl_array_t * arr)
+  {
+  int i;
+  gavl_dictionary_t * dict;
+  for(i = 0; i < arr->num_entries; i++)
+    {
+    if((dict = gavl_value_get_dictionary_nc(&arr->entries[i])))
+      gavl_dictionary_set_int(dict, GAVL_HW_BUF_SHARED, 1);
+    }
+
+  }
+
+int gavl_hw_buf_desc_is_shared(const gavl_dictionary_t * dict)
+  {
+  int val = 0;
+  return gavl_dictionary_get_int(dict, GAVL_HW_BUF_SHARED, &val) && val;
   }

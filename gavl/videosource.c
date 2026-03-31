@@ -687,6 +687,8 @@ gavl_video_source_set_exporter(gavl_video_source_t * src, const gavl_array_t * i
   gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Exporting from %s to %s",
            gavl_hw_type_to_string(gavl_hw_ctx_get_type(src->src_format.hwctx)),
            gavl_hw_type_to_string(gavl_hw_ctx_get_type(priv->hwctx)));
+
+  //  gavl_dictionary_dump(fmt, 2);
   
   gavl_hw_ctx_set_video_importer(priv->hwctx, src->src_format.hwctx, &vfmt);
   
