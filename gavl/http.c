@@ -39,7 +39,6 @@
 // #define DUMP_REQUESTS_READ
 
 
-
 /* Utils */
 
 int gavl_http_parse_vars_line(gavl_dictionary_t * m, char * line)
@@ -676,7 +675,12 @@ void gavl_http_header_set_time(gavl_dictionary_t * h, const char * name, int64_t
   {
   char date[80];
   struct tm tm;
+#if SIZEOF_TIME_T == 4
+  time_t t_4 = t;
+  strftime(date, sizeof(date),"%a, %d %b %Y %H:%M:%S GMT", gmtime_r(&t_4, &tm));
+#else
   strftime(date, sizeof(date),"%a, %d %b %Y %H:%M:%S GMT", gmtime_r(&t, &tm));
+#endif
   gavl_dictionary_set_string(h, name, date);
   }
 

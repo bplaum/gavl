@@ -323,6 +323,7 @@ AC_CHECK_SIZEOF(int,0)
 AC_CHECK_SIZEOF(long,0)
 AC_CHECK_SIZEOF(float,4)
 AC_CHECK_SIZEOF(double,8)
+AC_CHECK_SIZEOF([time_t], [], [#include <time.h>])
 
 dnl UD_CHECK_IEEE
 
