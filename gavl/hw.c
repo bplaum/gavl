@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+
 #include <config.h>
 
 #include <gavl/gavl.h>
@@ -46,8 +47,6 @@
 
 #define DEFAULT_MAX_FRAMES 16
 
-
-  
 
 gavl_hw_context_t * gavl_hw_context_create_internal(void * native,
                                                     const gavl_hw_funcs_t * funcs,
@@ -70,11 +69,22 @@ int gavl_hw_ctx_get_support_flags(gavl_hw_context_t * ctx)
 
 void gavl_hw_ctx_resync(gavl_hw_context_t * ctx)
   {
-  int i;
-  
   if(ctx->flags & HW_CTX_FLAG_IMPORTER)
     gavl_hw_frame_pool_reset(ctx, 0);
+  else if(ctx->flags & HW_CTX_FLAG_CREATOR)
+    {
+    int val;
+    sem_getvalue(&ctx->reftab->free_buffers, &val);
+#if 0
+    fprintf(stderr, "gavl_hw_ctx_resync (%p %s creator %s) sem: %d num_frames: %d\n",
+            ctx,
+            (ctx->flags & HW_CTX_FLAG_AUDIO ? "audio" : "video"),
+            gavl_hw_type_to_string(ctx->type),
+            val, ctx->num_frames);
 
+    gavl_hw_reftable_dump(ctx);
+#endif
+    }
   }
 
 void gavl_hw_ctx_reset(gavl_hw_context_t * ctx)
@@ -681,10 +691,14 @@ int gavl_hw_supported(gavl_hw_type_t type)
 
 /* Frame pool */
 
-static int refcount(gavl_hw_context_t * ctx, int buf_idx)
+int gavl_hw_refcount(gavl_hw_context_t * ctx, int buf_idx)
   {
+  //  static_assert(ATOMIC_INT_LOCK_FREE == 2, "atomic int must be lock-free for shared memory use");
+  
+  //  return atomic_load_explicit(&ctx->reftab->frames[buf_idx].refcount,
+  //                              memory_order_relaxed);
   return atomic_load_explicit(&ctx->reftab->frames[buf_idx].refcount,
-                              memory_order_relaxed);
+                              memory_order_acquire);
 
   }
 
@@ -695,16 +709,30 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
   if((val = atomic_fetch_sub_explicit(&ctx->reftab->frames[buf_idx].refcount,
                                       1, memory_order_release)) == 1)
     {
+    atomic_thread_fence(memory_order_acquire);
+#if 0    
     /* Increase free frames */
-    //    fprintf(stderr, "sem_post\n");
+    fprintf(stderr, "Releasing %s frame %d\n",
+            ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
+            buf_idx);
+    gavl_hw_reftable_dump(ctx);
+#endif
     sem_post(&ctx->reftab->free_buffers);
+
+    sem_getvalue(&ctx->reftab->free_buffers, &val);
+    if(val > ctx->num_frames)
+      {
+      fprintf(stderr, "BUG: sem > num_frames for %s (%d > %d)\n",
+              ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio", val, ctx->num_frames);
+      gavl_hw_reftable_dump(ctx);
+      }
     }
   }
 
 static void ref(gavl_hw_context_t * ctx, int buf_idx)
   {
   atomic_fetch_add_explicit(&ctx->reftab->frames[buf_idx].refcount,
-                            1, memory_order_acquire);
+                            1, memory_order_relaxed);
   }
 
 #define CHECK_HWCTX_RET if(!f->hwctx) \
@@ -724,7 +752,7 @@ static void ref(gavl_hw_context_t * ctx, int buf_idx)
 int gavl_hw_video_frame_refcount(gavl_video_frame_t * f)
   {
   CHECK_HWCTX_RET
-  return refcount(f->hwctx, f->buf_idx);
+  return gavl_hw_refcount(f->hwctx, f->buf_idx);
   }
 
 void gavl_hw_video_frame_unref(gavl_video_frame_t * f)
@@ -742,7 +770,7 @@ void gavl_hw_video_frame_ref(gavl_video_frame_t * f)
 int gavl_hw_audio_frame_refcount(gavl_audio_frame_t * f)
   {
   CHECK_HWCTX_RET
-  return refcount(f->hwctx, f->buf_idx);
+  return gavl_hw_refcount(f->hwctx, f->buf_idx);
   }
 
 void gavl_hw_audio_frame_unref(gavl_audio_frame_t * f)
@@ -760,7 +788,7 @@ void gavl_hw_audio_frame_ref(gavl_audio_frame_t * f)
 int gavl_hw_packet_refcount(gavl_packet_t * f)
   {
   CHECK_HWCTX_RET
-  return refcount(f->hwctx, f->buf_idx);
+  return gavl_hw_refcount(f->hwctx, f->buf_idx);
   }
 
 void gavl_hw_packet_unref(gavl_packet_t * f)
@@ -782,13 +810,17 @@ static void * get_free_frame(gavl_hw_context_t * ctx)
   int i;
   for(i = 0; i < ctx->num_frames; i++)
     {
-    if(!refcount(ctx, i))
+    if(!gavl_hw_refcount(ctx, i))
       {
       //      fprintf(stderr, "gavl_hw_video_frame_get: reusing frame\n");
       ref(ctx, i);
       return ctx->frames[i].frame;
       }
     }
+
+  gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "get_free_frame: Couldn't get free frame");
+  //  gavl_hw_reftable_dump(ctx);
+  
   return NULL;
   }
 
@@ -799,14 +831,18 @@ frame_get_write(gavl_hw_context_t * ctx)
   void * f = NULL;
 
   if(!(ctx->flags & HW_CTX_FLAG_CREATOR))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "frame_get_write faied: No creator");
     return NULL;
-
+    }
   gavl_hw_frame_pool_init(ctx);
 
+#if 0
   sem_getvalue(&ctx->reftab->free_buffers, &result);
-  
-  //  fprintf(stderr, "get_frame_write: num_frames: %d sem: %d\n", ctx->num_frames, result);
-
+  fprintf(stderr, "get_frame_write (%s: %s): num_frames: %d sem: %d\n", 
+          ctx->flags & HW_CTX_FLAG_AUDIO ? "audio" : "video", gavl_hw_type_to_string(ctx->type),
+          ctx->num_frames, result);
+#endif
   while(1)
     {
 
@@ -814,7 +850,7 @@ frame_get_write(gavl_hw_context_t * ctx)
 
     if(!result)
       {
-      //      fprintf(stderr, "bla 1\n");
+      //      fprintf(stderr, "Getting free frame\n");
       return get_free_frame(ctx);
       }
     if(errno == EINTR)
@@ -900,7 +936,10 @@ frame_get_write(gavl_hw_context_t * ctx)
     while(sem_timedwait(&ctx->reftab->free_buffers, &ts) == -1)
       {
       if(errno != EINTR)
+        {
+        gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "frame_get_write faied: Buffer overflow");
         return NULL;
+        }
       }
     //    fprintf(stderr, "bla 3\n");
     return get_free_frame(ctx);
@@ -913,7 +952,10 @@ gavl_video_frame_t *
 gavl_hw_video_frame_get_write(gavl_hw_context_t * ctx)
   {
   if(!(ctx->flags & HW_CTX_FLAG_VIDEO))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_hw_video_frame_get_write faied: No video support");
     return NULL;
+    }
   return frame_get_write(ctx);
   }
 
@@ -922,7 +964,10 @@ gavl_hw_audio_frame_get_write(gavl_hw_context_t * ctx)
   {
   gavl_audio_frame_t * ret;
   if(!(ctx->flags & HW_CTX_FLAG_AUDIO))
+    {
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "gavl_hw_video_frame_get_write faied: No audio support");
     return NULL;
+    }
   ret = frame_get_write(ctx);
   return ret;
   }
@@ -993,25 +1038,29 @@ int gavl_hw_frame_pool_add(gavl_hw_context_t * ctx, void * frame, int idx)
 void gavl_hw_frame_pool_reset(gavl_hw_context_t * ctx, int free_resources)
   {
   int i;
-  for(i = 0; i < ctx->num_frames; i++)
-    {
-    switch(ctx->flags & HW_CTX_MODE_MASK)
-      {
-      case HW_CTX_FLAG_AUDIO:
-        gavl_hw_destroy_audio_frame(ctx, ctx->frames[i].frame, free_resources);
-        break;
-      case HW_CTX_FLAG_VIDEO:
-        gavl_hw_destroy_video_frame(ctx, ctx->frames[i].frame, free_resources);
-        
-        break;
-      case HW_CTX_FLAG_PACKET:
-        break;
-      }
-    ctx->frames[i].frame = NULL;
-    }
   
   if(ctx->frames)
     {
+
+    for(i = 0; i < ctx->max_frames; i++)
+      {
+      if(ctx->frames[i].frame)
+        {
+        switch(ctx->flags & HW_CTX_MODE_MASK)
+          {
+          case HW_CTX_FLAG_AUDIO:
+            gavl_hw_destroy_audio_frame(ctx, ctx->frames[i].frame, free_resources);
+            break;
+          case HW_CTX_FLAG_VIDEO:
+            gavl_hw_destroy_video_frame(ctx, ctx->frames[i].frame, free_resources);
+        
+            break;
+          case HW_CTX_FLAG_PACKET:
+            break;
+          }
+        ctx->frames[i].frame = NULL;
+        }
+      }
     free(ctx->frames);
     ctx->frames = NULL;
     ctx->num_frames = 0;

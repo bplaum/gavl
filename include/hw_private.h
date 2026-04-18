@@ -150,6 +150,9 @@ typedef struct
 
 char * gavl_hw_reftable_create_name(void);
 
+void gavl_hw_reftable_dump(gavl_hw_context_t * ctx);
+int gavl_hw_refcount(gavl_hw_context_t * ctx, int buf_idx);
+
 reftable_t * gavl_hw_reftable_create_local(gavl_hw_context_t * ctx);
 reftable_t * gavl_hw_reftable_create_shared(gavl_hw_context_t * ctx);
 reftable_t * gavl_hw_reftable_create_remote(gavl_hw_context_t * ctx);

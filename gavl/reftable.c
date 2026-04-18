@@ -62,6 +62,18 @@ static int reftable_size(gavl_hw_context_t * ctx)
   return sizeof(reftable_t) + ctx->max_frames * sizeof(reftable_frame_t);
   }
 
+void gavl_hw_reftable_dump(gavl_hw_context_t * ctx)
+  {
+  int val;
+  int i;
+  
+  sem_getvalue(&ctx->reftab->free_buffers, &val);
+
+  gavl_dprintf("Reference table, total frames: %d, free buffers: %d\n", ctx->num_frames, val);
+  for(i = 0; i < ctx->num_frames; i++)
+    gavl_dprintf("  frame: %d, refcount: %d\n", i, gavl_hw_refcount(ctx, i));
+  
+  }
 
 reftable_t * gavl_hw_reftable_create_local(gavl_hw_context_t * ctx)
   {
@@ -85,6 +97,11 @@ reftable_t * gavl_hw_reftable_create_shared(gavl_hw_context_t * ctx)
   reftable_t * ret;
   
   size = reftable_size(ctx);
+
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+           "Creating shared reference table for %s, shm_name: %s", 
+           ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
+           ctx->shm_name);
   
   if((ctx->shm_fd = shm_open(ctx->shm_name, O_RDWR | O_CREAT | O_EXCL,
                              S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
@@ -124,6 +141,11 @@ reftable_t * gavl_hw_reftable_create_remote(gavl_hw_context_t * ctx)
 
   size = reftable_size(ctx);
 
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN,
+           "Creating remote reference table for %s, shm_name: %s", 
+           ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
+           ctx->shm_name);
+  
   if((ctx->shm_fd = shm_open(ctx->shm_name, O_RDWR,
                              S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
     {

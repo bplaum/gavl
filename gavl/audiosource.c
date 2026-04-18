@@ -164,15 +164,7 @@ void gavl_audio_source_reset(gavl_audio_source_t * s)
 
   if(s->flags & FLAG_PASSTHROUGH_INIT)
     s->flags |= FLAG_PASSTHROUGH;
-
   s->incomplete_samples = 0;
-  
-#if 0
-  if(s->src_fp)
-    gavl_audio_frame_pool_reset(s->src_fp);
-  if(s->dst_fp)
-    gavl_audio_frame_pool_reset(s->dst_fp);
-#endif
   }
 
 void
