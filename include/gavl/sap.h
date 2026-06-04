@@ -41,6 +41,13 @@ int gavl_sap_decode(const gavl_buffer_t * buf, int * del, gavl_dictionary_t * re
 GAVL_PUBLIC
 int gavl_sap_encode(gavl_buffer_t * ret, int del, const gavl_dictionary_t * dict);
 
+/* SDP handling */
+
+#define GAVL_SDP_ORIGININATOR "o"
+#define GAVL_SDP_SDP_SE "o"
+
+#define GAVL_SDP_SESSIONAME   "s" 
+#define GAVL_SDP_SESSIONTITLE "i" 
 
 
 
