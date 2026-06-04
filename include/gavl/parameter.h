@@ -50,6 +50,7 @@ typedef enum
     GAVL_PARAMETER_POSITION      = 18, //!< Position (x/y coordinates, scaled 0..1)
     GAVL_PARAMETER_BUTTON        = 19, //!< Pressing the button causes set_parameter to be called with NULL value
     GAVL_PARAMETER_DIRLIST       = 20, //!< List of directories
+    GAVL_PARAMETER_STRING_MULTILINE = 21, //!< String (multiple lines)
   } gavl_parameter_type_t;
 
 
@@ -117,6 +118,7 @@ typedef struct gavl_parameter_info_s  gavl_parameter_info_t;
 /* Dictionary keys */
 
 #define GAVL_PARAMETER_TYPE              "ptype"
+#define GAVL_PARAMETER_FLAGS             "flags"
 
 #define GAVL_PARAMETER_DEFAULT           "default"
 #define GAVL_PARAMETER_MIN               "min"
@@ -187,6 +189,10 @@ gavl_parameter_append_param(gavl_dictionary_t* params, const char * name,
 
 GAVL_PUBLIC gavl_parameter_type_t
 gavl_parameter_info_get_type(const gavl_dictionary_t* info);
+
+GAVL_PUBLIC
+int gavl_parameter_info_get_flags(const gavl_dictionary_t* info);
+
 
 GAVL_PUBLIC void
 gavl_parameter_init(gavl_dictionary_t* param,
