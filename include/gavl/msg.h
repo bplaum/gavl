@@ -68,8 +68,8 @@
 
 /** \brief Generic progress callback
  *
- *  arg1: Activity (string) 
  *  arg0: Percentage (0.0..1.0)
+ *  arg1: Activity (string) 
  */
 
 #define GAVL_MSG_PROGRESS      101
