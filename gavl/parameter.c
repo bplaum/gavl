@@ -157,6 +157,13 @@ gavl_parameter_type_t gavl_parameter_info_get_type(const gavl_dictionary_t* info
   return type;
   }
 
+int gavl_parameter_info_get_flags(const gavl_dictionary_t* info)
+  {
+  int flags = 0;
+  gavl_dictionary_get_int(info, GAVL_PARAMETER_TYPE, &flags);
+  return flags;
+  }
+
 void
 gavl_parameter_from_static(gavl_dictionary_t* param,
                            const gavl_parameter_info_t * p)
@@ -177,6 +184,9 @@ gavl_parameter_from_static(gavl_dictionary_t* param,
 
   if(p->num_digits)
     gavl_dictionary_set_int(param, GAVL_PARAMETER_NUM_DIGITS, p->num_digits);
+
+  if(p->flags)
+    gavl_dictionary_set_int(param, GAVL_PARAMETER_FLAGS, p->flags);
   
   gavl_dictionary_set_string(param, GAVL_PARAMETER_HELP, p->help_string);
   
@@ -297,10 +307,11 @@ gavl_type_t gavl_parameter_type_to_gavl(gavl_parameter_type_t type)
     case GAVL_PARAMETER_SLIDER_FLOAT:  //!< Float slider
       return GAVL_TYPE_FLOAT;
       break;
-    case GAVL_PARAMETER_STRING:        //!< String (one line only)
-    case GAVL_PARAMETER_STRING_HIDDEN: //!< Encrypted string (displays as ***)
-    case GAVL_PARAMETER_STRINGLIST:    //!< Popdown menu with string values
-    case GAVL_PARAMETER_FONT:          //!< Font (contains fontconfig compatible fontname)
+    case GAVL_PARAMETER_STRING:           //!< String (one line only)
+    case GAVL_PARAMETER_STRING_HIDDEN:    //!< Encrypted string (displays as ***)
+    case GAVL_PARAMETER_STRINGLIST:       //!< Popdown menu with string values
+    case GAVL_PARAMETER_STRING_MULTILINE: //!< String (multiline)
+    case GAVL_PARAMETER_FONT:             //!< Font (contains fontconfig compatible fontname)
     case GAVL_PARAMETER_FILE:          //!< File
     case GAVL_PARAMETER_DIRECTORY:     //!< Directory
       return GAVL_TYPE_STRING;
