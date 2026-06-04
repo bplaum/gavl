@@ -435,6 +435,7 @@ int gavl_string_array_indexof_i(const gavl_array_t * arr, const char * str)
   return -1;
   }
 
+  
 char * gavl_string_array_join(const gavl_array_t * arr, const char * glue)
   {
   char * ret;
