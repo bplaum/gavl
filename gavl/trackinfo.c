@@ -3152,6 +3152,25 @@ void gavl_track_from_location(gavl_dictionary_t * ret, const char * location)
   gavl_metadata_add_src(m, GAVL_META_SRC, NULL, location);
   }
 
+void gavl_tracks_from_locations(gavl_array_t * ret, const gavl_array_t * locations)
+  {
+  int i;
+
+  for(i = 0; i < locations->num_entries; i++)
+    {
+    gavl_value_t dict_val;
+    gavl_dictionary_t * dict;
+    
+    gavl_value_init(&dict_val);
+    dict = gavl_value_set_dictionary(&dict_val);
+    gavl_track_from_location(dict, gavl_string_array_get(locations, i));
+    gavl_array_splice_val_nocopy(ret, -1, 0, &dict_val);
+    }
+
+  
+  }
+
+
 #if 0
 void gavl_track_set_clock_time_map(gavl_dictionary_t * track,
                                    int64_t pts, int pts_scale, gavl_time_t clock_time)

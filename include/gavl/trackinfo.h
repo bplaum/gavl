@@ -95,6 +95,8 @@ int gavl_track_has_src(const gavl_dictionary_t * m, const char * key,
 GAVL_PUBLIC
 void gavl_track_from_location(gavl_dictionary_t * ret, const char * location);
 
+GAVL_PUBLIC
+void gavl_tracks_from_locations(gavl_array_t * ret, const gavl_array_t * locations);
 
 GAVL_PUBLIC gavl_dictionary_t *
 gavl_track_get_stream_all_nc(gavl_dictionary_t * d, int idx);
