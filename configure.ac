@@ -144,8 +144,12 @@ dnl getaddrinfo_a
 dnl
 ANL_LIBS=""
 OLD_LIBS=$LIBS
+if test "x$host_cpu" != "xloongarch64"; then
 LIBS="$LIBS -lanl"
 AC_CHECK_FUNC(getaddrinfo_a, LIBGAVL_LIBS="${LIBGAVL_LIBS} -lanl", AC_MSG_ERROR("getaddrinfo_a not found in libanl"))
+else
+AC_CHECK_FUNC(getaddrinfo_a, LIBGAVL_LIBS="${LIBGAVL_LIBS}", AC_MSG_ERROR("getaddrinfo_a not found in libanl"))
+fi
 LIBS=$OLD_LIBS
 
 
