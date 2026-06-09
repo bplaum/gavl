@@ -935,8 +935,12 @@ static int done_buffer_capture_pool(gavl_v4l2_device_t * dev)
   {
   int i;
 
+  /* Unref frame from before */
   if(dev->capture.cur_idx >= 0)
+    {
     gavl_hw_video_frame_unref(dev->capture.ctx->frames[dev->capture.cur_idx].frame);
+    dev->capture.cur_idx = -1;
+    }
   
   for(i = 0; i < dev->capture.num_bufs; i++)
     {
@@ -959,6 +963,61 @@ static int done_buffer_capture_pool(gavl_v4l2_device_t * dev)
     }
   
   return 1;
+  }
+
+static int ensure_capture_frame(gavl_v4l2_device_t * dev)
+  {
+  int result;
+  struct timespec ts;
+  int timeout_ms = 1000; // 1 sec.
+
+  done_buffer_capture_pool(dev);
+  
+  /* We need to decrement the semaphore */
+  while(1)
+    {
+    result = sem_trywait(&dev->capture.ctx->reftab->free_buffers);
+    
+    if(!result)
+      return 1;
+
+    if(errno == EINTR)
+      continue;
+    else
+      break;
+    }
+    
+  /* Wait for a free buffer */
+    
+    
+  // Get current time (CLOCK_REALTIME required!)
+  clock_gettime(CLOCK_REALTIME, &ts);
+  
+  // Add timeout
+  ts.tv_sec += timeout_ms / 1000;
+  ts.tv_nsec += (timeout_ms % 1000) * 1000000;
+    
+  // Normalize (if nsec >= 1 second)
+  if(ts.tv_nsec >= 1000000000)
+    {
+    ts.tv_sec++;
+    ts.tv_nsec -= 1000000000;
+    }
+    
+  // Wait with timeout
+  while(sem_timedwait(&dev->capture.ctx->reftab->free_buffers, &ts) == -1)
+    {
+    if(errno != EINTR)
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no free frame");
+      return 0;
+      }
+    }
+  
+  /* Queue free buffers */
+  done_buffer_capture_pool(dev);
+  return 1;
+  
   }
 
 static gavl_packet_t * gavl_v4l2_device_get_packet_write(gavl_v4l2_device_t * dev)
@@ -1452,8 +1511,9 @@ static void handle_decoder_event(gavl_v4l2_device_t * dev)
                                                        DECODER_NUM_FRAMES);
 
           for(i = 0; i < dev->capture.num_bufs; i++)
+            {
             queue_frame_capture(dev, i);
-          
+            }
           stream_on(dev, dev->capture.buf_type);
           
           //      fprintf(stderr, "Re-created buffers\n");
@@ -1621,8 +1681,11 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
   int events_requested;
   
   /* Send frame back to the queue */
-  done_buffer_capture_pool(dev);
+  //  done_buffer_capture_pool(dev);
 
+  if(!ensure_capture_frame(dev))
+    return GAVL_SOURCE_EOF;
+  
   //  fprintf(stderr, "get_frame_decoder...");
   
   if(dev->flags & DECODER_GOT_EOS)
@@ -1661,6 +1724,8 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       {
       int idx;
       gavl_video_frame_t * f;
+
+
       
       idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, NULL, NULL);
       
@@ -1847,9 +1912,10 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
       }
     return GAVL_SOURCE_OK;
     }
-  
-  done_buffer_capture_pool(dev);
 
+  if(!ensure_capture_frame(dev))
+    return GAVL_SOURCE_EOF;
+  
   events = POLLIN;
 
   //  fprintf(stderr, "Poll...");
@@ -1974,7 +2040,6 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   for(i = 0; i < dev->capture.num_bufs; i++)
     queue_frame_capture(dev, i);
   
-
   if(dev->capture.ci.id != GAVL_CODEC_ID_NONE)
     {
     /* Compressed capture */
@@ -1989,6 +2054,12 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     }
 
   init_capture_context(dev);
+
+  if(dev->capture.ci.id == GAVL_CODEC_ID_NONE)
+    {
+    for(i = 0; i < dev->capture.num_bufs; i++)
+      sem_post(&dev->capture.ctx->reftab->free_buffers);
+    }
   
   ret = 1;
   fail:
@@ -2235,6 +2306,7 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
                                   gavl_packet_source_t * psrc)
   {
   int format_packets = 0;
+  int i;
   
   int caps = 0;
   int ret = 0;
@@ -2511,6 +2583,9 @@ int gavl_v4l2_device_init_decoder(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   init_output_context(dev);
   
   init_frame_pool(&dev->capture);
+
+  for(i = 0; i < dev->capture.num_bufs; i++)
+    sem_post(&dev->capture.ctx->reftab->free_buffers);
   
   dev->vsrc_priv = gavl_video_source_create(get_frame_decoder, dev,
                                             GAVL_SOURCE_SRC_ALLOC,

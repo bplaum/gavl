@@ -710,7 +710,7 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
                                       1, memory_order_release)) == 1)
     {
     atomic_thread_fence(memory_order_acquire);
-#if 0    
+#if 0
     /* Increase free frames */
     fprintf(stderr, "Releasing %s frame %d\n",
             ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
@@ -845,7 +845,7 @@ frame_get_write(gavl_hw_context_t * ctx)
 #endif
   while(1)
     {
-
+    
     result = sem_trywait(&ctx->reftab->free_buffers);
 
     if(!result)
