@@ -1780,6 +1780,10 @@ void gavl_v4l2_device_resync_decoder(gavl_v4l2_device_t * dev)
   for(i = 0; i < dev->capture.num_bufs; i++)
     {
     queue_frame_capture(dev, i);
+
+    /* This is dirty but should work */
+    while(gavl_hw_refcount(dev->capture.ctx, i))
+      gavl_hw_video_frame_unref(dev->capture.ctx->frames[i].frame);
     }
   
   for(i = 0; i < dev->output.num_bufs; i++)
