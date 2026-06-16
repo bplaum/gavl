@@ -155,13 +155,13 @@ void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
     
     if((f->size_max < 0) || (f->size_max < data_len))
       f->size_max = data_len;
+
+    f->total_bytes += data_len;
     }
   
   if(!(flags & GAVL_PACKET_NOOUTPUT))
     f->total_packets++;
   
-  if(data_len > 0)
-    f->total_bytes += data_len;
   }
 
 void gavl_stream_stats_apply_generic(gavl_stream_stats_t * f,
