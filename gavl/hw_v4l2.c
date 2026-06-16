@@ -884,7 +884,10 @@ static int dequeue_buffer(port_t * p, int memory,
     
   if(IS_CAPTURE(p->buf_type))
     {
-    p->bufs[buf.index].bytesused = buf.bytesused;
+    if(IS_PLANAR(p->buf_type))
+      p->bufs[buf.index].bytesused = buf.m.planes[0].bytesused;
+    else
+      p->bufs[buf.index].bytesused = buf.bytesused;
     p->cur_idx = buf.index;
     }
   
@@ -1724,14 +1727,15 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       {
       int idx;
       gavl_video_frame_t * f;
-
-
+      int flags = 0;
       
-      idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, NULL, NULL);
+      idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, &flags, NULL);
       
-      if(idx < 0)
+      if((idx < 0) || !(dev->capture.bufs[idx].bytesused))
+        {
+        //        fprintf(stderr, "Got EOF 1\n");
         return GAVL_SOURCE_EOF;
-
+        }
       /* Set output buffer to frame */
 
       f = dev->capture.ctx->frames[idx].frame;
@@ -1740,10 +1744,14 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       
       gavl_hw_video_frame_ref(f);
       
-      gavl_packet_pts_cache_get_first(dev->cache, f);
+      if(!gavl_packet_pts_cache_get_first(dev->cache, f))
+        {
+        //        fprintf(stderr, "Got EOF 2\n");
+        return GAVL_SOURCE_EOF;
+        }
       
       //      fprintf(stderr, "Frame pts: %"PRId64" %d %d\n",
-      //              dev->capture.vframe->timestamp, idx, dev->capture.vframe->buf_idx);
+      //              f->timestamp, idx, f->buf_idx);
       
       if(frame)
         *frame = f;
