@@ -47,7 +47,7 @@
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
-// #define COUNT_PACKETS
+#define COUNT_PACKETS
 
 
 // #define MAX_PACKETS 200
@@ -85,7 +85,8 @@ static void buf_push(buf_t * buf, gavl_packet_t ** p)
     {
     buf->alloc += 32;
     buf->packets = realloc(buf->packets, buf->alloc * sizeof(*buf->packets));
-    memset(buf->packets + buf->num, 0, (buf->alloc - buf->num) * sizeof(*buf->packets) );
+    memset(buf->packets + buf->num, 0,
+           (buf->alloc - buf->num) * sizeof(*buf->packets) );
     }
   buf->packets[buf->num] = *p;
   *p = NULL;
@@ -400,7 +401,10 @@ static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
       if(next_idx < 0)
         last_idx = i;
       else
+        {
         duration = buf->buf.packets[next_idx]->pts - buf->buf.packets[i]->pts;
+        buf->buf.packets[i]->duration = duration;
+        }
       }
     buf->buf.packets[last_idx]->duration = duration;
     return;
@@ -818,7 +822,6 @@ gavl_packet_buffer_create(const gavl_dictionary_t * stream_info)
   ret->last_duration = -1;
   ret->pts = GAVL_TIME_UNDEFINED;
   
-  
   return ret;
   }
 
@@ -832,10 +835,10 @@ void gavl_packet_buffer_destroy(gavl_packet_buffer_t * b)
     {
     int i;
     gavl_dprintf("Packets in buffer: %d\n",
-                 b->valid_packets);
+                 b->buf.num);
     
-    for(i = 0; i < b->valid_packets; i++)
-      gavl_packet_dump(b->packets[i]);
+    for(i = 0; i < b->buf.num; i++)
+      gavl_packet_dump(b->buf.packets[i]);
     }
   
 #endif
