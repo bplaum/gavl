@@ -283,6 +283,8 @@ int gavl_compression_constant_frame_samples(gavl_codec_id_t id);
 GAVL_PUBLIC
 int gavl_compression_get_sample_size(gavl_codec_id_t id);
 
+
+  
 /** \brief Return the long name of the compression 
  *  \param id A codec ID
  *  \returns The long name or NULL
