@@ -74,6 +74,9 @@
 // #define DUMP_CONTROLS
 // #define DUMP_QUEUE
 
+// #define COUNT_FRAMES
+
+
 
 // #define MAX_BUFFERS 16 // From libavcodec
 
@@ -97,8 +100,10 @@
 #define DECODER_HAVE_FRAME  (1<<3)
 #define OUTPUT_STREAM_ON    (1<<4)
 #define CAPTURE_STREAM_ON   (1<<5)
-#define DMABUF_CHECKED       (1<<6)
-#define DMABUF_SUPPORTED     (1<<7)
+#define DMABUF_CHECKED      (1<<6)
+#define DMABUF_SUPPORTED    (1<<7)
+#define GOT_LAST            (1<<8)
+
 
 #define GAVL_V4L2_BUFFER_FLAG_QUEUED (1<<0)
 #define GAVL_V4L2_BUFFER_FLAG_VALID  (1<<1)
@@ -151,7 +156,7 @@ typedef struct
   gavl_video_format_t format;
   gavl_compression_info_t ci;
 
-  uint32_t frame_counter;
+  int64_t frame_counter;
 
   gavl_hw_context_t * ctx;
 
@@ -888,6 +893,10 @@ static int dequeue_buffer(port_t * p, int memory,
       p->bufs[buf.index].bytesused = buf.m.planes[0].bytesused;
     else
       p->bufs[buf.index].bytesused = buf.bytesused;
+
+    if(buf.flags & V4L2_BUF_FLAG_LAST)
+      p->dev->flags |= GOT_LAST;
+    
     p->cur_idx = buf.index;
     }
   
@@ -1095,7 +1104,7 @@ static gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t *
 
   current_buf->flags |= GAVL_V4L2_BUFFER_FLAG_QUEUED;
   dev->output.cur_idx = -1;
-  
+
   return GAVL_SINK_OK;
   }
 
@@ -1139,6 +1148,8 @@ static int send_decoder_packet(gavl_v4l2_device_t * dev)
   
   dev->decoder_delay++;
   gavl_packet_pts_cache_push_packet(dev->cache, p);
+  dev->output.frame_counter++;
+  //  fprintf(stderr, "Sent Packet %"PRId64"\n", p->pts);
   return 1;
   }
 
@@ -1527,7 +1538,7 @@ static void handle_decoder_event(gavl_v4l2_device_t * dev)
         break;
       case V4L2_EVENT_EOS:
         dev->flags |= DECODER_GOT_EOS;
-        //       fprintf(stderr, "Got EOS\n");
+        //        fprintf(stderr, "V4L2: Got EOS\n");
         break;
       }
     }
@@ -1691,12 +1702,12 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
   
   //  fprintf(stderr, "get_frame_decoder...");
   
-  if(dev->flags & DECODER_GOT_EOS)
+  if(dev->flags & GOT_LAST)
     return GAVL_SOURCE_EOF;
   
   while(1)
     {
-    if(dev->flags & DECODER_GOT_EOS)
+    if(dev->flags & GOT_LAST)
       return GAVL_SOURCE_EOF;
     
     events_requested = POLLIN | POLLPRI;
@@ -1750,8 +1761,7 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
         return GAVL_SOURCE_EOF;
         }
       
-      //      fprintf(stderr, "Frame pts: %"PRId64" %d %d\n",
-      //              f->timestamp, idx, f->buf_idx);
+      //      fprintf(stderr, "Frame pts: %"PRId64"\n", f->timestamp);
       
       if(frame)
         *frame = f;
@@ -1759,7 +1769,7 @@ static gavl_source_status_t get_frame_decoder(void * priv, gavl_video_frame_t **
       dev->decoder_delay--;
 
       //      fprintf(stderr, "get_frame_decoder...done\n");
-
+      dev->capture.frame_counter++;
       return GAVL_SOURCE_OK;
       }
     
@@ -3005,6 +3015,14 @@ void gavl_v4l2_device_close(gavl_v4l2_device_t * dev)
   if(dev->vsrc_priv)
     gavl_video_source_destroy(dev->vsrc_priv);
 
+#ifdef COUNT_FRAMES
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "V4L2 output frame count: %"PRId64"\n",
+           dev->output.frame_counter);
+  
+  gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "V4L2 capture frame count: %"PRId64"\n",
+           dev->capture.frame_counter);
+#endif
+  
   port_cleanup(&dev->capture);
   port_cleanup(&dev->output);
   
