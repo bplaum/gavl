@@ -827,13 +827,14 @@ gavl_packet_buffer_create(const gavl_dictionary_t * stream_info)
 void gavl_packet_buffer_destroy(gavl_packet_buffer_t * b)
   {
 #ifdef COUNT_PACKETS
-  gavl_dprintf("packets in:  %d\npackets out: %d\n",
+  gavl_dprintf("%s buffer stats:\n", gavl_stream_type_name(b->type));
+  gavl_dprintf("  packets in:  %d\n  packets out: %d\n",
                b->in_count, b->out_count);
 
   if(b->out_count < b->in_count)
     {
     int i;
-    gavl_dprintf("Packets in buffer: %d\n",
+    gavl_dprintf("  packets in buffer: %d\n",
                  b->buf.num);
     
     for(i = 0; i < b->buf.num; i++)
