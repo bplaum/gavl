@@ -120,6 +120,31 @@ gavl_dictionary_t * gavl_parameter_append_option(gavl_dictionary_t* params,
   return gavl_value_get_dictionary_nc(&arr->entries[arr->num_entries-1]);
   }
 
+static int compare_options(const void * v1, const void * v2, void * data)
+  {
+  const gavl_dictionary_t * dict1;
+  const gavl_dictionary_t * dict2;
+  const char * s1;
+  const char * s2;
+
+  if((dict1 = gavl_value_get_dictionary(v1)) &&
+     (dict2 = gavl_value_get_dictionary(v2)) &&
+     (s1 = gavl_dictionary_get_string(dict1, GAVL_META_LABEL)) &&
+     (s2 = gavl_dictionary_get_string(dict2, GAVL_META_LABEL)))
+    return strcoll(s1, s2);
+  else
+    return 0;
+  }
+
+void gavl_parameter_sort_options(gavl_dictionary_t* params)
+  {
+  gavl_array_t * arr;
+  arr= gavl_dictionary_get_array_create(params, GAVL_PARAMETER_OPTIONS);
+
+  gavl_array_sort(arr, compare_options, NULL);
+  }
+
+
 void gavl_parameter_init(gavl_dictionary_t* param,
                          const char * name,
                          const char * label,
@@ -220,6 +245,10 @@ gavl_parameter_from_static(gavl_dictionary_t* param,
       
       i++;
       }
+
+    if(p->flags & GAVL_PARAMETER_SORT_OPTIONS)
+      gavl_parameter_sort_options(param);
+    
     }
   }
 
@@ -316,7 +345,7 @@ gavl_type_t gavl_parameter_type_to_gavl(gavl_parameter_type_t type)
     case GAVL_PARAMETER_DIRECTORY:     //!< Directory
       return GAVL_TYPE_STRING;
       break;
-    case GAVL_PARAMETER_MULTI_MENU:    //!< Menu with config- and infobutton
+    case GAVL_PARAMETER_MULTI_MENU:    //!< Menu with config button
       return GAVL_TYPE_DICTIONARY;
       break;
     case GAVL_PARAMETER_DIRLIST:

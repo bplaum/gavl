@@ -53,6 +53,14 @@ typedef enum
     GAVL_PARAMETER_STRING_MULTILINE = 21, //!< String (multiple lines)
   } gavl_parameter_type_t;
 
+/* Flags */
+
+/* Flags */
+
+#define GAVL_PARAMETER_SYNC           (1<<0) //!< Apply the value whenever the widgets value changes
+#define GAVL_PARAMETER_HIDE_DIALOG    (1<<1) //!< Don't make a configuration widget (for objects, which change values themselves)
+#define GAVL_PARAMETER_SORT_OPTIONS   (1<<2) //!< Sort options
+
 
 GAVL_PUBLIC
 gavl_type_t gavl_parameter_type_to_gavl(gavl_parameter_type_t type);
@@ -75,7 +83,7 @@ struct gavl_parameter_info_s
   
   gavl_parameter_type_t type; //!< Type
 
-  int flags; //!< Mask of BG_PARAMETER_* defines
+  int flags; //!< Mask of GAVL_PARAMETER_* defines
   
   gavl_value_t val_default; //!< Default value
   gavl_value_t val_min; //!< Minimum value (for arithmetic types)
@@ -159,6 +167,9 @@ int gavl_parameter_num_params(const gavl_dictionary_t* params);
 
 GAVL_PUBLIC
 int gavl_parameter_num_options(const gavl_dictionary_t* params);
+
+GAVL_PUBLIC
+void gavl_parameter_sort_options(gavl_dictionary_t* params);
 
 
 GAVL_PUBLIC
