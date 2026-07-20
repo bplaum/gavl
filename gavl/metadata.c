@@ -683,3 +683,97 @@ int gavl_metadata_has_src(const gavl_dictionary_t * m, const char * key,
   return 0;
   }
 
+static const char * multi_tags[] =
+  {
+    GAVL_META_ARTIST,
+    GAVL_META_ALBUMARTIST,
+    GAVL_META_AUTHOR,
+    GAVL_META_GENRE,
+    GAVL_META_COUNTRY,
+    GAVL_META_DIRECTOR,
+    GAVL_META_ACTOR,
+    NULL,
+  };
+
+static int is_multi_tag(const char * tag)
+  {
+  int i = 0;
+  while(multi_tags[i])
+    {
+    if(!strcmp(tag, multi_tags[i]))
+      return 1;
+    i++;
+    }
+  return 0;
+  }
+
+static const struct
+  {
+  const char *tag;
+  gavl_type_t type;
+  }
+type_tags[] =
+  {
+    { GAVL_META_IDX,           GAVL_TYPE_INT  },
+    { GAVL_META_TOTAL,         GAVL_TYPE_INT  },
+    { GAVL_META_SEASON,        GAVL_TYPE_INT },
+    { GAVL_META_EPISODENUMBER, GAVL_TYPE_INT },
+    { GAVL_META_TRACKNUMBER,   GAVL_TYPE_INT },
+    { GAVL_META_RATING,        GAVL_TYPE_FLOAT },
+    { /* End */ }
+  };
+
+static gavl_type_t get_tag_type(const char * tag)
+  {
+  int i = 0;
+  while(type_tags[i].tag)
+    {
+    if(!strcmp(tag, type_tags[i].tag))
+      return type_tags[i].type;
+    i++;
+    }
+  return GAVL_TYPE_UNDEFINED;
+  }
+
+int
+gavl_metadata_set_from_string(gavl_dictionary_t * m,
+                              const char * key,
+                              const char * val)
+  {
+  gavl_value_t v;
+  
+  if(is_multi_tag(key))
+    {
+    if(strchr(val, ';'))
+      {
+      int i = 0;
+      char ** arr = gavl_strbreak(val, ';');
+      /* Clear entry from before */
+      
+      gavl_dictionary_set(m, key, NULL);
+      while(arr[i])
+        {
+        gavl_dictionary_append_string_array(m, key, arr[i]);
+        i++;
+        }
+      gavl_strbreak_free(arr);
+      }
+    else
+      gavl_dictionary_set_string(m, key, val);
+    return 1;
+    }
+  
+  gavl_value_init(&v);
+  if((v.type = get_tag_type(key)) != GAVL_TYPE_UNDEFINED)
+    {
+    if(gavl_value_from_string(&v, val))
+      gavl_dictionary_set_nocopy(m, key, &v);
+    else
+      return 0;
+    }
+  else
+    gavl_dictionary_set_string(m, key, val);
+
+  return 1;
+  
+  }

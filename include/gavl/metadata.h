@@ -62,51 +62,12 @@ extern "C" {
   
 #define GAVL_METADATA_DATE_TIME_STRING_LEN 20 
   
-/** \brief Free all metadata tags 
- *  \arg m A metadata structure
- */
+
+GAVL_PUBLIC int
+gavl_metadata_set_from_string(gavl_dictionary_t * m,
+                              const char * key,
+                              const char * val);
   
-// GAVL_PUBLIC void
-// gavl_dictionary_free(gavl_dictionary_t * m);
-
-/** \brief Initialize structure
- *  \arg m A metadata structure
- *
- *  Use this if you define a \ref gavl_dictionary_t
- *  structure in uninitialized memory (e.g. on the stack)
- *  before using it.
- */
-  
-// GAVL_PUBLIC void
-// gavl_dictionary_init(gavl_dictionary_t * m);
-
-/** \brief Set a tag
- *  \arg m A metadata structure
- *  \arg key Key
- *  \arg val Value
- *
- *  Set a metadata tag. The value is copied.
- */
-
-// GAVL_PUBLIC void
-//gavl_dictionary_set_string(gavl_dictionary_t * m,
-//                  const char * key,
-//                  const char * val);
-
-/** \brief Set a tag
- *  \arg m A metadata structure
- *  \arg key Key
- *  \arg val Value
- *
- *  Like \ref gavl_dictionary_set_string except that the
- *  value is not copied.
- */
-
-//GAVL_PUBLIC void
-//gavl_dictionary_set_string_nocpy(gavl_dictionary_t * m,
-//                        const char * key,
-//                        char * val);
-
 /** \brief Append values of a tag
  *  \arg m A metadata structure
  *  \arg key Key
