@@ -1936,10 +1936,17 @@ void gavl_track_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
 
   for(i = 0; i < num_streams; i++)
     {
-    if(!(src_s = gavl_track_get_stream_all(src, i)) ||
-       !(dst_s = gavl_track_get_stream_all_nc(dst, i)))
+    int id = 0;
+    
+    if(!(src_s = gavl_track_get_stream_all(src, i)))
       break;
 
+    if(!gavl_stream_get_id(src_s, &id))
+      continue;
+    
+    if(!(dst_s = gavl_track_find_stream_by_id_nc(dst, id)))
+      continue;
+    
     src_m = gavl_stream_get_metadata(src_s);
     dst_m = gavl_stream_get_metadata_nc(dst_s);
     gavl_dictionary_merge2(dst_m, src_m);
@@ -1953,10 +1960,16 @@ void gavl_track_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
       gavl_video_format_copy(vfmt_dst, vfmt_src);
 
     gavl_compression_info_init(&ci);
-    if(gavl_stream_get_compression_info(src, &ci))
+    if(gavl_stream_get_compression_info(src_s, &ci))
       {
-      gavl_stream_set_compression_info(dst, &ci);
+      fprintf(stderr, "Merging compression info for ID %d\n", id);
+      gavl_compression_info_dump(&ci);
+      
+      gavl_stream_set_compression_info(dst_s, &ci);
       gavl_compression_info_free(&ci);
+
+      fprintf(stderr, "Merged compression info\n");
+      gavl_dictionary_dump(dst_s, 2);
       }
     }
   
