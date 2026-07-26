@@ -741,11 +741,11 @@ int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * inte
   }
 
 /* Join another group */
-int gavl_udp_socket_join_multicast(int fd,
-                                   gavl_socket_address_t * multicast_addr,
-                                   gavl_socket_address_t * interface_addr)
+int gavl_udp_socket_join_multicast_source(int fd,
+                                          gavl_socket_address_t * multicast_addr,
+                                          gavl_socket_address_t * interface_addr,
+                                          gavl_socket_address_t * src_addr)
   {
-  struct ip_mreq req;
   struct sockaddr_in * a = (struct sockaddr_in *)&multicast_addr->addr;
 
   if(multicast_addr->addr.ss_family != AF_INET)
@@ -754,29 +754,77 @@ int gavl_udp_socket_join_multicast(int fd,
     return 0;
     }
 
-  memset(&req, 0, sizeof(req));
-    
-  memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
-
-  if(interface_addr)
+  if(!src_addr)
     {
-    a = (struct sockaddr_in *)&interface_addr->addr;
-    memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
+    struct ip_mreq req;
+    memset(&req, 0, sizeof(req));
+    
+    memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
+
+    if(interface_addr)
+      {
+      a = (struct sockaddr_in *)&interface_addr->addr;
+      memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
+      }
+    else
+      req.imr_interface.s_addr = htonl(INADDR_ANY);
+  
+    if(setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
+               strerror(errno));
+      return 0;
+      }
+    
     }
   else
-    req.imr_interface.s_addr = htonl(INADDR_ANY);
-  
-  if(setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &req, sizeof(req)))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
-             strerror(errno));
-    return 0;
+    struct ip_mreq_source req;
+
+    memset(&req, 0, sizeof(req));
+    
+    memcpy(&req.imr_multiaddr, &a->sin_addr, sizeof(req.imr_multiaddr));
+
+    if(interface_addr)
+      {
+      a = (struct sockaddr_in *)&interface_addr->addr;
+      memcpy(&req.imr_interface, &a->sin_addr, sizeof(req.imr_multiaddr));
+      }
+    else
+      req.imr_interface.s_addr = htonl(INADDR_ANY);
+
+    a = (struct sockaddr_in *)&src_addr->addr;
+    memcpy(&req.imr_sourceaddr, &a->sin_addr, sizeof(req.imr_sourceaddr));
+    
+    
+    if(setsockopt(fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &req, sizeof(req)))
+      {
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
+               strerror(errno));
+      return 0;
+      }
+    
     }
+  
   return 1;
+  
+  }
+  
+
+/* Join another group */
+int gavl_udp_socket_join_multicast(int fd,
+                                   gavl_socket_address_t * multicast_addr,
+                                   gavl_socket_address_t * interface_addr)
+  {
+  return gavl_udp_socket_join_multicast_source(fd,
+                                               multicast_addr,
+                                               interface_addr,
+                                               NULL);
   }
 
-int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
-                                     gavl_socket_address_t * interface_addr)
+int gavl_udp_socket_create_multicast_source(gavl_socket_address_t * multicast_addr,
+                                            gavl_socket_address_t * interface_addr,
+                                            gavl_socket_address_t * src_addr)
   {
   int reuse = 1;
   int ret;
@@ -828,7 +876,7 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
     return -1;
     }
 
-  if(!gavl_udp_socket_join_multicast(ret, multicast_addr, interface_addr))
+  if(!gavl_udp_socket_join_multicast_source(ret, multicast_addr, interface_addr, src_addr))
     {
     gavl_socket_close(ret);
     return -1;
@@ -837,6 +885,16 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
   setsockopt(ret, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
     
   return ret;
+  
+  }
+
+
+int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
+                                     gavl_socket_address_t * interface_addr)
+  {
+  return gavl_udp_socket_create_multicast_source(multicast_addr,
+                                                 interface_addr,
+                                                 NULL);
   }
 
 int gavl_udp_socket_receive(int fd, uint8_t * data, int data_size,

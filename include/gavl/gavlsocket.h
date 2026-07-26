@@ -189,9 +189,21 @@ int gavl_udp_socket_create_multicast(gavl_socket_address_t * multicast_addr,
                                      gavl_socket_address_t * interface_addr);
 
 GAVL_PUBLIC
+int gavl_udp_socket_create_multicast_source(gavl_socket_address_t * multicast_addr,
+                                            gavl_socket_address_t * interface_addr,
+                                            gavl_socket_address_t * src_addr);
+
+GAVL_PUBLIC
 int gavl_udp_socket_join_multicast(int fd,
                                    gavl_socket_address_t * multicast_addr,
                                    gavl_socket_address_t * interface_addr);
+
+GAVL_PUBLIC
+int gavl_udp_socket_join_multicast_source(int fd,
+                                          gavl_socket_address_t * multicast_addr,
+                                          gavl_socket_address_t * interface_addr,
+                                          gavl_socket_address_t * src_addr);
+
 
 GAVL_PUBLIC
 int gavl_udp_socket_set_multicast_interface(int fd, gavl_socket_address_t * interface_addr);
