@@ -24,6 +24,7 @@
 #define GAVL_SAP_H_INCLUDED
 
 #include <gavl/gavlsocket.h>
+#include <gavl/utils.h>
 
 /* De-encode SAP packets */
 
@@ -31,9 +32,10 @@
 #define GAVL_SAP_ADDRESS "addr" /* Originating address */
 #define GAVL_SAP_SDP     "sdp"  /* Session Description Protocol */
 #define GAVL_SAP_HEADER  "head"  /* SAP header as binary */
+#define GAVL_SAP_SESSION_VERSION "version "  /* Session version from "o=" */
 
 GAVL_PUBLIC
-void gavl_sap_init(gavl_buffer_t * ret, const gavl_socket_address_t * addr);
+void gavl_sap_init(gavl_dictionary_t * dict, const gavl_socket_address_t * addr);
 
 GAVL_PUBLIC
 int gavl_sap_decode(const gavl_buffer_t * buf, int * del, gavl_dictionary_t * ret);
@@ -43,13 +45,18 @@ int gavl_sap_encode(gavl_buffer_t * ret, int del, const gavl_dictionary_t * dict
 
 /* SDP handling */
 
-#define GAVL_SDP_ORIGININATOR "o"
-#define GAVL_SDP_SDP_SE "o"
+GAVL_PUBLIC
+int gavl_parse_sdp_o(const char * sdp,
+                     char ** user,
+                     int64_t * id,
+                     int64_t * version,
+                     char ** nettype,
+                     char ** addrtype,
+                     char ** addr);
 
-#define GAVL_SDP_SESSIONAME   "s" 
-#define GAVL_SDP_SESSIONTITLE "i" 
-
-
+GAVL_PUBLIC
+int gavl_sdp_get_session_id(const char * sdp,
+                            char ret[GAVL_MD5_LENGTH], int64_t * version);
 
 
 #endif // GAVL_SAP_H_INCLUDED
