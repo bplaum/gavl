@@ -231,7 +231,7 @@ int gavl_parse_sdp_o(const char * sdp,
     return 0;
     }
 
-  fprintf(stderr, "* * * ID: %s\n", el[1]);
+  //  fprintf(stderr, "* * * ID: %s\n", el[1]);
   
   if(user)
     *user = gavl_strdup(el[0]);
