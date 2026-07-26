@@ -255,6 +255,7 @@ void gavl_dictionary_set_binary(const gavl_dictionary_t * d, const char * name, 
   gavl_buffer_alloc(b, len);
   memcpy(b->buf, buf, len);
   b->len = len;
+  gavl_dictionary_set_nocopy(d, name, &v);
   }
 
 
