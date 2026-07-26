@@ -152,6 +152,7 @@ packetbuffer.c \
 packetindex.c \
 packetsink.c \
 packetsource.c \
+packettimer.c \
 palette.c \
 parameter.c \
 peakdetector.c \

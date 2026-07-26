@@ -26,6 +26,7 @@ msg.h \
 numptr.h \
 parameter.h \
 packetindex.h \
+packettimer.h \
 peakdetector.h \
 sap.h \
 state.h \
