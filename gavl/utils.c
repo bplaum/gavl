@@ -1287,9 +1287,22 @@ int gavl_write_file(const char * filename, void * data, int len)
 char * gavl_sdp_to_uri(const char * sdp)
   {
   char * ret;
-  char * sdp_enc = gavl_base64_encode_data_urlsafe(sdp, strlen(sdp)+1);
+  char * sdp_priv = NULL;
+  char * sdp_enc;
+
+  if(!gavl_string_ends_with(sdp, "\r\n"))
+    {
+    sdp_priv = gavl_sprintf("%s\r\n", sdp);
+    sdp = sdp_priv;
+    }
+  
+  sdp_enc = gavl_base64_encode_data_urlsafe(sdp, strlen(sdp)+1);
   ret = gavl_sprintf("sdp://%s", sdp_enc);
   free(sdp_enc);
+
+  if(sdp_priv)
+    free(sdp_priv);
+
   return ret;
   }
 
