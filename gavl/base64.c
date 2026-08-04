@@ -53,15 +53,17 @@ static int
 base64_decode_data_internal(const char * str, gavl_buffer_t * ret, int urlsafe)
   {
   struct base64_decode_ctx ctx;
-  size_t dst_length;
+  size_t dst_length = 0;
   int len = strlen(str);
   if(urlsafe)
     base64url_decode_init(&ctx);
   else
     base64_decode_init(&ctx);
-  
-  gavl_buffer_alloc(ret, BASE64_DECODE_LENGTH(len)+1);
 
+  dst_length = BASE64_DECODE_LENGTH(len)+1;
+  
+  gavl_buffer_alloc(ret, dst_length);
+  
   base64_decode_update(&ctx,
                        &dst_length,
                        ret->buf,
