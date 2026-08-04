@@ -91,7 +91,7 @@ void gavl_sap_init(gavl_dictionary_t * dict, const gavl_socket_address_t * addr)
     header.len += 16;
     }
 
-  gavl_buffer_append_data(&header, (const uint8_t*)mimetype, strlen(mimetype)+1);
+  //  gavl_buffer_append_data(&header, (const uint8_t*)mimetype, strlen(mimetype)+1);
   gavl_dictionary_set_binary(dict, GAVL_SAP_HEADER, header.buf, header.len);
   gavl_buffer_free(&header);
   
@@ -160,17 +160,24 @@ int gavl_sap_decode(const gavl_buffer_t * buf, int * del, gavl_dictionary_t * re
   //  fprintf(stderr, "Got str: %s\n", str);
 
   if((pos = memchr(str, '\0', end - str)) &&
-     (pos != end) &&
-     !strcasecmp(str, "application/sdp"))
+     (pos != end))
+    {
+    if(strcasecmp(str, "application/sdp"))
+      {
+      gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "Unknown type: %s", str);
+      return 0;
+      }
+    str = pos+1;
+    }
+
+  if(gavl_string_starts_with(str, "v=0"))
     {
     char id[GAVL_MD5_LENGTH];
     int64_t version;
     
-    pos++;
+    gavl_dictionary_set_string(ret, GAVL_SAP_SDP, str);
 
-    gavl_dictionary_set_string(ret, GAVL_SAP_SDP, pos);
-
-    gavl_sdp_get_session_id(pos, id, &version);
+    gavl_sdp_get_session_id(str, id, &version);
     
     gavl_dictionary_set_string(ret, GAVL_META_ID, id);
     gavl_dictionary_set_long(ret, GAVL_SAP_SESSION_VERSION, version);
@@ -193,8 +200,10 @@ int gavl_sap_encode(gavl_buffer_t * ret, int del, const gavl_dictionary_t * dict
     ret->buf[0] |= 0x04;
   
   if((sdp = gavl_dictionary_get_string(dict, GAVL_SAP_SDP)))
+    {
     gavl_buffer_append_data(ret, (const uint8_t*)sdp, strlen(sdp));
-  
+    gavl_buffer_append_data(ret, (const uint8_t*)"\r\n", 2);
+    }
   return 1;
   }
 
