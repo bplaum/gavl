@@ -244,7 +244,7 @@ int gavl_dictionary_set_array(gavl_dictionary_t * d,
   return gavl_dictionary_set_nocopy(d, name, &v);
   }
 
-void gavl_dictionary_set_binary(const gavl_dictionary_t * d, const char * name, const uint8_t * buf, int len)
+void gavl_dictionary_set_binary(gavl_dictionary_t * d, const char * name, const uint8_t * buf, int len)
   {
   gavl_buffer_t * b;
   gavl_value_t v;

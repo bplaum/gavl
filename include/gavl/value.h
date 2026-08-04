@@ -279,7 +279,7 @@ GAVL_PUBLIC
 const gavl_buffer_t * gavl_dictionary_get_binary(const gavl_dictionary_t * d, const char * name);
 
 GAVL_PUBLIC
-void gavl_dictionary_set_binary(const gavl_dictionary_t * d, const char * name, const uint8_t * buf, int len);
+void gavl_dictionary_set_binary(gavl_dictionary_t * d, const char * name, const uint8_t * buf, int len);
 
 GAVL_PUBLIC
 void gavl_dictionary_set_audio_format(gavl_dictionary_t * d, const char * name,
