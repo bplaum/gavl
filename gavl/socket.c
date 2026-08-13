@@ -799,7 +799,7 @@ int gavl_udp_socket_join_multicast_source(int fd,
     
     if(setsockopt(fd, IPPROTO_IP, IP_ADD_SOURCE_MEMBERSHIP, &req, sizeof(req)))
       {
-      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group: %s",
+      gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Cannot join multicast group with source: %s",
                strerror(errno));
       return 0;
       }
