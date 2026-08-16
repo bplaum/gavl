@@ -667,6 +667,8 @@ static void async_destroy(lookup_async_t * a)
 
   if(a->addr)
     freeaddrinfo(a->addr);
+  if(a->hostname)
+    free(a->hostname);
   
   free(a);
   }

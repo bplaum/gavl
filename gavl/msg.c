@@ -427,8 +427,8 @@ gavl_msg_t * gavl_msg_create()
 void gavl_msg_free(gavl_msg_t * m)
   {
   int i;
-  for(i = 0; i < m->num_args; i++)
-    gavl_value_free(&m->args[i]);
+  for(i = 0; i < GAVL_MSG_MAX_ARGS; i++)
+    gavl_value_reset(&m->args[i]);
   
   gavl_dictionary_reset(&m->header);
   memset(m, 0, sizeof(*m));
