@@ -719,6 +719,7 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
 #endif
     sem_post(&ctx->reftab->free_buffers);
 
+#if 0 /* This causes spurious error messages on the receiver side, if num_frames is still growing */
     sem_getvalue(&ctx->reftab->free_buffers, &val);
     if(val > ctx->num_frames)
       {
@@ -726,6 +727,7 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
               ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio", val, ctx->num_frames);
       gavl_hw_reftable_dump(ctx);
       }
+#endif
     }
   }
 
