@@ -909,6 +909,8 @@ static int dequeue_buffer(port_t * p, int memory,
     *timestamp *= GAVL_TIME_SCALE;
     *timestamp += buf.timestamp.tv_usec;
     }
+
+  //  p->bufs[buf.index].flags &= ~GAVL_V4L2_BUFFER_FLAG_QUEUED;
   
   return buf.index;
   }
@@ -936,7 +938,7 @@ static int done_buffer_capture(gavl_v4l2_device_t * dev)
     return 0;
     }
 #ifdef DUMP_QUEUE
-  gavl_dprintf("Queued buf %d\n", dev->capture.current_buf->buf.index);
+  gavl_dprintf("Queued buf %d\n", dev->capture.cur_idx);
 #endif
   dev->capture.bufs[dev->capture.cur_idx].flags |= GAVL_V4L2_BUFFER_FLAG_QUEUED;
   dev->capture.cur_idx = -1;
@@ -959,12 +961,14 @@ static int done_buffer_capture_pool(gavl_v4l2_device_t * dev)
     if(!(dev->capture.bufs[i].flags & GAVL_V4L2_BUFFER_FLAG_QUEUED) &&
        !gavl_hw_video_frame_refcount(dev->capture.ctx->frames[i].frame))
       {
-
+      //      fprintf(stderr, "done_buffer_capture_pool: %d\n", i);
+      
       if(my_ioctl(dev->fd, VIDIOC_QBUF, &dev->capture.bufs[i].buf) == -1)
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "VIDIOC_QBUF failed for capture (index: %d): %s",
                  i, strerror(errno));
-        return 0;
+        //        return 0;
+        //        continue;
         }
 #ifdef DUMP_QUEUE
       gavl_dprintf("Queued buf %d\n", i);
@@ -1099,7 +1103,7 @@ static gavl_sink_status_t gavl_v4l2_device_put_packet_write(gavl_v4l2_device_t *
     return GAVL_SINK_ERROR;
     }
 #ifdef DUMP_QUEUE
-    gavl_dprintf("Queued buf %d\n", dev->output.current_buf->buf.index);
+    gavl_dprintf("Queued buf %d\n", current_buf->buf.index);
 #endif
 
   current_buf->flags |= GAVL_V4L2_BUFFER_FLAG_QUEUED;
@@ -1435,6 +1439,8 @@ static int queue_frame_capture(gavl_v4l2_device_t * dev, int idx)
   {
   struct v4l2_buffer buf;
   struct v4l2_plane planes[GAVL_MAX_PLANES];
+
+  //  fprintf(stderr, "queue_frame_capture: %d\n", idx);
   
   memset(&buf, 0, sizeof(buf));
 
@@ -1571,7 +1577,11 @@ static int do_poll(gavl_v4l2_device_t * dev, int events, int * revents)
     gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "poll() failed: %s", strerror(errno));
     return 0;
     }
-
+  else if(!result)
+    gavl_log(GAVL_LOG_WARNING, LOG_DOMAIN, "poll timeout");
+  //  else
+  //    fprintf(stderr, "Poll returned: %d\n", result);
+  
   *revents = 0;
   
   if(fds.revents & (POLLIN|POLLRDNORM))
@@ -1917,7 +1927,6 @@ static gavl_source_status_t read_packet_capture(void * priv, gavl_packet_t ** p)
 
 static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t ** frame)
   {
-  int idx;
   gavl_v4l2_device_t * dev = priv;
   int flags;
   gavl_time_t pts = 0;
@@ -1944,14 +1953,16 @@ static gavl_source_status_t read_frame_capture(void * priv, gavl_video_frame_t *
   
   if(!do_poll(dev, events, &revents) || !(revents & POLLIN))
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no frame");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "Got no frame for capturing");
     return GAVL_SOURCE_EOF;
     }
   
-  if((idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, &flags, &pts) < 0))
+  if((dev->capture.cur_idx = dequeue_buffer(&dev->capture, V4L2_MEMORY_MMAP, &flags, &pts)) < 0)
     return GAVL_SOURCE_EOF;
 
-  f = dev->capture.ctx->frames[idx].frame;
+  dev->capture.bufs[dev->capture.cur_idx].flags &= ~GAVL_V4L2_BUFFER_FLAG_QUEUED;
+  
+  f = dev->capture.ctx->frames[dev->capture.cur_idx].frame;
   gavl_hw_video_frame_ref(f);
   f->timestamp = get_capture_pts(dev, flags, pts);
 
@@ -2051,6 +2062,7 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   gavl_video_format_copy(gavl_stream_get_video_format_nc(stream),
                          &dev->capture.format);
 
+#if 0  
   /* Request buffers */
   if(!(dev->capture.num_bufs = request_buffers_mmap(&dev->capture, 2)))
     goto fail;
@@ -2061,6 +2073,8 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   /* Queue frames */
   for(i = 0; i < dev->capture.num_bufs; i++)
     queue_frame_capture(dev, i);
+
+  init_capture_context(dev);
   
   if(dev->capture.ci.id != GAVL_CODEC_ID_NONE)
     {
@@ -2075,13 +2089,13 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
     
     }
 
-  init_capture_context(dev);
 
   if(dev->capture.ci.id == GAVL_CODEC_ID_NONE)
     {
     for(i = 0; i < dev->capture.num_bufs; i++)
       sem_post(&dev->capture.ctx->reftab->free_buffers);
     }
+#endif
   
   ret = 1;
   fail:
@@ -2093,6 +2107,44 @@ int gavl_v4l2_device_start_capture(gavl_v4l2_device_t * dev)
   {
   gavl_stream_stats_t stats;
 
+#if 1
+  int i;
+  /* Request buffers */
+  if(!(dev->capture.num_bufs = request_buffers_mmap(&dev->capture, 2)))
+    return 0;
+
+  if(dev->capture.ci.id == GAVL_CODEC_ID_NONE)
+    init_frame_pool(&dev->capture);
+  
+  /* Queue frames */
+  for(i = 0; i < dev->capture.num_bufs; i++)
+    queue_frame_capture(dev, i);
+
+  init_capture_context(dev);
+  
+  if(dev->capture.ci.id != GAVL_CODEC_ID_NONE)
+    {
+    /* Compressed capture */
+    dev->psrc_priv = gavl_packet_source_create(read_packet_capture, dev, GAVL_SOURCE_SRC_ALLOC, dev->s);
+    }
+  else
+    {
+    /* Uncompressed capture */
+    dev->vsrc_priv = gavl_video_source_create(read_frame_capture, dev, GAVL_SOURCE_SRC_ALLOC,
+                                              &dev->capture.format);
+    
+    }
+
+
+  if(dev->capture.ci.id == GAVL_CODEC_ID_NONE)
+    {
+    for(i = 0; i < dev->capture.num_bufs; i++)
+      sem_post(&dev->capture.ctx->reftab->free_buffers);
+    }
+#endif
+
+
+  
   gavl_stream_stats_init(&stats);
   
   if(!stream_on(dev, dev->capture.buf_type))
