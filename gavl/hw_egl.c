@@ -510,8 +510,8 @@ static void get_import_formats(gavl_hw_context_t * ctx)
     
     i++;
     }
-#endif
   free(formats);
+#endif
   }
 
 #if 0
