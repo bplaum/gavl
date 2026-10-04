@@ -1981,7 +1981,6 @@ int gavl_v4l2_device_init_capture(gavl_v4l2_device_t * dev, gavl_dictionary_t * 
   int caps = 0;
   uint32_t pixelformat;
   int ret = 0;
-  int i;
 
   dev->s = stream;
 
