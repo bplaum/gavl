@@ -44,6 +44,10 @@ static void stats_to_dict(const gavl_stream_stats_t * s, gavl_dictionary_t * dic
 
   gavl_dictionary_set_long(dict, GAVL_META_STREAM_STATS_NUM_PACKETS, s->total_packets);
   gavl_dictionary_set_long(dict, GAVL_META_STREAM_STATS_NUM_BYTES,   s->total_bytes);
+
+  gavl_dictionary_set_long(dict, GAVL_META_STREAM_STATS_DELAY_MIN, s->delay_min);
+  gavl_dictionary_set_long(dict, GAVL_META_STREAM_STATS_DELAY_MAX, s->delay_max);
+  
   }
 
 static int stats_from_dict(gavl_stream_stats_t * s, const gavl_dictionary_t * dict)
@@ -57,7 +61,9 @@ static int stats_from_dict(gavl_stream_stats_t * s, const gavl_dictionary_t * di
     gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_PTS_START, &s->pts_start) &&
     gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_PTS_END,   &s->pts_end) &&
     gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_NUM_PACKETS, &s->total_packets) &&
-    gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_NUM_BYTES,   &s->total_bytes);
+    gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_NUM_BYTES,   &s->total_bytes) &&
+    gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_DELAY_MIN, &s->delay_min) &&
+    gavl_dictionary_get_long(dict, GAVL_META_STREAM_STATS_DELAY_MAX,   &s->delay_max);
   }
 
 void gavl_stream_stats_dump(const gavl_stream_stats_t * stats, int indent)
@@ -101,6 +107,8 @@ void gavl_stream_stats_init(gavl_stream_stats_t * f)
   f->pts_end      = GAVL_TIME_UNDEFINED;
   f->size_min     = -1;
   f->size_max     = -1;
+  f->delay_min     = GAVL_TIME_UNDEFINED;
+  f->delay_max     = GAVL_TIME_UNDEFINED;
   }
 
 void gavl_stream_stats_update_end(gavl_stream_stats_t * f, const gavl_packet_t * p)
@@ -122,12 +130,12 @@ void gavl_stream_stats_update_end(gavl_stream_stats_t * f, const gavl_packet_t *
 
 void gavl_stream_stats_update(gavl_stream_stats_t * f, const gavl_packet_t * p)
   {
-  gavl_stream_stats_update_params(f, p->pts, p->duration, p->buf.len,
+  gavl_stream_stats_update_params(f, p->dts, p->pts, p->duration, p->buf.len,
                                   p->flags);
   }
 
 void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
-                                     int64_t pts, int64_t duration, int data_len,
+                                     int64_t dts, int64_t pts, int64_t duration, int data_len,
                                      int flags)
   {
   if(f->pts_start == GAVL_TIME_UNDEFINED)
@@ -147,7 +155,6 @@ void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
       f->duration_max = duration;
     }
   
-
   if(data_len > 0)
     {
     if((f->size_min < 0) || (f->size_min > data_len))
@@ -161,6 +168,22 @@ void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
   
   if(!(flags & GAVL_PACKET_NOOUTPUT))
     f->total_packets++;
+
+  if(dts != GAVL_TIME_UNDEFINED)
+    {
+    int64_t delay = pts - dts;
+
+    if((f->delay_min == GAVL_TIME_UNDEFINED) ||
+       (f->delay_min > delay))
+      f->delay_min = delay;
+
+    if((f->delay_max == GAVL_TIME_UNDEFINED) ||
+       (f->delay_max < delay))
+      {
+      f->delay_max = delay;
+      //      fprintf(stderr, "Delay max: %"PRId64" %"PRId64" %"PRId64"\n", f->delay_max, pts, dts);
+      }
+    }
   
   }
 

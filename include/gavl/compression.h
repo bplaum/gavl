@@ -567,6 +567,11 @@ typedef struct
 
   int64_t total_bytes;   // For average bitrate 
   int64_t total_packets; // For average framerate
+
+  /* delay = pts - dts */
+  
+  int64_t delay_min;
+  int64_t delay_max;
   
   } gavl_stream_stats_t;
 
@@ -584,7 +589,7 @@ void gavl_stream_stats_update_end(gavl_stream_stats_t * f, const gavl_packet_t *
   
 GAVL_PUBLIC
 void gavl_stream_stats_update_params(gavl_stream_stats_t * f,
-                                     int64_t pts, int64_t duration, int data_len,
+                                     int64_t dts, int64_t pts, int64_t duration, int data_len,
                                      int flags);
 
 

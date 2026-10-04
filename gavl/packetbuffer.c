@@ -38,12 +38,13 @@
 #define FLAG_NON_CONTINUOUS       (1<<2)
 #define FLAG_MARK_LAST            (1<<3)
 #define FLAG_CALC_FRAME_DURATIONS (1<<4)
+#define FLAG_CALC_DTS             (1<<5)
 
 // #define DUMP_IN_PACKETS
 // #define DUMP_OUT_PACKETS
 
 // #define DUMP_PACKET_MASK (GAVL_STREAM_AUDIO)
-// #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
+#define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_TEXT)
 // #define DUMP_PACKET_MASK (GAVL_STREAM_VIDEO|GAVL_STREAM_AUDIO)
 
@@ -133,6 +134,8 @@ struct gavl_packet_buffer_s
   int64_t pts;
 
   int64_t max_pts;
+
+  int64_t dts;
   
   const gavl_dictionary_t * stream;
   gavl_compression_info_t ci;
@@ -146,8 +149,6 @@ struct gavl_packet_buffer_s
 
   int ip_frames_seen;
   int keyframes_seen;
-  
-  int duration_divisor;
   
 #ifdef COUNT_PACKETS
   int in_count;
@@ -255,39 +256,6 @@ static void update_timestamps_low_delay(gavl_packet_buffer_t * buf)
 
     if(buf->flags & FLAG_FLUSH)
       duration_from_pts(buf, buf->buf.packets[buf->buf.num-1], NULL);
-    }
-  
-  /* Duration from PES PTS */
-  if((buf->duration_divisor > 0) &&
-     (buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
-     (buf->buf.packets[buf->buf.num-1]->duration < 0) &&
-     (buf->buf.packets[buf->buf.num-1]->pes_pts != GAVL_TIME_UNDEFINED))
-    {
-    for(i = 0; i < buf->buf.num-1; i++)
-      {
-      int frames_per_packet;
-      int approx_samples;
-      
-      if(buf->buf.packets[i]->duration > 0)
-        continue;
-
-      approx_samples = gavl_time_rescale(buf->packet_scale,
-                                         buf->sample_scale,
-                                         buf->buf.packets[i+1]->pes_pts -
-                                         buf->buf.packets[i]->pes_pts);
-      frames_per_packet = (approx_samples + buf->duration_divisor/2) / buf->duration_divisor;
-      buf->buf.packets[i]->duration = frames_per_packet * buf->duration_divisor;
-      buf->last_duration = buf->buf.packets[i]->duration;
-
-      if(buf->buf.packets[i]->pts == GAVL_TIME_UNDEFINED)
-        pts_from_duration(buf, buf->buf.packets[i]);
-      }
-    if(buf->flags & FLAG_FLUSH)
-      {
-      buf->buf.packets[buf->buf.num-1]->duration = buf->last_duration;
-      if(buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED)
-        pts_from_duration(buf, buf->buf.packets[buf->buf.num-1]);
-      }
     }
   
   /* PTS from duration */
@@ -447,6 +415,7 @@ static void duration_from_pts_b_frames(gavl_packet_buffer_t * buf)
 static void update_timestamps_b_frames(gavl_packet_buffer_t * buf)
   {
   int i;
+
   
   /* Duration from dts */
   if((buf->buf.packets[buf->buf.num-1]->pts == GAVL_TIME_UNDEFINED) &&
@@ -487,6 +456,14 @@ static void update_timestamps(gavl_packet_buffer_t * buf)
   if(buf->buf.num < 1)
     return;
 
+  /* dts from duration */
+  if((buf->flags & FLAG_CALC_DTS) &&
+     (buf->buf.packets[buf->buf.num-1]->dts == GAVL_TIME_UNDEFINED))
+    {
+    buf->buf.packets[buf->buf.num-1]->dts = buf->dts;
+    buf->dts += buf->buf.packets[buf->buf.num-1]->duration;
+    }
+  
   /* Check if this is necessary at all */
   if((buf->buf.packets[buf->buf.num-1]->pts != GAVL_TIME_UNDEFINED) &&
      (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) ||
@@ -562,10 +539,6 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     gavl_dictionary_get_int(m, GAVL_META_STREAM_PACKET_TIMESCALE, &buf->packet_scale);
     gavl_dictionary_get_int(m, GAVL_META_STREAM_SAMPLE_TIMESCALE, &buf->sample_scale);
 
-    if(gavl_dictionary_get_int(m, GAVL_META_STREAM_PACKET_DURATION_DIVISOR, &buf->duration_divisor))
-      gavl_log(GAVL_LOG_INFO, LOG_DOMAIN, "Got duration divisor %d", buf->duration_divisor);
-    else
-      buf->duration_divisor = 0;
     
     gavl_stream_get_compression_info(buf->stream, &buf->ci);
 
@@ -678,11 +651,8 @@ static gavl_sink_status_t sink_put_func(void * priv, gavl_packet_t * p)
     
   buf_push(&buf->buf, &buf->in_packet);
   //  fprintf(stderr, "put_func: %p %d\n", buf, buf->buf.num);
-  
-  if((p->pts != GAVL_TIME_UNDEFINED) &&
-     (!(buf->flags & FLAG_CALC_FRAME_DURATIONS) ||
-      (p->duration >= 0)))
-    return GAVL_SINK_OK;
+
+
   
   //  else // No P-frames
   //    buf->valid_packets++;
@@ -884,4 +854,10 @@ void gavl_packet_buffer_set_calc_frame_durations(gavl_packet_buffer_t * buf, int
     buf->flags |= FLAG_CALC_FRAME_DURATIONS;
   else
     buf->flags &= ~FLAG_CALC_FRAME_DURATIONS;
+  }
+
+void gavl_packet_buffer_set_calc_dts(gavl_packet_buffer_t * buf, int64_t dts_start)
+  {
+  buf->flags |= FLAG_CALC_DTS;
+  buf->dts = dts_start;
   }
