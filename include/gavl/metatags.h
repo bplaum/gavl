@@ -488,6 +488,8 @@
 #define GAVL_META_STREAM_STATS_PACKET_SIZE_MAX     "maxsize"
 #define GAVL_META_STREAM_STATS_PACKET_DURATION_MIN "mindur"
 #define GAVL_META_STREAM_STATS_PACKET_DURATION_MAX "maxdur"
+#define GAVL_META_STREAM_STATS_DELAY_MIN           "mindelay"
+#define GAVL_META_STREAM_STATS_DELAY_MAX           "maxdelay"
 
 #define GAVL_META_STREAMS      "streams"
 #define GAVL_META_STREAMS_EXT  "streams-ext" // External streams with separate URIs (e.g. subtitles)
