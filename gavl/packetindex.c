@@ -164,18 +164,25 @@ void gavl_packet_index_set_stream_stats(gavl_packet_index_t * idx,
                                         int stream_id, gavl_stream_stats_t * stats)
   {
   int i;
+  int64_t dts = GAVL_TIME_UNDEFINED;
   gavl_stream_stats_init(stats);
   
   for(i = 0; i < idx->num_entries; i++)
     {
     if(idx->entries[i].stream_id != stream_id)
       continue;
+
+    if(dts == GAVL_TIME_UNDEFINED)
+      dts = idx->entries[i].pts;
     
     gavl_stream_stats_update_params(stats,
+                                    dts,
                                     idx->entries[i].pts,
                                     idx->entries[i].duration,
                                     idx->entries[i].size,
                                     idx->entries[i].flags & 0xFFFF);
+    
+    dts += idx->entries[i].duration;
     }
   }
 
