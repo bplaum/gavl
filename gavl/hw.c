@@ -594,7 +594,7 @@ void gavl_hw_ctx_set_video_importer(gavl_hw_context_t * ctx,
       gavl_video_format_copy(vfmt, &ctx->vfmt);
 
     ctx->shm_name = gavl_strrep(ctx->shm_name, ctx_src->shm_name);
-      
+    ctx->max_frames = ctx_src->max_frames;
     
     }
   else
@@ -706,17 +706,19 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
   {
   int val;
 
-  if((val = atomic_fetch_sub_explicit(&ctx->reftab->frames[buf_idx].refcount,
-                                      1, memory_order_release)) == 1)
+  val = atomic_fetch_sub_explicit(&ctx->reftab->frames[buf_idx].refcount,
+                                  1, memory_order_release);
+
+#if 0
+  /* Increase free frames */
+  fprintf(stderr, "Releasing %s frame %d: %d\n",
+          ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
+          buf_idx, val - 1);
+#endif
+  
+  if(val == 1)
     {
     atomic_thread_fence(memory_order_acquire);
-#if 0
-    /* Increase free frames */
-    fprintf(stderr, "Releasing %s frame %d\n",
-            ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
-            buf_idx);
-    gavl_hw_reftable_dump(ctx);
-#endif
     sem_post(&ctx->reftab->free_buffers);
 
 #if 0 /* This causes spurious error messages on the receiver side, if num_frames is still growing */
@@ -733,8 +735,21 @@ static void unref(gavl_hw_context_t * ctx, int buf_idx)
 
 static void ref(gavl_hw_context_t * ctx, int buf_idx)
   {
+#if 0  
+  int val =
+    atomic_fetch_add_explicit(&ctx->reftab->frames[buf_idx].refcount,
+                              1, memory_order_relaxed) + 1;
+
+  fprintf(stderr, "Referencing %s frame %d: %d\n",
+          ctx->flags & HW_CTX_FLAG_VIDEO ? "video" : "audio",
+          buf_idx, val);
+
+#else
+  
   atomic_fetch_add_explicit(&ctx->reftab->frames[buf_idx].refcount,
                             1, memory_order_relaxed);
+  
+#endif
   }
 
 #define CHECK_HWCTX_RET if(!f->hwctx) \
@@ -940,6 +955,7 @@ frame_get_write(gavl_hw_context_t * ctx)
       if(errno != EINTR)
         {
         gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "frame_get_write faied: Buffer overflow");
+        gavl_hw_reftable_dump(ctx);
         return NULL;
         }
       }
@@ -1027,7 +1043,7 @@ int gavl_hw_frame_pool_add(gavl_hw_context_t * ctx, void * frame, int idx)
   
   if(idx >= ctx->max_frames)
     {
-    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "max_frames exceeded");
+    gavl_log(GAVL_LOG_ERROR, LOG_DOMAIN, "max_frames exceeded (%d >= %d)", idx, ctx->max_frames);
     return 0;
     }
   
