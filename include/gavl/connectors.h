@@ -1019,6 +1019,10 @@ void gavl_packet_buffer_set_mark_last(gavl_packet_buffer_t * buf, int mark);
 
 GAVL_PUBLIC 
 void gavl_packet_buffer_set_calc_frame_durations(gavl_packet_buffer_t * buf, int calc);
+
+GAVL_PUBLIC 
+void gavl_packet_buffer_set_calc_dts(gavl_packet_buffer_t * buf, int64_t dts_start);
+
   
 /**
  * @}
