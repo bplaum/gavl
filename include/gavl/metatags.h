@@ -273,6 +273,12 @@
 #define GAVL_META_H264_PROFILE_MULTIVIEW_HIGH                "MultiviewHigh"
 #define GAVL_META_H264_PROFILE_MULTIVIEW_DEPTH_HIGH          "MultiviewDepthHigh"
 
+/* H.265 Profiles */
+#define GAVL_META_H265_PROFILE_MAIN       "Main"
+#define GAVL_META_H265_PROFILE_MAIN_10    "Main10"
+#define GAVL_META_H265_PROFILE_MAIN_STILL "MainStill"
+
+
 #define GAVL_META_LEVEL "Level"
 
 /** \brief Vendor of the device/software, which created the file

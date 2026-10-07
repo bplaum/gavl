@@ -109,6 +109,7 @@ typedef enum
     GAVL_CODEC_ID_DV,             //!< DV (several variants)
     GAVL_CODEC_ID_VP8,            //!< VP8 (as used in webm)
     GAVL_CODEC_ID_DIV3,           //!< Old style Divx (aka MSMPEG4V3)
+    GAVL_CODEC_ID_H265,           //!< H.265 (Annex B)
 
     /* Subtitle (some video codecs can handle subtitles also */
     GAVL_CODEC_ID_DVDSUB = 0x20000, //!< DVD subtitles, palette is in header

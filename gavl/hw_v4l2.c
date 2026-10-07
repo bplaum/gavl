@@ -2191,7 +2191,6 @@ static const str_int_map_t h264_profiles[] =
   };
 
 
-
 static const str_int_map_t h264_levels[] =
   {
     { "1", V4L2_MPEG_VIDEO_H264_LEVEL_1_0 },
@@ -2215,6 +2214,32 @@ static const str_int_map_t h264_levels[] =
     { "6.1", V4L2_MPEG_VIDEO_H264_LEVEL_6_1 },
     { "6.2", V4L2_MPEG_VIDEO_H264_LEVEL_6_2 },
     { /* End */                             }
+  };
+
+static const str_int_map_t h265_profiles[] =
+  {
+    { GAVL_META_H265_PROFILE_MAIN,       V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN    },
+    { GAVL_META_H265_PROFILE_MAIN_10,    V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10 },
+    { GAVL_META_H265_PROFILE_MAIN_STILL, V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE },
+    { /* */ }
+  };
+
+static const str_int_map_t h265_levels[] =
+  {
+    { "1",   V4L2_MPEG_VIDEO_HEVC_LEVEL_1   },
+    { "2",   V4L2_MPEG_VIDEO_HEVC_LEVEL_2   },
+    { "2.1", V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1 },
+    { "3",   V4L2_MPEG_VIDEO_HEVC_LEVEL_3   },
+    { "3.1", V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1 },
+    { "4",   V4L2_MPEG_VIDEO_HEVC_LEVEL_4   },
+    { "4.1", V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1 },
+    { "5",   V4L2_MPEG_VIDEO_HEVC_LEVEL_5   },
+    { "5.1", V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1 },
+    { "5.2", V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2 },
+    { "6",   V4L2_MPEG_VIDEO_HEVC_LEVEL_6   },
+    { "6.1", V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1 },
+    { "6.2", V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2 },
+    { /* */ }
   };
 
 static const str_int_map_t mpeg2_profiles[] =
@@ -2361,6 +2386,13 @@ static int check_compat(const gavl_dictionary_t * device,
                     V4L2_CID_MPEG_VIDEO_H264_LEVEL, 0))
         goto fail;
       break;
+    case GAVL_CODEC_ID_H265:
+      if(!check_str(dev, profile, h265_profiles,
+                    V4L2_CID_MPEG_VIDEO_HEVC_PROFILE, 1) ||
+         !check_str(dev, level, h265_levels,
+                    V4L2_CID_MPEG_VIDEO_HEVC_LEVEL, 0))
+        goto fail;
+
     default:
       goto fail;
       break;
@@ -3452,7 +3484,7 @@ pixelformats[] =
     // #define V4L2_PIX_FMT_VP8      v4l2_fourcc('V', 'P', '8', '0') /* VP8 */
    { V4L2_PIX_FMT_VP8, GAVL_PIXELFORMAT_NONE, GAVL_CODEC_ID_VP8 },
     // #define V4L2_PIX_FMT_VP9      v4l2_fourcc('V', 'P', '9', '0') /* VP9 */
-    // #define V4L2_PIX_FMT_HEVC     v4l2_fourcc('H', 'E', 'V', 'C') /* HEVC aka H.265 */
+   { V4L2_PIX_FMT_HEVC, GAVL_PIXELFORMAT_NONE, GAVL_CODEC_ID_H265 }, /* HEVC aka H.265 */
     // #define V4L2_PIX_FMT_FWHT     v4l2_fourcc('F', 'W', 'H', 'T') /* Fast Walsh Hadamard Transform (vicodec) */
     // #define V4L2_PIX_FMT_FWHT_STATELESS     v4l2_fourcc('S', 'F', 'W', 'H') /* Stateless FWHT (vicodec) */
     

@@ -85,6 +85,7 @@ compression_ids[] =
     { GAVL_CODEC_ID_MPEG2,     "mpv",      "mpeg2",  "MPEG-2",        "video/mpeg", FLAG_NEEDS_PIXELFORMAT },
     { GAVL_CODEC_ID_MPEG4_ASP, "m4v",      "mpeg4",  "MPEG-4",        NULL, }, // ISO/IEC 14496-2
     { GAVL_CODEC_ID_H264,      "h264",     "h264",   "H.264",         NULL, },
+    { GAVL_CODEC_ID_H265,      "h265",     "h265",   "H.265",         NULL, },
     { GAVL_CODEC_ID_THEORA,    NULL,       "theora", "Theora",        NULL, },
     { GAVL_CODEC_ID_DIRAC,     NULL,       "dirac",  "Dirac",         "video/x-dirac", },
     { GAVL_CODEC_ID_DV,        "dv",       "dv",     "DV",            NULL, FLAG_NEEDS_PIXELFORMAT },
