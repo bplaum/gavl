@@ -2144,6 +2144,8 @@ gavl_find_blend_func_c(gavl_overlay_blend_context_t * ctx,
       *overlay_format = GAVL_RGBA_FLOAT;
       return blend_rgba_float;
       break;
+    case GAVL_PIXELFORMAT_EXTENDED:
+      return NULL;
     case GAVL_PIXELFORMAT_NONE:
       return NULL;
     }

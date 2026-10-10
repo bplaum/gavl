@@ -314,6 +314,7 @@ void gavl_video_frame_absdiff(gavl_video_frame_t * dst,
                 src2->planes[2], src2->strides[2],
                 format->image_width/sub_h, format->image_height/sub_v);
       break;
+    case GAVL_PIXELFORMAT_EXTENDED:
     case GAVL_PIXELFORMAT_NONE:
       break;
     }

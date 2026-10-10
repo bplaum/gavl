@@ -135,6 +135,7 @@ int gavl_pixelformat_num_planes(gavl_pixelformat_t csp)
       return 3;
       break;
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       return 0;
       break;
     }
@@ -200,6 +201,7 @@ void gavl_pixelformat_chroma_sub(gavl_pixelformat_t csp, int * sub_hp,
       sub_v = 4;
       break;
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       break;
     }
 
@@ -456,6 +458,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
           break;
         }
@@ -545,6 +548,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAYA_16:
           break;
         }
@@ -636,6 +640,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_16:
           break;
         }
@@ -725,6 +730,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAYA_32:
           break;
         }
@@ -816,6 +822,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_FLOAT:
           break;
         }
@@ -906,6 +913,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
           /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAYA_FLOAT:
           break;
         }
@@ -1018,6 +1026,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_15:
           break;
         }
@@ -1129,6 +1138,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_BGR_15:
           break;
         }
@@ -1241,6 +1251,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_16:
           break;
         }
@@ -1353,6 +1364,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_BGR_16:
           break;
         }
@@ -1464,6 +1476,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_24:
           break;
         }
@@ -1575,6 +1588,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_BGR_24:
           break;
         }
@@ -1686,6 +1700,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_32:
           break;
         }
@@ -1797,6 +1812,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_BGR_32:
           break;
         }
@@ -1908,6 +1924,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGBA_32:
           break;
         }
@@ -2020,6 +2037,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGBA_64:
           break;
         }
@@ -2132,6 +2150,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGBA_FLOAT:
           break;
         }
@@ -2245,6 +2264,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_48:
           break;
         }
@@ -2356,6 +2376,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_FLOAT:
           break;
         }
@@ -2470,6 +2491,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUY2:
           break;
         }
@@ -2581,6 +2603,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_UYVY:
           break;
         }
@@ -2693,6 +2716,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVA_32:
           break;
         }
@@ -2805,6 +2829,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVA_64:
           break;
         }
@@ -2917,6 +2942,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVA_FLOAT:
           break;
         }
@@ -3029,6 +3055,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_FLOAT:
           break;
         }
@@ -3142,6 +3169,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_420_P:
           break;
         }
@@ -3254,6 +3282,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_410_P:
           break;
         }
@@ -3365,6 +3394,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_422_P:
           break;
         }
@@ -3477,6 +3507,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_422_P_16:
           break;
         }
@@ -3590,6 +3621,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_411_P:
           break;
         }
@@ -3702,6 +3734,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_444_P:
           break;
         }
@@ -3815,6 +3848,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUV_444_P_16:
           break;
         }
@@ -3928,6 +3962,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVJ_420_P:
           break;
         }
@@ -4039,6 +4074,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVJ_422_P:
           break;
         }
@@ -4150,6 +4186,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
           break;
         /* Keep GCC happy */
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_YUVJ_444_P:
           break;
         }
@@ -4157,6 +4194,7 @@ gavl_find_pixelformat_converter(const gavl_video_options_t * opt,
 
       
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       break;
     }
   free(tab);  
@@ -4170,6 +4208,7 @@ int gavl_pixelformat_bytes_per_component(gavl_pixelformat_t csp)
   switch(csp)
     {
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
     case GAVL_RGB_15:
     case GAVL_BGR_15:
     case GAVL_RGB_16:
@@ -4221,6 +4260,7 @@ int gavl_pixelformat_bytes_per_pixel(gavl_pixelformat_t csp)
   switch(csp)
     {
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       return 0;
       break;
     case GAVL_GRAY_8:
@@ -4288,6 +4328,7 @@ int gavl_pixelformat_bits_per_pixel(gavl_pixelformat_t pixelformat)
   switch(pixelformat)
     {
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       return 0;
       break;
     case GAVL_GRAY_8:
@@ -4368,6 +4409,7 @@ static int effective_bits_per_component(gavl_pixelformat_t fmt)
   switch(fmt)
     {
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       return 0;
       break;
     case GAVL_RGB_15:
@@ -4609,7 +4651,10 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
   {
   switch(in_csp)
     {
-    case GAVL_PIXELFORMAT_NONE: return GAVL_PIXELFORMAT_NONE; break;
+    case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
+      return GAVL_PIXELFORMAT_NONE;
+      break;
     case GAVL_GRAY_8:
     case GAVL_GRAY_16:
     case GAVL_GRAY_FLOAT:
@@ -4637,6 +4682,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_15:
         case GAVL_BGR_15:
         case GAVL_RGB_16:
@@ -4684,7 +4730,9 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
-          return GAVL_PIXELFORMAT_NONE; break;
+        case GAVL_PIXELFORMAT_EXTENDED:
+          return GAVL_PIXELFORMAT_NONE;
+          break;
           /* YUV422 -> RGB */
         case GAVL_RGB_15:
         case GAVL_BGR_15:
@@ -4733,6 +4781,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
           return GAVL_PIXELFORMAT_NONE; break;
           /* YUV420 -> RGB */
         case GAVL_RGB_15:
@@ -4782,6 +4831,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_15:
         case GAVL_BGR_15:
         case GAVL_RGB_16:
@@ -4830,6 +4880,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
         case GAVL_GRAY_16:
         case GAVL_GRAY_FLOAT:
@@ -4880,6 +4931,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
         case GAVL_GRAY_16:
         case GAVL_GRAY_FLOAT:
@@ -4929,6 +4981,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
         case GAVL_GRAY_16:
         case GAVL_GRAY_FLOAT:
@@ -4975,6 +5028,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
         case GAVL_GRAY_16:
         case GAVL_GRAY_FLOAT:
@@ -5022,6 +5076,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_GRAY_8:
         case GAVL_GRAY_16:
         case GAVL_GRAY_FLOAT:
@@ -5066,6 +5121,7 @@ gavl_pixelformat_t gavl_pixelformat_get_intermediate(gavl_pixelformat_t in_csp,
       switch(out_csp)
         {
         case GAVL_PIXELFORMAT_NONE:
+        case GAVL_PIXELFORMAT_EXTENDED:
         case GAVL_RGB_15:
         case GAVL_BGR_15:
         case GAVL_RGB_16:
@@ -5119,6 +5175,7 @@ void gavl_pixelformat_get_offset(gavl_pixelformat_t pixelformat,
   switch(pixelformat)
     {
     case GAVL_PIXELFORMAT_NONE:
+    case GAVL_PIXELFORMAT_EXTENDED:
       break;
     case GAVL_RGB_15:
     case GAVL_BGR_15:

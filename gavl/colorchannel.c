@@ -867,6 +867,7 @@ static int get_channel_properties(gavl_pixelformat_t src_format,
   
   switch(src_format)
     {
+    case GAVL_PIXELFORMAT_EXTENDED:
     case GAVL_PIXELFORMAT_NONE:
       return 0;
     case GAVL_GRAY_8:

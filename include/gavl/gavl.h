@@ -1811,6 +1811,12 @@ void gavl_rectangle_f_dump(const gavl_rectangle_f_t * r);
  * Flag for grayscale pixelformats
  */
 #define GAVL_PIXFMT_GRAY   (1<<13)
+
+/** \ingroup video_format
+ * Extended format
+ */
+#define GAVL_PIXFMT_EXTENDED (1<<14)
+
   
 /*! \ingroup video_format
  * \brief Pixelformat definition
@@ -1945,6 +1951,10 @@ enum gavl_pixelformat_e
     /*! 16 bit Planar YCbCr 4:2:2. Each component is an uint16_t in native byte order.
      */
     GAVL_YUV_422_P_16 = 10 | GAVL_PIXFMT_PLANAR | GAVL_PIXFMT_YUV,
+
+    /* Extended (as specified by fourcc) */
+
+    GAVL_PIXELFORMAT_EXTENDED =      GAVL_PIXFMT_EXTENDED,
     
   };
 
@@ -2434,7 +2444,7 @@ struct gavl_video_format_s
   
   gavl_image_orientation_t orientation;
 
-  int shuffle_indices[GAVL_MAX_COLOR_CHANNELS];
+  uint32_t fourcc; // Format Specifier (for GAVL_PIXELFORMAT_EXTENDED)
   
   };
 
