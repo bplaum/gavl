@@ -1962,15 +1962,18 @@ void gavl_track_merge(gavl_dictionary_t * dst, const gavl_dictionary_t * src)
     gavl_compression_info_init(&ci);
     if(gavl_stream_get_compression_info(src_s, &ci))
       {
-      fprintf(stderr, "Merging compression info for ID %d\n", id);
-      gavl_compression_info_dump(&ci);
+      //      fprintf(stderr, "Merging compression info for ID %d\n", id);
+      //      gavl_compression_info_dump(&ci);
       
       gavl_stream_set_compression_info(dst_s, &ci);
       gavl_compression_info_free(&ci);
 
-      fprintf(stderr, "Merged compression info\n");
-      gavl_dictionary_dump(dst_s, 2);
+      //      fprintf(stderr, "Merged compression info\n");
+      //      gavl_dictionary_dump(dst_s, 2);
       }
+
+    gavl_dictionary_copy_value(dst_s, src_s, GAVL_META_STREAM_STATS);
+    
     }
   
   }
